@@ -64,6 +64,30 @@ function parseFoilValue(value: string) {
   )
 }
 
+function isLikelyArchidektToken(card: ImportedDeckCard) {
+  const normalizedName = card.cardName.trim().toLowerCase()
+  const normalizedSet = card.setCode?.trim().toLowerCase() ?? ''
+
+  if (normalizedSet.startsWith('t')) {
+    return true
+  }
+
+  const obviousTokenNames = new Set([
+    'treasure',
+    'clue',
+    'food',
+    'blood',
+    'gold',
+    'map',
+    'copy',
+    'elephant',
+    'rebel',
+    'phyrexian germ',
+  ])
+
+  return obviousTokenNames.has(normalizedName)
+}
+
 function inferSectionFromArchidektRow(
   row: Record<string, string>
 ): 'commander' | 'mainboard' | 'token' {
@@ -197,7 +221,9 @@ function parseCardLine(
 }
 
 export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckCard[] {
-  if (sourceType.toLowerCase() === 'archidekt') {
+  const normalizedSourceType = sourceType.toLowerCase()
+
+  if (normalizedSourceType === 'archidekt') {
     const archidektCards = parseArchidektTable(input)
     if (archidektCards.length > 0) {
       return archidektCards
@@ -238,6 +264,14 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
 
     const parsed = parseCardLine(line, currentSection)
     if (parsed) {
+      if (
+        normalizedSourceType === 'archidekt' &&
+        currentSection === 'mainboard' &&
+        isLikelyArchidektToken(parsed)
+      ) {
+        parsed.section = 'token'
+      }
+
       cards.push(parsed)
     }
   }

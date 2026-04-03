@@ -2,6 +2,7 @@
 
 import { parseDeckText } from '@/lib/commander/parse'
 import { validateCommanderDeck } from '@/lib/commander/validate'
+import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichDeckWithScryfall } from './enrich'
@@ -48,20 +49,69 @@ export async function importDeckAction(
   const sourceType = String(formData.get('source_type') || 'text').trim()
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
+  const deckFile = formData.get('deck_file')
   const fields = buildActionFields(deckName, sourceType, sourceUrl, rawList)
 
-  if (!deckName) {
-    return { error: 'Deck name is required.', fields }
+  let resolvedDeckName = deckName
+  let resolvedRawList = rawList
+  let parsedCards =
+    sourceType.toLowerCase() === 'moxfield' ? [] : parseDeckText(resolvedRawList, sourceType)
+
+  if (
+    deckFile instanceof File &&
+    deckFile.size > 0 &&
+    !resolvedRawList
+  ) {
+    resolvedRawList = (await deckFile.text()).trim()
+
+    if (!resolvedDeckName) {
+      resolvedDeckName = deckFile.name.replace(/\.[^.]+$/, '').trim()
+    }
+
+    parsedCards = parseDeckText(resolvedRawList, sourceType)
   }
 
-  if (!rawList) {
-    return { error: 'Paste a deck list first.', fields }
+  if (sourceType.toLowerCase() === 'moxfield') {
+    if (!sourceUrl) {
+      return {
+        error: 'Add a Moxfield deck URL to import from a link.',
+        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      }
+    }
+
+    try {
+      const deck = await fetchMoxfieldDeck(sourceUrl)
+      parsedCards = deck.cards
+
+      if (!resolvedDeckName) {
+        resolvedDeckName = deck.deckName ?? ''
+      }
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to import that Moxfield deck.',
+        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      }
+    }
   }
 
-  const parsedCards = parseDeckText(rawList, sourceType)
+  if (!resolvedDeckName) {
+    return {
+      error: 'Deck name is required unless the source provides one.',
+      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+    }
+  }
 
   if (parsedCards.length === 0) {
-    return { error: 'No cards could be parsed from that input.', fields }
+    return {
+      error:
+        resolvedRawList || deckFile instanceof File
+          ? 'No cards could be parsed from that input.'
+          : 'Paste a deck list, upload a .txt file, or provide a supported deck URL.',
+      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+    }
   }
 
   const validation = validateCommanderDeck(parsedCards)
@@ -76,7 +126,7 @@ export async function importDeckAction(
     .insert([
       {
         user_id: user.id,
-        name: deckName,
+        name: resolvedDeckName,
         commander: primaryCommanderName,
         format: 'commander',
         commander_count: validation.commanderCount,
@@ -94,7 +144,10 @@ export async function importDeckAction(
     .single()
 
   if (deckError || !deckRow) {
-    return { error: deckError?.message || 'Failed to create deck.', fields }
+    return {
+      error: deckError?.message || 'Failed to create deck.',
+      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+    }
   }
 
   const deckId = deckRow.id
@@ -130,7 +183,10 @@ export async function importDeckAction(
     const { error: cardError } = await supabase.from('deck_cards').insert(deckCards)
 
     if (cardError) {
-      return { error: cardError.message, fields }
+      return {
+        error: cardError.message,
+        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      }
     }
   }
 
@@ -138,7 +194,10 @@ export async function importDeckAction(
     const { error: tokenError } = await supabase.from('deck_tokens').insert(deckTokens)
 
     if (tokenError) {
-      return { error: tokenError.message, fields }
+      return {
+        error: tokenError.message,
+        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      }
     }
   }
 

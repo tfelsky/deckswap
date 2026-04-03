@@ -13,6 +13,12 @@ type BaseCard = {
   image_url?: string | null
   price_usd?: number | null
   price_usd_foil?: number | null
+  type_line?: string | null
+  color_identity?: string[] | null
+  mana_cost?: string | null
+  cmc?: number | null
+  power?: string | null
+  toughness?: string | null
   section: 'commander' | 'mainboard' | 'token'
 }
 
@@ -59,6 +65,11 @@ function getLineTotal(card: BaseCard) {
 function formatUsd(value?: number | null) {
   if (value == null) return 'N/A'
   return `$${value.toFixed(2)}`
+}
+
+function formatColorIdentity(colors?: string[] | null) {
+  if (!colors || colors.length === 0) return 'Colorless'
+  return colors.join(', ')
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -198,10 +209,23 @@ function CardModal({
                 <MetaChip>{card.foil ? 'Foil' : 'Non-foil'}</MetaChip>
                 <MetaChip>Qty {card.quantity}</MetaChip>
                 <MetaChip>{card.section}</MetaChip>
+                {card.cmc != null && <MetaChip>CMC {card.cmc}</MetaChip>}
+                {card.power && card.toughness && (
+                  <MetaChip>
+                    {card.power}/{card.toughness}
+                  </MetaChip>
+                )}
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:col-span-2">
+                <div className="text-sm text-zinc-400">Type</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {card.type_line || 'Unknown'}
+                </div>
+              </div>
+
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-zinc-400">Set Name</div>
                 <div className="mt-2 text-lg font-medium text-white">
@@ -227,6 +251,36 @@ function CardModal({
                 <div className="text-sm text-zinc-400">Finish</div>
                 <div className="mt-2 text-lg font-medium text-white">
                   {card.foil ? 'Foil' : 'Non-foil'}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Color</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {formatColorIdentity(card.color_identity)}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Mana Cost</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {card.mana_cost || 'N/A'}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">CMC</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {card.cmc ?? 'N/A'}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Power / Toughness</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {card.power && card.toughness
+                    ? `${card.power}/${card.toughness}`
+                    : 'N/A'}
                 </div>
               </div>
 

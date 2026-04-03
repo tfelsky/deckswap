@@ -5,6 +5,9 @@ type ScryfallCard = {
   set: string
   set_name: string
   collector_number: string
+  cmc?: number
+  power?: string
+  toughness?: string
   foil?: boolean
   finishes?: string[]
   oracle_text?: string
@@ -124,6 +127,9 @@ export function scryfallToDeckCardUpdate(card: ScryfallCard) {
     type_line: card.type_line ?? null,
     rarity: card.rarity ?? null,
     mana_cost: card.mana_cost ?? null,
+    cmc: card.cmc ?? null,
+    power: card.power ?? null,
+    toughness: card.toughness ?? null,
     color_identity: card.color_identity ?? [],
     keywords: card.keywords ?? [],
     image_url: firstImage(card),

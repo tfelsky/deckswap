@@ -46,6 +46,9 @@ type DeckCard = {
   type_line?: string | null
   rarity?: string | null
   mana_cost?: string | null
+  cmc?: number | null
+  power?: string | null
+  toughness?: string | null
   oracle_id?: string | null
   scryfall_id?: string | null
   price_usd_etched?: number | null
@@ -145,7 +148,7 @@ export default async function DeckDetailPage({
   const { data: cards, error: cardsError } = await supabase
     .from('deck_cards')
     .select(
-      'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, finishes, oracle_text, type_line, rarity, mana_cost, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
+      'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
     )
     .eq('deck_id', deckId)
     .order('section', { ascending: true })

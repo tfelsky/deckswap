@@ -31,7 +31,7 @@ export default function ImportDeckPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Paste a deck list with commander, mainboard, and optional token sections.
+              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link.
             </p>
           </div>
         </div>
@@ -49,11 +49,13 @@ export default function ImportDeckPage() {
               </label>
               <input
                 name="deck_name"
-                required
                 defaultValue={fields?.deckName ?? ''}
                 placeholder="Alela Artifacts"
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
+              <p className="mt-2 text-xs text-zinc-500">
+                Optional if your import source already provides the deck name.
+              </p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -87,11 +89,25 @@ export default function ImportDeckPage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-zinc-300">
+                Deck file (optional)
+              </label>
+              <input
+                name="deck_file"
+                type="file"
+                accept=".txt,.csv,.tsv"
+                className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
+              />
+              <p className="mt-2 text-xs text-zinc-500">
+                Upload a plain text, CSV, or TSV deck export if you don&apos;t want to paste it.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-300">
                 Raw deck list
               </label>
               <textarea
                 name="raw_list"
-                required
                 rows={18}
                 placeholder={`Commander
 1 Alela, Artful Provocateur
@@ -108,6 +124,9 @@ Tokens
                 defaultValue={fields?.rawList ?? ''}
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
+              <p className="mt-2 text-xs text-zinc-500">
+                For `Moxfield`, the link is enough. For `Text` or `Archidekt`, you can paste here or upload a file above.
+              </p>
             </div>
 
             {state?.error && (
