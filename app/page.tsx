@@ -56,6 +56,15 @@ type DeckCommentRow = {
   deck_id: number
 }
 
+const MANA_SWATCHES: Record<string, string> = {
+  W: "bg-[linear-gradient(135deg,#f7f0c7,#eadf9d)] text-zinc-950",
+  U: "bg-[linear-gradient(135deg,#8fc7ff,#4b88d9)] text-white",
+  B: "bg-[linear-gradient(135deg,#726f7f,#2c2933)] text-white",
+  R: "bg-[linear-gradient(135deg,#ff9b73,#d74d37)] text-white",
+  G: "bg-[linear-gradient(135deg,#9dd98e,#3f8b54)] text-white",
+  C: "bg-[linear-gradient(135deg,#d6d4ce,#8f8b84)] text-zinc-950",
+}
+
 function readColorFilter(
   value: string | string[] | undefined
 ) {
@@ -74,6 +83,11 @@ function countByColorCode(
   }
 
   return counts
+}
+
+function getColorSwatches(code: string) {
+  if (code === "C") return ["C"]
+  return code.split("").filter(Boolean)
 }
 
 export default async function HomePage({
@@ -203,10 +217,10 @@ export default async function HomePage({
         <HeroSection inventory={inventory} />
         <section className="pb-4">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="deckswap-glass rounded-3xl p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="deckswap-glass rounded-[2rem] p-6 md:p-8">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div className="max-w-3xl">
-                  <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                  <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">
                     Deck Marketplace Filters
                   </div>
                   <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
@@ -218,17 +232,29 @@ export default async function HomePage({
                   </p>
                 </div>
 
-                {selectedColor && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedColor && (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                      <div className="text-xs uppercase tracking-[0.18em] text-primary/80">
+                        Active Filter
+                      </div>
+                      <div className="mt-1 font-medium">{selectedColor}</div>
+                    </div>
+                  )}
                   <Link
                     href="/"
-                    className="rounded-2xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                    className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                      selectedColor
+                        ? "border-border bg-card text-foreground hover:bg-secondary"
+                        : "border-border/70 bg-secondary/30 text-muted-foreground hover:bg-secondary/50"
+                    }`}
                   >
-                    Clear filter
+                    {selectedColor ? "Clear filter" : "Show all decks"}
                   </Link>
-                )}
+                </div>
               </div>
 
-              <div className="mt-6 space-y-5">
+              <div className="mt-8 space-y-6">
                 {[
                   { title: "Mono / Colorless", items: MONO_COLOR_FILTERS },
                   { title: "Color Pairs", items: PAIR_COLOR_FILTERS },
@@ -237,8 +263,15 @@ export default async function HomePage({
                   { title: "Five-Color", items: FIVE_COLOR_FILTERS },
                 ].map((group) => (
                   <div key={group.title}>
-                    <div className="text-sm font-medium text-foreground">{group.title}</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        {group.title}
+                      </div>
+                      <div className="hidden text-xs text-muted-foreground sm:block">
+                        {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {group.items.map((item) => {
                         const active = selectedColor === item.code
                         const count = colorCounts.get(item.code) ?? 0
@@ -247,13 +280,40 @@ export default async function HomePage({
                           <Link
                             key={item.code}
                             href={`/?color=${item.code}`}
-                            className={`rounded-full border px-3 py-2 text-sm transition ${
+                            className={`group rounded-[1.4rem] border p-4 transition ${
                               active
-                                ? "border-primary/30 bg-primary text-primary-foreground"
-                                : "border-border bg-secondary/40 text-foreground hover:bg-secondary"
+                                ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.24),rgba(234,190,94,0.14))] shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                                : "border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
                             }`}
                           >
-                            {item.code} · {item.label} ({count})
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                  {item.code}
+                                </div>
+                                <div className="mt-2 text-lg font-semibold text-foreground">
+                                  {item.label}
+                                </div>
+                              </div>
+                              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs text-foreground/80">
+                                {count}
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center gap-2">
+                              {getColorSwatches(item.code).map((symbol) => (
+                                <span
+                                  key={`${item.code}-${symbol}`}
+                                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
+                                >
+                                  {symbol}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="mt-4 text-sm text-muted-foreground transition group-hover:text-foreground/80">
+                              Browse {item.label.toLowerCase()} decks in the live marketplace.
+                            </div>
                           </Link>
                         )
                       })}
