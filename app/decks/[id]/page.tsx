@@ -275,6 +275,9 @@ export default async function DeckDetailPage({
   const access = await getAdminAccessForUser(user)
   const isAdmin = access.isAdmin
   const isSuperadmin = access.isSuperadmin
+  const activeInternalTab =
+    isSuperadmin && resolvedSearchParams?.view === 'superadmin' ? 'superadmin' : 'deck'
+  const showInternalAdminPanel = isAdmin && (!isSuperadmin || activeInternalTab === 'superadmin')
   const deckFormat = normalizeDeckFormat(typedDeck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
@@ -667,6 +670,31 @@ export default async function DeckDetailPage({
             )}
           </div>
 
+          {isSuperadmin && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href={`/decks/${deckId}`}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                  activeInternalTab === 'deck'
+                    ? 'bg-white text-zinc-950'
+                    : 'border border-white/10 bg-white/5 text-white hover:bg-white/10'
+                }`}
+              >
+                Deck View
+              </Link>
+              <Link
+                href={`/decks/${deckId}?view=superadmin`}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                  activeInternalTab === 'superadmin'
+                    ? 'bg-emerald-400 text-zinc-950'
+                    : 'border border-emerald-400/20 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/15'
+                }`}
+              >
+                Superadmin
+              </Link>
+            </div>
+          )}
+
           {showCommanderUpdated && (
             <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
               Commander updated. The deck validation status has been recalculated.
@@ -954,7 +982,7 @@ export default async function DeckDetailPage({
                       </div>
                     </div>
 
-                    {isAdmin && (
+                    {showInternalAdminPanel && (
                       <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -1080,9 +1108,11 @@ export default async function DeckDetailPage({
                 )}
               </div>
 
-              {isAdmin && typedDeck.user_id && (
+              {showInternalAdminPanel && typedDeck.user_id && (
                 <form action={updateSellerTrustAction} className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                  <div className="text-sm font-medium text-emerald-200">Admin Trust Controls</div>
+                  <div className="text-sm font-medium text-emerald-200">
+                    {isSuperadmin ? 'Superadmin Trust Controls' : 'Admin Trust Controls'}
+                  </div>
                   <p className="mt-2 text-sm text-emerald-50/80">
                     Manual trust overrides for known users, friends, and restricted accounts.
                   </p>
