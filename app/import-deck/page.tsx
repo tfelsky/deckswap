@@ -110,6 +110,9 @@ export default function ImportDeckPage() {
                   placeholder="https://www.moxfield.com/decks/..."
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
                 />
+                <p className="mt-2 text-xs text-zinc-500">
+                  Moxfield imports only work for public deck links.
+                </p>
               </div>
             </div>
 
@@ -151,7 +154,7 @@ Tokens
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
               <p className="mt-2 text-xs text-zinc-500">
-                For `Moxfield`, the link is enough. For `Text` or `Archidekt`, you can paste here or upload a file above. The importer will try to auto-detect format, and you can override it later in Deck Settings.
+                For `Moxfield`, the link is enough, but the deck must be public. For `Text` or `Archidekt`, you can paste here or upload a file above. The importer will try to auto-detect format, and you can override it later in Deck Settings.
               </p>
             </div>
 
