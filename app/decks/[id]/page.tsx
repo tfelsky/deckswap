@@ -816,7 +816,7 @@ export default async function DeckDetailPage({
                 )}
 
               <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:gap-5">
-                <div className="min-w-0 space-y-4">
+                <div className="min-w-0 space-y-4 lg:contents">
                   {isCommanderDeck ? (
                     <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                       <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -909,7 +909,7 @@ export default async function DeckDetailPage({
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-3 lg:col-span-2">
                     <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                       <div className="text-sm text-zinc-400">Commanders</div>
                       <div className="mt-2 text-3xl font-semibold text-white">
@@ -930,7 +930,7 @@ export default async function DeckDetailPage({
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 lg:col-span-2">
                     <div className="text-sm text-zinc-400">Deck Snapshot</div>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -968,7 +968,7 @@ export default async function DeckDetailPage({
                   </div>
 
                   {isCommanderDeck && (
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 lg:col-span-2">
                       <div className="text-sm text-zinc-400">Bracket Notes</div>
                       <div className="mt-3 space-y-2 text-sm text-zinc-300">
                         {bracketSummary.notes.map((note) => (
@@ -979,7 +979,7 @@ export default async function DeckDetailPage({
                   )}
                 </div>
 
-                <div className="min-w-0 space-y-4">
+                <div className="min-w-0 space-y-4 lg:contents">
                   <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
