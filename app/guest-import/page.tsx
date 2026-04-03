@@ -1,9 +1,13 @@
 'use client'
 
-import { GUEST_IMPORT_DRAFT_KEY, type GuestImportDraft } from '@/lib/guest-import'
+import {
+  readGuestImportDraft,
+  saveGuestImportDraft,
+  type GuestImportDraft,
+} from '@/lib/guest-import'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function GuestImportPage() {
   const router = useRouter()
@@ -12,6 +16,30 @@ export default function GuestImportPage() {
   const [sourceUrl, setSourceUrl] = useState('')
   const [rawList, setRawList] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const existingDraft = readGuestImportDraft()
+    if (!existingDraft) return
+
+    setDeckName(existingDraft.deckName)
+    setSourceType(existingDraft.sourceType || 'text')
+    setSourceUrl(existingDraft.sourceUrl)
+    setRawList(existingDraft.rawList)
+  }, [])
+
+  useEffect(() => {
+    const hasMeaningfulDraft =
+      deckName.trim() || sourceUrl.trim() || rawList.trim()
+
+    if (!hasMeaningfulDraft) return
+
+    saveGuestImportDraft({
+      deckName,
+      sourceType,
+      sourceUrl,
+      rawList,
+    })
+  }, [deckName, sourceType, sourceUrl, rawList])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -46,7 +74,7 @@ export default function GuestImportPage() {
       return
     }
 
-    window.sessionStorage.setItem(GUEST_IMPORT_DRAFT_KEY, JSON.stringify(draft))
+    saveGuestImportDraft(draft)
     router.push('/guest-preview')
   }
 

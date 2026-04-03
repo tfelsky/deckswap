@@ -4,7 +4,7 @@ import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { parseDeckText } from '@/lib/commander/parse'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { detectDeckFormat, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
-import { GUEST_IMPORT_DRAFT_KEY, type GuestImportDraft } from '@/lib/guest-import'
+import { readGuestImportDraft, type GuestImportDraft } from '@/lib/guest-import'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -28,14 +28,7 @@ export default function GuestPreviewPage() {
   const [draft, setDraft] = useState<GuestImportDraft | null>(null)
 
   useEffect(() => {
-    const raw = window.sessionStorage.getItem(GUEST_IMPORT_DRAFT_KEY)
-    if (!raw) return
-
-    try {
-      setDraft(JSON.parse(raw) as GuestImportDraft)
-    } catch {
-      setDraft(null)
-    }
+    setDraft(readGuestImportDraft())
   }, [])
 
   const parsed = useMemo(() => {
@@ -49,6 +42,9 @@ export default function GuestPreviewPage() {
       collectorNumber: card.collectorNumber,
     }))
   }, [draft])
+
+  const isRemoteOnlyPreview =
+    draft?.sourceType === 'moxfield' && !draft.rawList.trim() && !!draft.sourceUrl.trim()
 
   const detectedFormat = normalizeDeckFormat(detectDeckFormat(
     parsed.map((card) => ({
@@ -158,11 +154,27 @@ export default function GuestPreviewPage() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm text-zinc-400">Commander Bracket</div>
-            <div className="mt-2 text-2xl font-semibold text-white">{bracket.label}</div>
+            <div className="mt-2 text-2xl font-semibold text-white">
+              {isRemoteOnlyPreview ? 'After import' : bracket.label}
+            </div>
           </div>
         </div>
 
-        {!validation.isValid && validation.errors.length > 0 && (
+        {isRemoteOnlyPreview && (
+          <div className="mt-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
+            <div className="text-sm font-medium text-emerald-200">Remote source ready</div>
+            <p className="mt-3 text-sm text-emerald-50/90">
+              This guest draft is carrying a Moxfield link. The full card pull, pricing, and
+              validation happen in the authenticated import flow because the live source has to be
+              fetched server-side.
+            </p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-emerald-50/85">
+              Source URL: {draft.sourceUrl}
+            </div>
+          </div>
+        )}
+
+        {!isRemoteOnlyPreview && !validation.isValid && validation.errors.length > 0 && (
           <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5">
             <div className="text-sm font-medium text-yellow-200">Validation notes</div>
             <ul className="mt-3 list-disc pl-5 text-sm text-yellow-100/90">
@@ -189,7 +201,11 @@ export default function GuestPreviewPage() {
                 </div>
 
                 {group.cards.length === 0 ? (
-                  <div className="mt-4 text-sm text-zinc-400">No cards in this section.</div>
+                  <div className="mt-4 text-sm text-zinc-400">
+                    {isRemoteOnlyPreview && group.title === 'Mainboard'
+                      ? 'Cards will populate after the authenticated import fetches the live source.'
+                      : 'No cards in this section.'}
+                  </div>
                 ) : (
                   <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
                     <div className="grid grid-cols-[80px_1fr_180px] gap-3 border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-wide text-zinc-400">

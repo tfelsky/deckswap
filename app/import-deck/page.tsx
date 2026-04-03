@@ -1,8 +1,9 @@
 'use client'
 
 import {
-  GUEST_IMPORT_DRAFT_KEY,
   GUEST_IMPORT_SAVED_QUERY_KEY,
+  readGuestImportDraft,
+  saveGuestImportDraft,
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import AppHeader from '@/components/app-header'
@@ -27,19 +28,23 @@ function ImportDeckPageContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const raw = window.sessionStorage.getItem(GUEST_IMPORT_DRAFT_KEY)
-    if (!raw) return
-
-    try {
-      setGuestDraft(JSON.parse(raw) as GuestImportDraft)
-    } catch {
-      setGuestDraft(null)
-    }
+    setGuestDraft(readGuestImportDraft())
   }, [])
 
   const fields = state?.fields ?? guestDraft ?? undefined
   const showGuestBanner = !!guestDraft || searchParams.get('fromGuest') === '1'
   const [sourceType, setSourceType] = useState(fields?.sourceType ?? 'text')
+
+  useEffect(() => {
+    if (!state?.fields || !showGuestBanner) return
+
+    saveGuestImportDraft({
+      deckName: state.fields.deckName,
+      sourceType: state.fields.sourceType,
+      sourceUrl: state.fields.sourceUrl,
+      rawList: state.fields.rawList,
+    })
+  }, [showGuestBanner, state?.fields])
 
   useEffect(() => {
     setSourceType(fields?.sourceType ?? 'text')

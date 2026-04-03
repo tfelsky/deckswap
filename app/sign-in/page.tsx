@@ -1,6 +1,6 @@
 'use client'
 
-import { GUEST_IMPORT_DRAFT_KEY } from '@/lib/guest-import'
+import { hasGuestImportDraft } from '@/lib/guest-import'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,7 @@ export default function SignInPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   function getPostAuthRoute() {
-    if (typeof window !== 'undefined' && window.sessionStorage.getItem(GUEST_IMPORT_DRAFT_KEY)) {
+    if (hasGuestImportDraft()) {
       return '/import-deck?fromGuest=1'
     }
 

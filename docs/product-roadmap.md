@@ -1,6 +1,6 @@
 # Product Roadmap
 
-Status: Consolidated roadmap after the current import, pricing, admin, legal, and campaign work.
+Status: Consolidated roadmap after the current import, pricing, trust, trading, auction, navigation, and color-identity work.
 
 ## Goal
 
@@ -14,13 +14,26 @@ DeckSwap already has:
 - guest import preview
 - guest preview handoff into authenticated save flow
 - Commander validation and bracket estimation
+- Commander color identity validation after enrichment
+- homepage marketplace filters by color identity
+- deck-level color identity stored and derived from imported/enriched cards
 - broader format ingest with partial support
 - per-card and deck-level blended pricing
+- deck price history snapshots and 30 / 60 day trend display
+- deck marketing attributes such as sleeved / boxed / box type
+- per-card condition grading with listing and escrow guidance
 - admin tools for maintenance, trends, and marketplace metrics
+- admin / superadmin role foundation
 - basic public profiles, private shipping profiles, and seller trust controls
+- internal validation scoring for trust review
+- public deck comments and deck discussion
 - trade offers with offer acceptance handing off into draft escrow transactions
-- legal placeholder pages
+- counteroffers and unread trade-offer indicators
 - escrow transaction foundation with persisted draft trades
+- auction launch prototype for faster-sale deck paths
+- legal placeholder pages
+- shared app header and cleaned product navigation
+- unified site/app color palette and updated app chrome
 - campaign and community concept pages
 
 ## Loose Ends To Resolve
@@ -31,6 +44,8 @@ DeckSwap already has:
 - Guest preview still stops short of full pricing/enrichment before account creation.
 - Moxfield and file imports need continued hardening around edge-case deck metadata.
 - Commander inference for unlabeled imports still needs more real-world testing and fallback handling.
+- Broader source ingest still needs clearer source-specific error reporting when public/private remote decks fail.
+- Import and enrichment should eventually expose more structured diagnostics in admin instead of relying on page-state warnings.
 
 ### Marketplace and profile loose ends
 
@@ -38,19 +53,23 @@ DeckSwap already has:
 - Internal validation scoring now has a first pass, but last-login telemetry, live offer-response timing, and automated IP-based checks are still partly manual.
 - ID upload is still represented as a reserved placeholder, not a live collection flow.
 - Filtering and personalization based on user deck interests and preferred archetypes are still missing.
+- Color identity filtering now exists on the landing page, but marketplace-page filters and saved user preferences still need to be built.
+- Public profile reputation is still light compared to the internal trust model.
 
 ### Commerce and escrow loose ends
 
 - Draft trade records and event history now exist, but there are no real payment intents yet.
-- Trade offers now exist, but counteroffers, notifications, and richer negotiation threads are still missing.
+- Trade offers and counteroffers now exist, but notifications and richer negotiation threads are still missing.
 - Admin ecommerce counters still include placeholder values for sales, paid escrows, and completed settlements.
 - Shipping, insurance, intake, inspection, and release operations are modeled but not yet operationalized.
+- Auction flow exists as a launch prototype, but there is no live auction data model, bidding, or settlement.
 
 ### Format support loose ends
 
 - Non-Commander formats are accepted but not yet fully legality-aware.
 - Sideboards are not modeled.
 - Standard rotation, Pauper common-print legality, and Canadian Highlander points enforcement are still missing.
+- Color identity enforcement currently focuses on Commander and depends on enriched metadata; broader deck classification still needs more real-world testing.
 
 ### Campaign and content loose ends
 
@@ -78,6 +97,7 @@ Scope:
 - make guest import drafts resumable and more durable
 - harden Moxfield, Archidekt, file, and text import reliability
 - improve commander inference and post-import repair paths
+- keep deck color identity, counts, pricing snapshots, and validation fully in sync during import and re-enrichment
 - surface better import diagnostics when parsing or schema issues occur
 - decide whether guest preview should gain server-side persistence or stay intentionally lightweight
 
@@ -101,6 +121,7 @@ Scope:
 - automate more of the internal validation score from real login, messaging, and transaction events
 - add marketplace link verification and moderation
 - add ID collection and protected file storage
+- expand user preferences into deck-interest signals such as colors, archetypes, and wanted / owned deck directions
 - expose better seller/trader summaries across listing pages
 
 Expected outcome:
@@ -119,10 +140,11 @@ Why this is high value:
 
 Scope:
 
-- attach deck IDs and counterparties to transaction drafts
 - replace dummy payment method flow with real payment-intent placeholders
 - add shipment intake, inspection, dispute, and release states
+- connect accepted trade offers, condition grading, and escrow review into one operational flow
 - connect admin dashboard counters to real transactional records
+- decide whether auctions settle into the same transaction foundation or a parallel sales ledger
 
 Expected outcome:
 
@@ -146,6 +168,7 @@ Scope:
 - Modern / Legacy / Pauper banned-list logic
 - Pauper common-print checks
 - Canadian Highlander points enforcement
+- richer format-aware import messaging and deck settings validation
 
 Expected outcome:
 
@@ -203,7 +226,8 @@ If we only pick the clearest near-term wins, they are:
 
 1. Persist guest import drafts and tighten import reliability.
 2. Turn basic profile data into real trust workflows and verification.
-3. Turn draft trade records into live transaction operations.
+3. Turn draft trade records and accepted offers into live transaction operations.
+4. Add notifications around trade offers, counters, and escrow milestones.
 
 ## What Can Wait
 
@@ -211,8 +235,24 @@ If we only pick the clearest near-term wins, they are:
 - YouTube submission backend
 - complete affiliate reporting
 - advanced format legality beyond the first pass
+- live auction bidding and settlement
 
 Those are all worthwhile, but they are less immediately valuable than fixing import reliability, profile trust, and transaction foundations.
+
+## Recently Shipped Foundations
+
+- Guest import preview and save handoff
+- Moxfield URL import and file-based import
+- Commander repair flow for unlabeled imports
+- Blended foil-aware deck pricing and per-card pricing
+- Deck color identity derivation and homepage color filters
+- Deck marketing fields and per-card condition grading
+- Public comments on deck pages
+- Profiles, trust controls, and internal validation scoring
+- Superadmin role foundation
+- Trade offers, counteroffers, and escrow draft handoff
+- Auction launch prototype
+- Shared app header and cleaner signed-in navigation
 
 ## Related Docs
 

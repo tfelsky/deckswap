@@ -1,6 +1,6 @@
 'use client'
 
-import { GUEST_IMPORT_DRAFT_KEY } from '@/lib/guest-import'
+import { clearGuestImportDraft } from '@/lib/guest-import'
 import { useEffect } from 'react'
 
 export default function GuestDraftCleanup({
@@ -11,7 +11,7 @@ export default function GuestDraftCleanup({
   useEffect(() => {
     if (!shouldClear) return
 
-    window.sessionStorage.removeItem(GUEST_IMPORT_DRAFT_KEY)
+    clearGuestImportDraft()
   }, [shouldClear])
 
   return null

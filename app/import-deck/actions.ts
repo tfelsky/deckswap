@@ -198,6 +198,7 @@ export async function importDeckAction(
       quantity: card.quantity,
       card_name: card.cardName,
       condition: 'near_mint',
+      condition_source: 'import_default',
       set_code: card.setCode ?? null,
       set_name: card.setName ?? null,
       collector_number: card.collectorNumber ?? null,

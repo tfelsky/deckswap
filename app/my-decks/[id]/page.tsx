@@ -76,7 +76,7 @@ export default async function ManageDeckPage({
 
   const { data: deckCards } = await supabase
     .from('deck_cards')
-    .select('id, card_name, section, quantity, cmc, mana_cost, set_code, set_name, collector_number, foil, condition, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity')
+    .select('id, card_name, section, quantity, cmc, mana_cost, set_code, set_name, collector_number, foil, condition, condition_source, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity')
     .eq('deck_id', deckId)
 
   const { data: priceHistory } = await supabase
@@ -139,6 +139,29 @@ export default async function ManageDeckPage({
   const deckFormat = normalizeDeckFormat(deck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const snapshots = (priceHistory ?? []) as DeckPriceSnapshot[]
+  const gradingCards = ((deckCards ?? []) as Array<{
+    id: number
+    card_name: string
+    section: 'commander' | 'mainboard'
+    quantity: number
+    set_code?: string | null
+    condition?: string | null
+    condition_source?: string | null
+    image_url?: string | null
+    foil?: boolean | null
+    price_usd?: number | string | null
+    price_usd_foil?: number | string | null
+  }>)
+    .map((card) => {
+      const unitPrice = Number(
+        (card.foil ? card.price_usd_foil : null) ?? card.price_usd ?? 0
+      )
+      return {
+        ...card,
+        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+      }
+    })
+    .sort((a, b) => b.unitPrice - a.unitPrice || a.card_name.localeCompare(b.card_name))
   const currentPrice = Number(deck.price_total_usd_foil ?? 0)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
@@ -296,7 +319,7 @@ export default async function ManageDeckPage({
 
     await supabase
       .from('deck_cards')
-      .update({ condition: nextCondition })
+      .update({ condition: nextCondition, condition_source: 'manual' })
       .eq('id', cardId)
       .eq('deck_id', deckId)
 
@@ -620,16 +643,37 @@ export default async function ManageDeckPage({
                 <div>
                   <h2 className="text-2xl font-semibold">Card Conditions</h2>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Grade each listed card conservatively before sending it into the marketplace or escrow flow.
+                    Imported cards start as accepted Near Mint placeholders so validation can proceed. Before listing or entering escrow, manually review the highest-value cards first and downgrade anything that does not meet that standard.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-                  {(deckCards ?? []).length} card rows
+                  {gradingCards.length} card rows
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
                 <div className="space-y-3">
+                  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                    <div className="text-xs uppercase tracking-wide text-emerald-300">
+                      Review flow
+                    </div>
+                    <div className="mt-2 text-lg font-semibold text-white">
+                      Start with the most expensive cards
+                    </div>
+                    <p className="mt-2 text-sm text-emerald-50/85">
+                      Cards are ordered by current value. We recommend manually grading any card above $10 before it enters a listing, trade, or escrow review.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">
+                      Validation handling
+                    </div>
+                    <p className="mt-2 text-sm text-zinc-300">
+                      Condition data is accepted during import and does not block deck validation. Rules validation still focuses on legality, counts, and commander structure while grading remains editable here.
+                    </p>
+                  </div>
+
                   {CARD_CONDITIONS.map((condition) => {
                     const detail = CARD_CONDITION_DETAILS[condition]
                     return (
@@ -649,17 +693,53 @@ export default async function ManageDeckPage({
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="space-y-3">
-                    {(deckCards ?? []).map((card) => (
+                    {gradingCards.map((card) => (
                       <form
                         key={card.id}
                         action={updateCardCondition}
-                        className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 md:grid-cols-[1fr_220px_120px]"
+                        className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 md:grid-cols-[88px_1fr_240px_120px]"
                       >
                         <input type="hidden" name="card_id" value={card.id} />
+                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
+                          <div className="aspect-[5/7]">
+                            {card.image_url ? (
+                              <img
+                                src={card.image_url}
+                                alt={card.card_name}
+                                className="h-full w-full object-cover object-top"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center px-3 text-center text-xs text-zinc-500">
+                                No image
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         <div>
                           <div className="text-sm font-medium text-white">{card.card_name}</div>
                           <div className="mt-1 text-xs text-zinc-500">
                             {card.section} · Qty {card.quantity} · {card.set_code?.toUpperCase() || 'N/A'}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                              Value {card.unitPrice > 0 ? `$${card.unitPrice.toFixed(2)}` : 'N/A'}
+                            </span>
+                            <span
+                              className={`rounded-full border px-3 py-1 text-xs ${
+                                card.condition_source === 'manual'
+                                  ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                                  : 'border-amber-400/20 bg-amber-400/10 text-amber-200'
+                              }`}
+                            >
+                              {card.condition_source === 'manual'
+                                ? 'Manually graded'
+                                : 'Accepted by import'}
+                            </span>
+                            {card.unitPrice >= 10 && card.condition_source !== 'manual' && (
+                              <span className="rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs text-red-200">
+                                Manual review suggested
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -681,6 +761,11 @@ export default async function ManageDeckPage({
                           <p className="mt-2 text-xs text-zinc-500">
                             {getCardConditionMeta(card.condition).description}
                           </p>
+                          {card.condition_source !== 'manual' && (
+                            <p className="mt-2 text-xs text-amber-300/80">
+                              This condition came from the import default and has not been manually confirmed yet.
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-end">
