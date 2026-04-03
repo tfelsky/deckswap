@@ -1,48 +1,43 @@
 const faqs = [
   {
-    question: "What is the DeckSwap value proposition?",
+    question: "What is Mythiverse Exchange built for?",
     answer:
-      "DeckSwap is built around value-for-value Commander trading. You import a real deck, get a cleaner blended price estimate and bracket context, then match into trades that are close in value with a small platform matching fee layered on top instead of hidden spread.",
+      "Mythiverse Exchange is built for players who want a better way to move complete decks. Instead of breaking everything down into singles first, you can present a real list, compare value more clearly, and choose the path that fits best: trade, sale, or auction.",
   },
   {
-    question: "How does the matching fee work?",
+    question: "Why use deck-for-deck matching instead of a buylist?",
     answer:
-      "The current homepage framing is a small matching fee on top of a value-for-value trade. That means the deck value should stay centered on the imported card inventory, while the platform fee covers matching, coordination, and later operational protections rather than inflating the deck price itself.",
+      "For many players, a close deck-to-deck match preserves more value than a traditional trade-in. The goal is to keep the conversation centered on the deck itself instead of losing a large percentage to spread before the trade even begins.",
   },
   {
-    question: "How would DeckSwap escrow work for decks?",
+    question: "How does escrow help higher-value trades?",
     answer:
-      "The cleaner escrow model is that DeckSwap holds the decks, not the full cash value of both decks. Each user would pay the platform fee, shipping, insurance, and any value difference owed if one deck is worth more than the other. Once both decks are received and checked against the agreed inventory, DeckSwap forwards the decks and releases any equalization payment to the side that traded down in value.",
+      "Escrow is there to make valuable trades feel safer. It adds structure around the handoff, helps both sides stay aligned on what is being exchanged, and gives higher-value deals a clearer path forward when trust and delivery matter most.",
   },
   {
-    question: "What is the best way to import a deck?",
+    question: "What is the best way to add a deck?",
     answer:
-      "Best practice is to import a full decklist from pasted text, a `.txt` upload, an Archidekt export, or a public Moxfield URL. Full imports let the app validate commander structure, preserve tokens, and enrich pricing and print metadata much more reliably than manual entry.",
+      "A full import is usually the best start. The more complete the list, the easier it is to build a stronger deck page with clearer pricing, a cleaner commander setup, and better context for buyers or trade partners.",
   },
   {
     question: "What should I do if the commander is not detected?",
     answer:
-      "If a source list does not explicitly label the commander, import the deck anyway and then set the commander from the deck page. That keeps the imported card inventory intact while letting validation recalculate once the commander is chosen.",
+      "If the commander is not detected right away, you can still keep the deck and set it from the deck page. That is usually the quickest way to clean up a list without starting over.",
   },
   {
     question: "How should I interpret the price on a deck page?",
     answer:
-      "The current estimate is a blended card total based on each card's foil flag when pricing is available. It is best used as a marketplace guidance number, not a final settlement amount, because actual trade decisions still depend on condition, shipping, and the cards that could not be priced.",
+      "Think of the deck price as a strong marketplace reference point, not a final verdict. It helps anchor conversations, but the real outcome still depends on condition, presentation, and what both sides want from the exchange.",
   },
   {
-    question: "When should I re-enrich a deck?",
+    question: "How can I make a deck page stronger?",
     answer:
-      "Re-enrichment is helpful after parser improvements, pricing fixes, or schema additions. If a deck is missing prices, card stats, or richer print data, rerunning enrichment refreshes the inventory without needing the user to re-import from scratch.",
+      "Use a complete list, keep the commander accurate, include token support when relevant, and add packaging and condition details when you can. Better context makes the page more useful for both buyers and trade partners.",
   },
   {
-    question: "What are the best practices for deck listings?",
+    question: "What makes for a safer trade or sale?",
     answer:
-      "Use a complete list, keep the commander correct, preserve token inventory where possible, and prefer imports over quick manual listings for serious trading. More complete inventory gives better bracket estimation, cleaner deck pages, and fewer surprises during matching.",
-  },
-  {
-    question: "What are the best practices for safer trades?",
-    answer:
-      "Trade partners should compare the full deck page, check bracket expectations, confirm the blended value is in the right range, and agree on shipping method before finalizing. As the roadmap expands, shipping, insurance, verification, and reputation will make this workflow stronger.",
+      "Clear inventory, honest condition notes, realistic value expectations, and good communication all make a difference. The better a deck is represented up front, the fewer surprises there are later.",
   },
 ]
 
@@ -55,10 +50,10 @@ export function FAQSection() {
             FAQ
           </div>
           <h2 className="mt-5 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Best practices for importing, pricing, and matching
+            Common questions from players moving real decks
           </h2>
           <p className="mt-4 text-muted-foreground">
-            A short operating guide for using DeckSwap the way the product is meant to work.
+            A quick guide to what Mythiverse Exchange is for and how to get the most out of it.
           </p>
         </div>
 

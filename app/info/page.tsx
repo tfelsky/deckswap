@@ -12,14 +12,14 @@ export default function InfoPage() {
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                DeckSwap Info
+                Mythiverse Exchange
               </div>
               <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                Trade decks with clearer pricing, stronger trust, and better context
+                A better way to sell, trade, and discover complete Magic decks
               </h1>
               <p className="mt-4 text-lg text-muted-foreground">
-                DeckSwap is built to help players import real inventory, compare value more honestly,
-                and move from discovery to trade, auction, or escrow with less guesswork.
+                Mythiverse Exchange helps players turn deck inventory into something easier to value,
+                present, and move with confidence, whether the goal is a trade, a direct sale, or a faster auction path.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -99,14 +99,14 @@ export default function InfoPage() {
           <div className="mb-12 rounded-3xl border border-border bg-card p-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                Product Paths
+                Explore the Marketplace
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Choose the path that fits what you want to do
+                Choose the path that matches how you want to move a deck
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                DeckSwap already supports a few different ways to move inventory. This page is the
-                quick map for when to use each one.
+                Some players want to showcase a list, some want the best deck-for-deck fit, and some
+                just want a quicker sale. Mythiverse Exchange is designed to support each of those moments.
               </p>
             </div>
 
@@ -120,7 +120,7 @@ export default function InfoPage() {
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
                 <div className="text-sm font-medium text-foreground">Trade through escrow</div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Best when both sides want deck-for-deck value and a stronger handoff process.
+                  Best when both sides want deck-for-deck value with more confidence around the exchange.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
@@ -142,8 +142,8 @@ export default function InfoPage() {
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
                 These are practical marketplaces and accessory brands players already recognize.
-                Over time, some outbound links on DeckSwap may become referral links, which means
-                DeckSwap could earn a commission from qualifying purchases.
+                Over time, some outbound links on Mythiverse Exchange may become referral links, which means
+                Mythiverse Exchange could earn a commission from qualifying purchases.
               </p>
             </div>
 
