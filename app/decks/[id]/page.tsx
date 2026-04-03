@@ -1,4 +1,5 @@
 import DeckCardViews from '@/components/deck-card-views'
+import FormActionButton from '@/components/form-action-button'
 import GuestDraftCleanup from '@/components/guest-draft-cleanup'
 import AppHeader from '@/components/app-header'
 import { Button } from '@/components/ui/button'
@@ -927,7 +928,7 @@ export default async function DeckDetailPage({
         throw new Error(currentTokensError.message)
       }
 
-      const cardsToMoveToTokens = ((currentCards ?? []) as Array<{
+      const allCardRows = (currentCards ?? []) as Array<{
         id: number
         quantity: number
         card_name: string
@@ -937,13 +938,11 @@ export default async function DeckDetailPage({
         foil?: boolean | null
         sort_order?: number | null
         section: 'commander' | 'mainboard'
-      }>).filter(
-        (card) =>
-          card.section === 'mainboard' &&
-          isLikelyTokenCard(card.card_name, card.set_code)
-      )
+        condition?: string | null
+        condition_source?: string | null
+      }>
 
-      const tokensToMoveToCards = ((currentTokens ?? []) as Array<{
+      const allTokenRows = (currentTokens ?? []) as Array<{
         id: number
         quantity: number
         token_name: string
@@ -952,179 +951,198 @@ export default async function DeckDetailPage({
         collector_number?: string | null
         foil?: boolean | null
         sort_order?: number | null
-      }>).filter((token) => !isLikelyTokenCard(token.token_name, token.set_code))
+      }>
 
-      const nextCardSortBase =
-        ((currentCards ?? []) as Array<{ sort_order?: number | null }>).reduce(
-          (max, card) => Math.max(max, Number(card.sort_order ?? 0)),
-          0
-        ) + 1
-      const nextTokenSortBase =
-        ((currentTokens ?? []) as Array<{ sort_order?: number | null }>).reduce(
-          (max, token) => Math.max(max, Number(token.sort_order ?? 0)),
-          0
-        ) + 1
+      const commanderRows = allCardRows.filter((card) => card.section === 'commander')
+      const normalizedMainboardMap = new Map<
+        string,
+        {
+          quantity: number
+          card_name: string
+          set_code?: string | null
+          set_name?: string | null
+          collector_number?: string | null
+          foil?: boolean | null
+          condition?: string | null
+          condition_source?: string | null
+        }
+      >()
+      const normalizedTokenMap = new Map<
+        string,
+        {
+          quantity: number
+          token_name: string
+          set_code?: string | null
+          set_name?: string | null
+          collector_number?: string | null
+          foil?: boolean | null
+        }
+      >()
 
-      const movedCardIds = new Set(cardsToMoveToTokens.map((card) => card.id))
-      const movedTokenIds = new Set(tokensToMoveToCards.map((token) => token.id))
-
-      const remainingCardRows = ((currentCards ?? []) as Array<{
-        id: number
+      const addMainboard = (row: {
         quantity: number
         card_name: string
         set_code?: string | null
+        set_name?: string | null
         collector_number?: string | null
         foil?: boolean | null
-        section: 'commander' | 'mainboard'
-      }>).filter((card) => !movedCardIds.has(card.id))
+        condition?: string | null
+        condition_source?: string | null
+      }) => {
+        const key = rowMatchKey({
+          name: row.card_name,
+          setCode: row.set_code,
+          collectorNumber: row.collector_number,
+          foil: row.foil,
+        })
+        const existing = normalizedMainboardMap.get(key)
+        if (existing) {
+          existing.quantity += row.quantity
+          return
+        }
+        normalizedMainboardMap.set(key, { ...row })
+      }
 
-      const remainingTokenRows = ((currentTokens ?? []) as Array<{
-        id: number
+      const addToken = (row: {
         quantity: number
         token_name: string
         set_code?: string | null
+        set_name?: string | null
         collector_number?: string | null
         foil?: boolean | null
-      }>).filter((token) => !movedTokenIds.has(token.id))
+      }) => {
+        const key = rowMatchKey({
+          name: row.token_name,
+          setCode: row.set_code,
+          collectorNumber: row.collector_number,
+          foil: row.foil,
+        })
+        const existing = normalizedTokenMap.get(key)
+        if (existing) {
+          existing.quantity += row.quantity
+          return
+        }
+        normalizedTokenMap.set(key, { ...row })
+      }
 
-      const existingMainboardByKey = new Map(
-        remainingCardRows
-          .filter((card) => card.section === 'mainboard')
-          .map((card) => [
-            rowMatchKey({
-              name: card.card_name,
-              setCode: card.set_code,
-              collectorNumber: card.collector_number,
-              foil: card.foil,
-            }),
-            card,
-          ])
-      )
-
-      const existingTokenByKey = new Map(
-        remainingTokenRows.map((token) => [
-          rowMatchKey({
-            name: token.token_name,
-            setCode: token.set_code,
-            collectorNumber: token.collector_number,
-            foil: token.foil,
-          }),
-          token,
-        ])
-      )
-
-      if (cardsToMoveToTokens.length > 0) {
-        let newTokenIndex = 0
-
-        for (const card of cardsToMoveToTokens) {
-          const key = rowMatchKey({
-            name: card.card_name,
-            setCode: card.set_code,
-            collectorNumber: card.collector_number,
-            foil: card.foil,
-          })
-          const existingToken = existingTokenByKey.get(key)
-
-          if (existingToken) {
-            const { error } = await supabase
-              .from('deck_tokens')
-              .update({ quantity: existingToken.quantity + card.quantity })
-              .eq('id', existingToken.id)
-
-            if (error) {
-              throw new Error(error.message)
-            }
-
-            existingToken.quantity += card.quantity
-          } else {
-            const { error } = await supabase.from('deck_tokens').insert({
-              deck_id: deckId,
-              quantity: card.quantity,
-              token_name: card.card_name,
-              set_code: card.set_code ?? null,
-              set_name: card.set_name ?? null,
-              collector_number: card.collector_number ?? null,
-              foil: card.foil ?? false,
-              sort_order: nextTokenSortBase + newTokenIndex,
-            })
-
-            if (error) {
-              throw new Error(error.message)
-            }
-
-            newTokenIndex += 1
-          }
+      for (const card of allCardRows) {
+        if (card.section !== 'mainboard') {
+          continue
         }
 
-        const { error: deleteCardsError } = await supabase
-          .from('deck_cards')
-          .delete()
-          .in(
-            'id',
-            cardsToMoveToTokens.map((card) => card.id)
-          )
-
-        if (deleteCardsError) {
-          throw new Error(deleteCardsError.message)
+        if (isLikelyTokenCard(card.card_name, card.set_code)) {
+          addToken({
+            quantity: card.quantity,
+            token_name: card.card_name,
+            set_code: card.set_code ?? null,
+            set_name: card.set_name ?? null,
+            collector_number: card.collector_number ?? null,
+            foil: card.foil ?? false,
+          })
+        } else {
+          addMainboard({
+            quantity: card.quantity,
+            card_name: card.card_name,
+            set_code: card.set_code ?? null,
+            set_name: card.set_name ?? null,
+            collector_number: card.collector_number ?? null,
+            foil: card.foil ?? false,
+            condition: card.condition ?? 'near_mint',
+            condition_source: card.condition_source ?? 'import_default',
+          })
         }
       }
 
-      if (tokensToMoveToCards.length > 0) {
-        let newCardIndex = 0
-
-        for (const token of tokensToMoveToCards) {
-          const key = rowMatchKey({
-            name: token.token_name,
-            setCode: token.set_code,
-            collectorNumber: token.collector_number,
-            foil: token.foil,
+      for (const token of allTokenRows) {
+        if (isLikelyTokenCard(token.token_name, token.set_code)) {
+          addToken({
+            quantity: token.quantity,
+            token_name: token.token_name,
+            set_code: token.set_code ?? null,
+            set_name: token.set_name ?? null,
+            collector_number: token.collector_number ?? null,
+            foil: token.foil ?? false,
           })
-          const existingMainboard = existingMainboardByKey.get(key)
-
-          if (existingMainboard) {
-            const { error } = await supabase
-              .from('deck_cards')
-              .update({ quantity: existingMainboard.quantity + token.quantity })
-              .eq('id', existingMainboard.id)
-
-            if (error) {
-              throw new Error(error.message)
-            }
-
-            existingMainboard.quantity += token.quantity
-          } else {
-            const { error } = await supabase.from('deck_cards').insert({
-              deck_id: deckId,
-              section: 'mainboard',
-              quantity: token.quantity,
-              card_name: token.token_name,
-              condition: 'near_mint',
-              condition_source: 'import_default',
-              set_code: token.set_code ?? null,
-              set_name: token.set_name ?? null,
-              collector_number: token.collector_number ?? null,
-              foil: token.foil ?? false,
-              sort_order: nextCardSortBase + newCardIndex,
-            })
-
-            if (error) {
-              throw new Error(error.message)
-            }
-
-            newCardIndex += 1
-          }
+        } else {
+          addMainboard({
+            quantity: token.quantity,
+            card_name: token.token_name,
+            set_code: token.set_code ?? null,
+            set_name: token.set_name ?? null,
+            collector_number: token.collector_number ?? null,
+            foil: token.foil ?? false,
+            condition: 'near_mint',
+            condition_source: 'import_default',
+          })
         }
+      }
 
-        const { error: deleteTokensError } = await supabase
-          .from('deck_tokens')
-          .delete()
-          .in(
-            'id',
-            tokensToMoveToCards.map((token) => token.id)
-          )
+      const normalizedMainboardRows = Array.from(normalizedMainboardMap.values())
+      const normalizedTokenRows = Array.from(normalizedTokenMap.values())
 
-        if (deleteTokensError) {
-          throw new Error(deleteTokensError.message)
+      const { error: deleteMainboardError } = await supabase
+        .from('deck_cards')
+        .delete()
+        .eq('deck_id', deckId)
+        .eq('section', 'mainboard')
+
+      if (deleteMainboardError) {
+        throw new Error(deleteMainboardError.message)
+      }
+
+      const { error: deleteAllTokensError } = await supabase
+        .from('deck_tokens')
+        .delete()
+        .eq('deck_id', deckId)
+
+      if (deleteAllTokensError) {
+        throw new Error(deleteAllTokensError.message)
+      }
+
+      if (normalizedMainboardRows.length > 0) {
+        const nextCardSortBase =
+          commanderRows.reduce(
+            (max, card) => Math.max(max, Number(card.sort_order ?? 0)),
+            -1
+          ) + 1
+
+        const { error: insertCardsError } = await supabase.from('deck_cards').insert(
+          normalizedMainboardRows.map((row, index) => ({
+            deck_id: deckId,
+            section: 'mainboard',
+            quantity: row.quantity,
+            card_name: row.card_name,
+            condition: row.condition ?? 'near_mint',
+            condition_source: row.condition_source ?? 'import_default',
+            set_code: row.set_code ?? null,
+            set_name: row.set_name ?? null,
+            collector_number: row.collector_number ?? null,
+            foil: row.foil ?? false,
+            sort_order: nextCardSortBase + index,
+          }))
+        )
+
+        if (insertCardsError) {
+          throw new Error(insertCardsError.message)
+        }
+      }
+
+      if (normalizedTokenRows.length > 0) {
+        const { error: insertTokensError } = await supabase.from('deck_tokens').insert(
+          normalizedTokenRows.map((row, index) => ({
+            deck_id: deckId,
+            quantity: row.quantity,
+            token_name: row.token_name,
+            set_code: row.set_code ?? null,
+            set_name: row.set_name ?? null,
+            collector_number: row.collector_number ?? null,
+            foil: row.foil ?? false,
+            sort_order: index,
+          }))
+        )
+
+        if (insertTokensError) {
+          throw new Error(insertTokensError.message)
         }
       }
 
@@ -1143,8 +1161,8 @@ export default async function DeckDetailPage({
         severity: 'info',
         message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} reclassified saved rows between mainboard and tokens.`,
         details: {
-          movedCardsToTokens: cardsToMoveToTokens.length,
-          movedTokensToCards: tokensToMoveToCards.length,
+          normalizedMainboardRows: normalizedMainboardRows.length,
+          normalizedTokenRows: normalizedTokenRows.length,
         },
       })
 
@@ -1349,8 +1367,11 @@ export default async function DeckDetailPage({
           )}
 
           {showTokensReclassified && (
-            <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-              Saved rows were reclassified between mainboard and tokens, then refreshed.
+            <div className="mt-6 rounded-3xl border border-sky-500/20 bg-sky-500/10 p-5 text-sm text-sky-100 shadow-[0_0_0_1px_rgba(14,165,233,0.08)]">
+              <div className="font-medium text-sky-200">Token repair completed</div>
+              <p className="mt-3 text-sky-100/90">
+                Saved rows were normalized between mainboard and tokens, then the deck was refreshed.
+              </p>
             </div>
           )}
 
@@ -1409,26 +1430,38 @@ export default async function DeckDetailPage({
                 {canRunImportRecovery && (
                   <div className="mt-4 flex flex-wrap gap-3">
                     <form action={reprocessDeckStateAction}>
-                      <button className="rounded-xl border border-yellow-200/20 bg-yellow-100/10 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-yellow-100/15">
+                      <FormActionButton
+                        pendingLabel="Reprocessing..."
+                        className="rounded-xl border border-yellow-200/20 bg-yellow-100/10 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-yellow-100/15 disabled:cursor-wait disabled:opacity-70"
+                      >
                         Reprocess validation
-                      </button>
+                      </FormActionButton>
                     </form>
                     <form action={retryEnrichmentAction}>
-                      <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                      <FormActionButton
+                        pendingLabel="Retrying..."
+                        className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                      >
                         Retry enrichment
-                      </button>
+                      </FormActionButton>
                     </form>
                     {canReimportFromSource && (
                       <form action={reimportFromSourceAction}>
-                        <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                        <FormActionButton
+                          pendingLabel="Re-importing..."
+                          className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                        >
                           Re-import from source
-                        </button>
+                        </FormActionButton>
                       </form>
                     )}
                     <form action={reclassifyTokensAction}>
-                      <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                      <FormActionButton
+                        pendingLabel="Reclassifying..."
+                        className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                      >
                         Reclassify tokens
-                      </button>
+                      </FormActionButton>
                     </form>
                   </div>
                 )}
@@ -1446,26 +1479,38 @@ export default async function DeckDetailPage({
               {canRunImportRecovery && (
                 <div className="mt-4 flex flex-wrap gap-3">
                   <form action={retryEnrichmentAction}>
-                    <button className="rounded-xl border border-amber-200/20 bg-amber-100/10 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-amber-100/15">
+                    <FormActionButton
+                      pendingLabel="Retrying..."
+                      className="rounded-xl border border-amber-200/20 bg-amber-100/10 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-amber-100/15 disabled:cursor-wait disabled:opacity-70"
+                    >
                       Retry enrichment now
-                    </button>
+                    </FormActionButton>
                   </form>
                   <form action={reprocessDeckStateAction}>
-                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                    <FormActionButton
+                      pendingLabel="Reprocessing..."
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                    >
                       Reprocess deck state
-                    </button>
+                    </FormActionButton>
                   </form>
                   {canReimportFromSource && (
                     <form action={reimportFromSourceAction}>
-                      <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                      <FormActionButton
+                        pendingLabel="Re-importing..."
+                        className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                      >
                         Re-import from source
-                      </button>
+                      </FormActionButton>
                     </form>
                   )}
                   <form action={reclassifyTokensAction}>
-                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                    <FormActionButton
+                      pendingLabel="Reclassifying..."
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                    >
                       Reclassify tokens
-                    </button>
+                    </FormActionButton>
                   </form>
                 </div>
               )}
@@ -1480,26 +1525,38 @@ export default async function DeckDetailPage({
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <form action={retryEnrichmentAction}>
-                  <button className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15">
+                  <FormActionButton
+                    pendingLabel="Retrying..."
+                    className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 disabled:cursor-wait disabled:opacity-70"
+                  >
                     Retry enrichment
-                  </button>
+                  </FormActionButton>
                 </form>
                 <form action={reprocessDeckStateAction}>
-                  <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                  <FormActionButton
+                    pendingLabel="Reprocessing..."
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                  >
                     Reprocess validation
-                  </button>
+                  </FormActionButton>
                 </form>
                 {canReimportFromSource && (
                   <form action={reimportFromSourceAction}>
-                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                    <FormActionButton
+                      pendingLabel="Re-importing..."
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                    >
                       Re-import from source
-                    </button>
+                    </FormActionButton>
                   </form>
                 )}
                 <form action={reclassifyTokensAction}>
-                  <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                  <FormActionButton
+                    pendingLabel="Reclassifying..."
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
+                  >
                     Reclassify tokens
-                  </button>
+                  </FormActionButton>
                 </form>
               </div>
             </div>
