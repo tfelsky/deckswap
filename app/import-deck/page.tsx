@@ -32,7 +32,7 @@ export default function ImportDeckPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link for Commander, Standard, Pauper, Canadian Highlander, Legacy, Modern, and Premodern decks.
+              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link. Commander gets the richest validation today, while other formats are accepted as inventory and can be reviewed in Deck Settings.
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ Tokens
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
               <h2 className="text-lg font-semibold text-white">Supported Formats</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Commander still gets the richest validation and bracket logic, but the ingest flow now safely accepts broader deck inventory too.
+                Commander has the richest rules support today. Other formats can still be imported and labeled, but deeper legality enforcement is still on the roadmap.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {['Commander', 'Standard', 'Pauper', 'Canadian Highlander', 'Legacy', 'Modern', 'Premodern'].map((format) => (

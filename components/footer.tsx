@@ -10,7 +10,7 @@ const footerLinks = {
   trading: [
     { name: "Marketplace Flow", href: "/decks" },
     { name: "Trade Concepts", href: "#trade" },
-    { name: "Import Guide", href: "#how-it-works" },
+    { name: "Info & FAQ", href: "/info" },
     { name: "Commander Profiles", href: "/decks" },
   ],
   community: [
@@ -40,7 +40,8 @@ export function Footer() {
               <span className="text-lg font-semibold text-foreground">DeckSwap</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
-              A Commander-focused deck marketplace with import, validation, enrichment, and owner-managed listings.
+              A deck marketplace centered on value-for-value trading, cleaner imports, and better
+              inventory context.
             </p>
           </div>
 
@@ -111,11 +112,14 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} DeckSwap. All rights reserved.
+            (c) {new Date().getFullYear()} DeckSwap. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="/decks" className="text-sm text-muted-foreground hover:text-foreground">
               Marketplace
+            </Link>
+            <Link href="/info" className="text-sm text-muted-foreground hover:text-foreground">
+              Info
             </Link>
             <Link href="/my-decks" className="text-sm text-muted-foreground hover:text-foreground">
               My Decks

@@ -1,5 +1,8 @@
 'use server'
 
+import type { ImportedDeckCard } from '@/lib/commander/types'
+import { validateDeckForFormat } from '@/lib/commander/validate'
+import { normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import {
   fetchScryfallCollection,
@@ -24,11 +27,27 @@ type DeckTokenRow = {
   collector_number: string | null
 }
 
+type EnrichedDeckCardRow = DeckCardRow & {
+  sort_order: number | null
+  image_url: string | null
+  is_legendary: boolean | null
+  is_background: boolean | null
+  can_be_commander: boolean | null
+  keywords: string[] | null
+  partner_with_name: string | null
+  color_identity: string[] | null
+}
+
 type ScryfallCard = {
   id: string
   name: string
   set: string
   collector_number: string
+}
+
+function isBasicLand(cardName: string) {
+  const basics = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes'])
+  return basics.has(cardName.trim().toLowerCase())
 }
 
 function printKey(setCode: string | null, collectorNumber: string | null) {
@@ -183,6 +202,181 @@ async function captureDeckPriceSnapshot(
   })
 }
 
+function toImportedDeckCard(card: EnrichedDeckCardRow): ImportedDeckCard {
+  return {
+    section: card.section,
+    quantity: card.quantity,
+    cardName: card.card_name,
+    foil: false,
+    setCode: card.set_code ?? undefined,
+    collectorNumber: card.collector_number ?? undefined,
+    isLegendary: card.is_legendary ?? undefined,
+    isBackground: card.is_background ?? undefined,
+    canBeCommander: card.can_be_commander ?? undefined,
+    keywords: card.keywords ?? undefined,
+    partnerWithName: card.partner_with_name ?? undefined,
+    colorIdentity: card.color_identity ?? undefined,
+  }
+}
+
+function hasSingletonCommanderShape(cards: EnrichedDeckCardRow[]) {
+  const nonTokenCards = cards.filter((card) => card.section !== 'token')
+  const totalNonTokenCards = nonTokenCards.reduce((sum, card) => sum + card.quantity, 0)
+
+  if (totalNonTokenCards !== 100) {
+    return false
+  }
+
+  const seen = new Set<string>()
+
+  for (const card of nonTokenCards) {
+    const key = card.card_name.trim().toLowerCase()
+
+    if (card.quantity > 1 && !isBasicLand(key)) {
+      return false
+    }
+
+    if (card.quantity === 1 && !isBasicLand(key)) {
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+    }
+  }
+
+  return true
+}
+
+async function inferCommanderDeckState(deckId: number) {
+  const supabase = await createClient()
+
+  const { data: deckData, error: deckError } = await supabase
+    .from('decks')
+    .select('id, format, commander')
+    .eq('id', deckId)
+    .single()
+
+  if (deckError || !deckData) {
+    throw new Error(deckError?.message ?? 'Failed to load deck for commander inference.')
+  }
+
+  const { data: cardsData, error: cardsError } = await supabase
+    .from('deck_cards')
+    .select(
+      'id, section, quantity, card_name, set_code, collector_number, sort_order, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+    )
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+
+  if (cardsError) {
+    throw new Error(cardsError.message)
+  }
+
+  const cards = (cardsData ?? []) as EnrichedDeckCardRow[]
+  const explicitCommanders = cards.filter((card) => card.section === 'commander')
+  const currentFormat = normalizeDeckFormat(deckData.format)
+
+  if (explicitCommanders.length > 0 || currentFormat === 'commander') {
+    return
+  }
+
+  if (!hasSingletonCommanderShape(cards)) {
+    return
+  }
+
+  const candidates = cards.filter(
+    (card) =>
+      card.section === 'mainboard' &&
+      card.quantity === 1 &&
+      (card.can_be_commander || card.is_legendary || card.is_background)
+  )
+
+  if (candidates.length === 0) {
+    return
+  }
+
+  const byId = new Map<number, EnrichedDeckCardRow>(cards.map((card) => [card.id, card]))
+  const selectedIds: number[] = []
+
+  if (candidates.length === 1) {
+    selectedIds.push(candidates[0].id)
+  } else if (candidates.length === 2) {
+    const promoted = cards.map((card) => {
+      if (card.id === candidates[0].id || card.id === candidates[1].id) {
+        return { ...toImportedDeckCard(card), section: 'commander' as const }
+      }
+
+      return toImportedDeckCard(card)
+    })
+
+    if (validateDeckForFormat(promoted, 'commander').isValid) {
+      selectedIds.push(candidates[0].id, candidates[1].id)
+    }
+  }
+
+  if (selectedIds.length > 0) {
+    const { error: promoteError } = await supabase
+      .from('deck_cards')
+      .update({ section: 'commander' })
+      .in('id', selectedIds)
+
+    if (promoteError) {
+      throw new Error(promoteError.message)
+    }
+  }
+
+  const promotedCards = cards.map((card) => {
+    if (selectedIds.includes(card.id)) {
+      return { ...toImportedDeckCard(card), section: 'commander' as const }
+    }
+
+    return toImportedDeckCard(card)
+  })
+
+  const validation = validateDeckForFormat(promotedCards, 'commander')
+  const commanderNames = promotedCards
+    .filter((card) => card.section === 'commander')
+    .map((card) => card.cardName)
+
+  const promotedLead = selectedIds.length > 0 ? byId.get(selectedIds[0]) : null
+
+  const deckUpdate: {
+    format: 'commander'
+    commander: string | null
+    commander_count: number
+    mainboard_count: number
+    token_count: number
+    commander_mode: string
+    commander_names: string[]
+    is_valid: boolean
+    validation_errors: string[]
+    image_url?: string | null
+  } = {
+    format: 'commander',
+    commander: commanderNames[0] ?? null,
+    commander_count: validation.commanderCount,
+    mainboard_count: validation.mainboardCount,
+    token_count: validation.tokenCount,
+    commander_mode: validation.commanderMode,
+    commander_names: commanderNames,
+    is_valid: validation.isValid,
+    validation_errors: validation.errors,
+  }
+
+  if (promotedLead?.image_url) {
+    deckUpdate.image_url = promotedLead.image_url
+  }
+
+  const { error: updateError } = await supabase
+    .from('decks')
+    .update(deckUpdate)
+    .eq('id', deckId)
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+}
+
 export async function enrichDeckWithScryfall(
   deckId: number,
   snapshotType: 'import' | 'refresh' = 'refresh'
@@ -288,5 +482,6 @@ export async function enrichDeckWithScryfall(
 
   if (deckUpdateError) throw new Error(deckUpdateError.message)
 
+  await inferCommanderDeckState(deckId)
   await captureDeckPriceSnapshot(deckId, Number(totalUsdFoil.toFixed(2)), snapshotType)
 }

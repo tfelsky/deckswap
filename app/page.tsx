@@ -5,7 +5,6 @@ import { TradeMatching } from "@/components/trade-matching"
 import { HowItWorks } from "@/components/how-it-works"
 import { Categories } from "@/components/categories"
 import { Testimonials } from "@/components/testimonials"
-import { FAQSection } from "@/components/faq-section"
 import { CTASection } from "@/components/cta-section"
 import { Footer } from "@/components/footer"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
@@ -133,7 +132,6 @@ export default async function HomePage() {
         <Categories counts={categoryCounts} />
         <Testimonials />
         <CTASection />
-        <FAQSection />
       </main>
       <Footer />
     </div>

@@ -164,7 +164,7 @@ function CardModal({
                 <img
                   src={card.image_url}
                   alt={card.card_name}
-                  className="h-full w-full object-cover"
+                  className="block h-full w-full object-cover object-top"
                 />
               ) : (
                 <div className="flex h-full items-end p-5">
@@ -339,7 +339,7 @@ function CardTile({
           <img
             src={card.image_url}
             alt={card.card_name}
-            className="h-full w-full object-cover"
+            className="block h-full w-full object-cover object-top"
           />
         ) : (
           <div className="flex h-full items-end p-4">

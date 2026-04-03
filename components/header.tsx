@@ -25,8 +25,8 @@ export function Header() {
           <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Matchmaking
           </Link>
-          <Link href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Import Flow
+          <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Learn More
           </Link>
           <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             My Decks
@@ -64,8 +64,8 @@ export function Header() {
             <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Matchmaking
             </Link>
-            <Link href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Import Flow
+            <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              Learn More
             </Link>
             <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               My Decks
