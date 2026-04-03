@@ -12,9 +12,11 @@ type AppHeaderProps = {
     | 'my-decks'
     | 'profile'
     | 'trade-offers'
+    | 'notifications'
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number
+  unreadNotifications?: number
 }
 
 export default function AppHeader({
@@ -22,6 +24,7 @@ export default function AppHeader({
   isSignedIn,
   isAdmin = false,
   unreadTradeOffers = 0,
+  unreadNotifications = 0,
 }: AppHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-xl">
@@ -50,6 +53,7 @@ export default function AppHeader({
           isSignedIn={isSignedIn}
           isAdmin={isAdmin}
           unreadTradeOffers={unreadTradeOffers}
+          unreadNotifications={unreadNotifications}
         />
       </div>
     </header>

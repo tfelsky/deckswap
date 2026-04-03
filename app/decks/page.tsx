@@ -8,7 +8,9 @@ import {
 import AppHeader from '@/components/app-header'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
+import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
 
@@ -46,6 +48,18 @@ export default async function DecksPage() {
   } = await supabase.auth.getUser()
   const access = await getAdminAccessForUser(user)
   const isAdmin = access.isAdmin
+  const { data: tradeOffersData } = user
+    ? await supabase
+        .from('trade_offers')
+        .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
+        .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
+    : { data: [] as TradeOfferRow[] }
+  const unreadTradeOffers = user
+    ? ((tradeOffersData ?? []) as TradeOfferRow[]).filter((offer) =>
+        isUnreadTradeOffer(offer, user.id)
+      ).length
+    : 0
+  const unreadNotifications = user ? await getUnreadNotificationsCount(supabase, user.id) : 0
 
   const { data, error } = await supabase
     .from('decks')
@@ -125,7 +139,13 @@ export default async function DecksPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
-      <AppHeader current="decks" isSignedIn={!!user} isAdmin={isAdmin} />
+      <AppHeader
+        current="decks"
+        isSignedIn={!!user}
+        isAdmin={isAdmin}
+        unreadTradeOffers={unreadTradeOffers}
+        unreadNotifications={unreadNotifications}
+      />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">

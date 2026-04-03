@@ -38,6 +38,7 @@ import {
   logDeckImportEvent,
   type DeckImportEventRow,
 } from '@/lib/import-events'
+import { createNotification, getUnreadNotificationsCount } from '@/lib/notifications'
 import {
   calculateInternalValidationSummary,
   formatShipFrom,
@@ -625,6 +626,21 @@ export default async function DeckDetailPage({
       body: body.slice(0, 1200),
     })
 
+    if (typedDeck.user_id && typedDeck.user_id !== user.id) {
+      await createNotification(supabase, {
+        userId: typedDeck.user_id,
+        actorUserId: user.id,
+        type: 'deck_comment_added',
+        title: 'New comment on your deck',
+        body: `${typedDeck.name} received a new public comment.`,
+        href: `/decks/${deckId}`,
+        metadata: {
+          deckId,
+          deckName: typedDeck.name,
+        },
+      })
+    }
+
     redirect(`/decks/${deckId}?commentAdded=1`)
   }
 
@@ -749,10 +765,16 @@ export default async function DeckDetailPage({
   }))
   const importEventsSchemaMissing = isDeckImportEventsSchemaMissing(importEventsError?.message)
   const importEvents = (importEventsData ?? []) as DeckImportEventRow[]
+  const unreadNotifications = user ? await getUnreadNotificationsCount(supabase, user.id) : 0
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
-      <AppHeader current="decks" isSignedIn={!!user} isAdmin={isAdmin} />
+      <AppHeader
+        current="decks"
+        isSignedIn={!!user}
+        isAdmin={isAdmin}
+        unreadNotifications={unreadNotifications}
+      />
       <GuestDraftCleanup shouldClear={showGuestSaved} />
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.18),_transparent_28%),linear-gradient(to_bottom,_rgb(24,24,27),_rgb(9,9,11))]">
         <div className="mx-auto w-full max-w-[104rem] px-6 py-12 2xl:max-w-[116rem]">

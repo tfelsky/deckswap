@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createNotification } from '@/lib/notifications'
 import { isTradeOffersSchemaMissing } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
@@ -132,6 +133,22 @@ export default async function ProposeTradeOfferPage({
       }
       redirect(`/trade-offers/propose?deckId=${requestedDeckId}&error=1`)
     }
+
+    await createNotification(supabase, {
+      userId: requestedDeckResult.data.user_id,
+      actorUserId: user.id,
+      type: 'trade_offer_created',
+      title: 'New trade offer received',
+      body: message
+        ? `A user sent a trade offer on your deck and included a note.`
+        : 'A user sent a trade offer on your deck.',
+      href: `/trade-offers/${insert.data.id}`,
+      metadata: {
+        offerId: insert.data.id,
+        offeredDeckId,
+        requestedDeckId,
+      },
+    })
 
     redirect(`/trade-offers/${insert.data.id}?created=1`)
   }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createNotification } from '@/lib/notifications'
 import {
   buildTradeDraftRows,
   isEscrowSchemaMissing,
@@ -254,9 +255,37 @@ export default async function TradeOfferDetailPage({
       .update({
         status: 'accepted',
         accepted_trade_transaction_id: transactionId,
+        last_action_by_user_id: user.id,
+        requested_user_viewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', offerId)
+
+    await createNotification(supabase, {
+      userId: currentOffer.offered_by_user_id,
+      actorUserId: user.id,
+      type: 'trade_offer_accepted',
+      title: 'Your trade offer was accepted',
+      body: 'Your accepted offer has been turned into a draft trade transaction.',
+      href: `/trades/${transactionId}`,
+      metadata: {
+        offerId,
+        tradeTransactionId: transactionId,
+      },
+    })
+
+    await createNotification(supabase, {
+      userId: currentOffer.requested_user_id,
+      actorUserId: user.id,
+      type: 'trade_draft_created',
+      title: 'Trade draft created',
+      body: 'Your accepted trade offer is now in the escrow draft workspace.',
+      href: `/trades/${transactionId}`,
+      metadata: {
+        offerId,
+        tradeTransactionId: transactionId,
+      },
+    })
 
     redirect(`/trade-offers/${offerId}?accepted=1`)
   }
@@ -277,11 +306,25 @@ export default async function TradeOfferDetailPage({
       .from('trade_offers')
       .update({
         status: 'declined',
+        last_action_by_user_id: user.id,
+        requested_user_viewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', offerId)
       .eq('requested_user_id', user.id)
       .eq('status', 'pending')
+
+    await createNotification(supabase, {
+      userId: offer.offered_by_user_id,
+      actorUserId: user.id,
+      type: 'trade_offer_declined',
+      title: 'Trade offer declined',
+      body: 'One of your trade offers was declined.',
+      href: `/trade-offers/${offerId}`,
+      metadata: {
+        offerId,
+      },
+    })
 
     redirect(`/trade-offers/${offerId}?declined=1`)
   }
@@ -302,11 +345,25 @@ export default async function TradeOfferDetailPage({
       .from('trade_offers')
       .update({
         status: 'cancelled',
+        last_action_by_user_id: user.id,
+        offered_by_viewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', offerId)
       .eq('offered_by_user_id', user.id)
       .eq('status', 'pending')
+
+    await createNotification(supabase, {
+      userId: offer.requested_user_id,
+      actorUserId: user.id,
+      type: 'trade_offer_cancelled',
+      title: 'Trade offer cancelled',
+      body: 'A pending trade offer was cancelled before you responded.',
+      href: `/trade-offers/${offerId}`,
+      metadata: {
+        offerId,
+      },
+    })
 
     redirect(`/trade-offers/${offerId}?cancelled=1`)
   }
@@ -395,9 +452,25 @@ export default async function TradeOfferDetailPage({
       .update({
         status: 'countered',
         superseded_by_offer_id: insert.data.id,
+        last_action_by_user_id: user.id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', currentOffer.id)
+
+    await createNotification(supabase, {
+      userId: requestedUserIdForCounter,
+      actorUserId: user.id,
+      type: 'trade_offer_countered',
+      title: 'Counteroffer received',
+      body: message
+        ? 'A trade offer came back with changes and a new note.'
+        : 'A trade offer came back with changes.',
+      href: `/trade-offers/${insert.data.id}`,
+      metadata: {
+        offerId: insert.data.id,
+        parentOfferId: currentOffer.id,
+      },
+    })
 
     redirect(`/trade-offers/${insert.data.id}?countered=1`)
   }

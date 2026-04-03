@@ -6,7 +6,9 @@ import { validateDeckForFormat } from '@/lib/commander/validate'
 import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
+import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -85,6 +87,11 @@ export default async function ManageDeckPage({
     .eq('deck_id', deckId)
     .order('captured_at', { ascending: false })
 
+  const { data: tradeOffersData } = await supabase
+    .from('trade_offers')
+    .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
+    .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
+
   const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
     card_name: string
     section: 'commander' | 'mainboard' | 'token'
@@ -131,6 +138,11 @@ export default async function ManageDeckPage({
       </main>
     )
   }
+
+  const unreadTradeOffers = ((tradeOffersData ?? []) as TradeOfferRow[]).filter((offer) =>
+    isUnreadTradeOffer(offer, user.id)
+  ).length
+  const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
 
   const access = await getAdminAccessForUser(user)
   const isAdmin = access.isAdmin
@@ -328,7 +340,13 @@ export default async function ManageDeckPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-32 text-white">
-      <AppHeader current="my-decks" isSignedIn isAdmin={isAdmin} />
+      <AppHeader
+        current="my-decks"
+        isSignedIn
+        isAdmin={isAdmin}
+        unreadTradeOffers={unreadTradeOffers}
+        unreadNotifications={unreadNotifications}
+      />
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap gap-3">
           <Link

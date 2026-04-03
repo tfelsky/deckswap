@@ -4,6 +4,7 @@ import AppHeader from '@/components/app-header'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/server'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 
@@ -92,6 +93,7 @@ export default async function MyDecksPage() {
   const unreadTradeOffers = ((tradeOffersData ?? []) as TradeOfferRow[]).filter((offer) =>
     isUnreadTradeOffer(offer, user.id)
   ).length
+  const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
   const deckIds = decks.map((deck) => deck.id)
 
   const { data: deckCards } = deckIds.length
@@ -136,6 +138,7 @@ export default async function MyDecksPage() {
         isSignedIn
         isAdmin={isAdmin}
         unreadTradeOffers={unreadTradeOffers}
+        unreadNotifications={unreadNotifications}
       />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">

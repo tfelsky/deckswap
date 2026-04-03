@@ -14,9 +14,11 @@ type MarketplaceNavProps = {
     | 'my-decks'
     | 'profile'
     | 'trade-offers'
+    | 'notifications'
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number
+  unreadNotifications?: number
 }
 
 const ITEMS = [
@@ -26,6 +28,7 @@ const ITEMS = [
   { key: 'create', href: '/create-deck', label: 'Create' },
   { key: 'my-decks', href: '/my-decks', label: 'My Decks' },
   { key: 'trade-offers', href: '/trade-offers', label: 'Trade Offers' },
+  { key: 'notifications', href: '/notifications', label: 'Notifications' },
   { key: 'profile', href: '/settings/profile', label: 'Profile' },
 ] as const
 
@@ -34,6 +37,7 @@ export default function MarketplaceNav({
   isSignedIn,
   isAdmin = false,
   unreadTradeOffers = 0,
+  unreadNotifications = 0,
 }: MarketplaceNavProps) {
   const supabase = createClient()
   const [detectedSignedIn, setDetectedSignedIn] = useState<boolean>(isSignedIn ?? false)
@@ -74,6 +78,8 @@ export default function MarketplaceNav({
             const label =
               item.key === 'trade-offers' && unreadTradeOffers > 0
                 ? `${item.label} (${unreadTradeOffers})`
+                : item.key === 'notifications' && unreadNotifications > 0
+                ? `${item.label} (${unreadNotifications})`
                 : item.label
 
             return (
