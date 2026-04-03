@@ -31,6 +31,9 @@ export function Header() {
           <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             My Decks
           </Link>
+          <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Profile
+          </Link>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -69,6 +72,9 @@ export function Header() {
             </Link>
             <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               My Decks
+            </Link>
+            <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              Profile
             </Link>
             <div className="flex flex-col gap-2 pt-4">
               <Button variant="ghost" size="sm" className="w-full justify-center" asChild>

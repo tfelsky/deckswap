@@ -19,6 +19,8 @@ type BaseCard = {
   cmc?: number | null
   power?: string | null
   toughness?: string | null
+  oracle_text?: string | null
+  keywords?: string[] | null
   section: 'commander' | 'mainboard' | 'token'
 }
 
@@ -70,6 +72,35 @@ function formatUsd(value?: number | null) {
 function formatColorIdentity(colors?: string[] | null) {
   if (!colors || colors.length === 0) return 'Colorless'
   return colors.join(', ')
+}
+
+function summarizeCommanderPlan(card: BaseCard) {
+  const oracle = (card.oracle_text ?? '').replace(/\s+/g, ' ').trim()
+  const lower = oracle.toLowerCase()
+  const notes: string[] = []
+
+  if (lower.includes('treasure')) notes.push('Makes or rewards Treasure, so ramp and artifact payoffs matter.')
+  if (lower.includes('draw') || lower.includes('card')) notes.push('Generates card flow, so cheap support pieces help keep the engine moving.')
+  if (lower.includes('token') || lower.includes('create')) notes.push('Wants token support and ways to convert extra bodies into pressure or value.')
+  if (lower.includes('cast') || lower.includes('spells')) notes.push('Leans toward chaining spells, so low-curve interaction and velocity pieces fit well.')
+  if (lower.includes('attack') || lower.includes('combat')) notes.push('Pushes toward combat, so haste, protection, and clean attack steps matter.')
+  if (lower.includes('+1/+1')) notes.push('Cares about counters, so scaling threats and counter payoffs are a natural fit.')
+  if (lower.includes('graveyard') || lower.includes('dies') || lower.includes('sacrifice')) {
+    notes.push('Uses the graveyard well, so recursion and sacrifice loops are worth looking at.')
+  }
+  if (lower.includes('equipment') || lower.includes('aura')) {
+    notes.push('Likes to suit creatures up, so efficient equipment or aura support helps it snowball.')
+  }
+
+  if (notes.length === 0) {
+    if (card.type_line?.includes('Creature')) {
+      notes.push('Looks like a board-centric commander that wants a clean curve, reliable ramp, and protection for its key turns.')
+    } else {
+      notes.push('Looks like a synergy commander that wants focused support pieces and a clean plan instead of generic good-stuff slots.')
+    }
+  }
+
+  return notes.slice(0, 3)
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -413,17 +444,66 @@ export default function DeckCardViews({
       <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
         <h2 className="text-2xl font-semibold">Commander</h2>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 space-y-4">
           {commanders.length === 0 ? (
             <div className="text-sm text-zinc-400">No commander cards saved.</div>
           ) : (
             commanders.map((card) => (
-              <div key={card.id} className="w-full max-w-[12rem]">
-                <CardTile
-                  card={card}
-                  onOpen={() => openCard(card)}
-                  label="Commander"
-                />
+              <div
+                key={card.id}
+                className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 md:grid-cols-[12rem_1fr]"
+              >
+                <div className="w-full max-w-[12rem]">
+                  <CardTile
+                    card={card}
+                    onOpen={() => openCard(card)}
+                    label="Commander"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-emerald-300">
+                      Commander Snapshot
+                    </div>
+                    <h3 className="mt-2 text-xl font-semibold text-white">{card.card_name}</h3>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      {card.type_line || 'Commander details will appear here after enrichment.'}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {card.mana_cost && <MetaChip>{card.mana_cost}</MetaChip>}
+                    <MetaChip>{formatColorIdentity(card.color_identity)}</MetaChip>
+                    {card.cmc != null && <MetaChip>CMC {card.cmc}</MetaChip>}
+                    {card.power && card.toughness && (
+                      <MetaChip>
+                        {card.power}/{card.toughness}
+                      </MetaChip>
+                    )}
+                    {card.keywords?.slice(0, 3).map((keyword) => (
+                      <MetaChip key={keyword}>{keyword}</MetaChip>
+                    ))}
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-sm font-medium text-white">What this commander wants to do</div>
+                    <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                      {summarizeCommanderPlan(card).map((note) => (
+                        <p key={note}>{note}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {card.oracle_text && (
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-sm font-medium text-white">Card Text</div>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-zinc-300">
+                        {card.oracle_text}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -478,7 +558,7 @@ export default function DeckCardViews({
             {mainboard.map((card) => (
               <div
                 key={card.id}
-                className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 px-4 py-3 text-sm last:border-b-0"
+                className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 px-4 py-3 text-sm transition hover:bg-white/[0.03] last:border-b-0"
               >
                 <div className="text-zinc-300">{card.quantity}</div>
                 <div className="font-medium text-white">{card.card_name}</div>

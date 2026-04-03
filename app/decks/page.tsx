@@ -1,4 +1,5 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
   HoverCard,
   HoverCardContent,
@@ -9,8 +10,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
 import SignOutButton from '@/components/sign-out-button'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +40,8 @@ export default async function DecksPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const isAdmin = user?.email === ADMIN_EMAIL
+  const access = await getAdminAccessForUser(user)
+  const isAdmin = access.isAdmin
 
   const { data, error } = await supabase
     .from('decks')

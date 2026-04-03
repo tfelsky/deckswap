@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +20,9 @@ export default async function AdminLayout({
     redirect('/sign-in')
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  const access = await getAdminAccessForUser(user)
+
+  if (!access.isAdmin) {
     redirect('/decks')
   }
 
@@ -39,7 +40,7 @@ export default async function AdminLayout({
           <div className="mt-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-                Admin Control
+                {access.isSuperadmin ? 'Superadmin Control' : 'Admin Control'}
               </div>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">Admin Dashboard</h1>
               <p className="mt-3 max-w-3xl text-zinc-400">

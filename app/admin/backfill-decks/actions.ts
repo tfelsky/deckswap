@@ -1,9 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/admin/access'
 import { enrichDeckWithScryfall } from '@/app/import-deck/enrich'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 type BackfillResult = {
   updated: number
@@ -11,22 +9,8 @@ type BackfillResult = {
   errors: string[]
 }
 
-async function requireAdmin() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user || user.email !== ADMIN_EMAIL) {
-    throw new Error('Unauthorized')
-  }
-
-  return supabase
-}
-
 export async function backfillDeckCommanderImages(): Promise<BackfillResult> {
-  const supabase = await requireAdmin()
+  const { supabase } = await requireSuperadmin()
 
   const { data: decks, error: decksError } = await supabase
     .from('decks')
@@ -106,7 +90,7 @@ export async function backfillDeckCommanderImages(): Promise<BackfillResult> {
 }
 
 export async function reEnrichAllDecks(): Promise<BackfillResult> {
-  const supabase = await requireAdmin()
+  const { supabase } = await requireSuperadmin()
 
   const { data: decks, error: decksError } = await supabase
     .from('decks')

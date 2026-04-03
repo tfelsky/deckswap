@@ -3,6 +3,7 @@ import {
   ESCROW_EXAMPLES,
   type SupportedCountry,
 } from '@/lib/escrow/prototype'
+import { createTradeDraftAction } from './actions'
 import Link from 'next/link'
 
 function formatUsd(value: number) {
@@ -37,6 +38,8 @@ export default async function CheckoutPrototypePage({
   const deckBValue = parseMoney(params.deckBValue, 1000)
   const countryA = parseCountry(params.countryA, 'ca')
   const countryB = parseCountry(params.countryB, 'ca')
+  const schemaMissing = params.schemaMissing === '1'
+  const saveError = params.saveError === '1'
 
   const result = calculateEscrowPrototype({
     deckAValue,
@@ -172,6 +175,20 @@ export default async function CheckoutPrototypePage({
                 ))}
               </div>
             </form>
+
+            {(schemaMissing || saveError) && (
+              <div
+                className={`rounded-3xl border p-5 text-sm ${
+                  schemaMissing
+                    ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-100'
+                    : 'border-red-500/20 bg-red-500/10 text-red-100'
+                }`}
+              >
+                {schemaMissing
+                  ? 'Persistent trade tables are not in Supabase yet. Run docs/sql/escrow-transaction-foundation.sql before creating drafts from this page.'
+                  : 'Something went wrong while creating the trade draft. The calculator still works, but the transaction record was not saved.'}
+              </div>
+            )}
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -345,15 +362,20 @@ export default async function CheckoutPrototypePage({
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="mt-6 w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
-              >
-                Pay Prototype Amount
-              </button>
+              <form action={createTradeDraftAction} className="mt-6 space-y-3">
+                <input type="hidden" name="deckAValue" value={deckAValue} />
+                <input type="hidden" name="deckBValue" value={deckBValue} />
+                <input type="hidden" name="countryA" value={countryA} />
+                <input type="hidden" name="countryB" value={countryB} />
+                <button
+                  className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
+                >
+                  Create Draft Transaction
+                </button>
+              </form>
 
               <p className="mt-3 text-center text-xs text-zinc-500">
-                Prototype only. No real payment is processed on this page.
+                This now persists a draft trade foundation, but no real payment is processed yet.
               </p>
             </div>
 
@@ -371,6 +393,27 @@ export default async function CheckoutPrototypePage({
                   the side that traded down in value.
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Foundation Status</h2>
+              <div className="mt-4 space-y-3 text-sm text-zinc-300">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  Draft transactions can now be stored with participant obligations.
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  Event history is recorded from the moment a trade draft is created.
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  Next up is mapping draft obligations into real payment intents and shipment states.
+                </div>
+              </div>
+              <Link
+                href="/trades"
+                className="mt-5 inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                View Trades Workspace
+              </Link>
             </div>
           </div>
         </div>

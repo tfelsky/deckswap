@@ -59,6 +59,14 @@ export default function SignInPage() {
       return
     }
 
+    if (getPostAuthRoute() !== '/decks') {
+      setMessage(
+        'Account created. If email confirmation is enabled, confirm your email and then sign in here to carry your guest preview into the save flow.'
+      )
+      setLoading(false)
+      return
+    }
+
     setMessage(
       'Account created. If email confirmation is enabled in Supabase, check your inbox before signing in.'
     )

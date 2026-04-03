@@ -1,9 +1,8 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,7 +112,8 @@ export default async function MyDecksPage() {
           ) / ratedDecks.length
         ).toFixed(1)
       : '0.0'
-  const isAdmin = user.email === ADMIN_EMAIL
+  const access = await getAdminAccessForUser(user)
+  const isAdmin = access.isAdmin
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -156,6 +156,13 @@ export default async function MyDecksPage() {
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
               >
                 Import Deck
+              </Link>
+
+              <Link
+                href="/settings/profile"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Profile Settings
               </Link>
 
               <Link

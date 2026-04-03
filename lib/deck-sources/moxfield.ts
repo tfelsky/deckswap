@@ -1,4 +1,5 @@
 import type { ImportedDeckCard } from '@/lib/commander/types'
+import { isLikelyTokenCard } from '@/lib/commander/parse'
 
 type MoxfieldCardEntry = {
   quantity?: number
@@ -73,23 +74,28 @@ function parseMoxfieldBoard(
   if (!cardMap) return []
 
   return Object.values(cardMap)
-    .map((entry) => {
+    .map((entry): ImportedDeckCard | null => {
       const card = entry.card
       const name = card?.name?.trim()
 
       if (!name) return null
 
+      const inferredSection =
+        section === 'mainboard' && isLikelyTokenCard(name, card?.set)
+          ? 'token'
+          : section
+
       return {
-        section,
+        section: inferredSection,
         quantity: Number(entry.quantity ?? 1),
         cardName: name,
         foil:
           card?.foil === true ||
-          (card?.finishes ?? []).some((finish) => finish.toLowerCase() === 'foil'),
+          (card?.finishes ?? []).some((finish: string) => finish.toLowerCase() === 'foil'),
         setCode: card?.set?.toLowerCase() || undefined,
         setName: card?.setName || undefined,
         collectorNumber: card?.collectorNumber || undefined,
-      } satisfies ImportedDeckCard
+      }
     })
     .filter((card): card is ImportedDeckCard => !!card)
 }

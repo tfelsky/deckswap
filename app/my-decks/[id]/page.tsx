@@ -1,12 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,7 +129,8 @@ export default async function ManageDeckPage({
     )
   }
 
-  const isAdmin = user.email === ADMIN_EMAIL
+  const access = await getAdminAccessForUser(user)
+  const isAdmin = access.isAdmin
   const activeTab =
     resolvedSearchParams?.tab === 'settings' ? 'settings' : 'overview'
   const deckFormat = normalizeDeckFormat(deck.format)
@@ -291,6 +291,13 @@ export default async function ManageDeckPage({
             Public Deck View
           </Link>
 
+          <Link
+            href={`/auction-prototype?deckId=${deckId}`}
+            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-sm font-medium text-amber-300 hover:bg-amber-400/15"
+          >
+            Auction This Deck
+          </Link>
+
           {isAdmin && (
             <Link
               href="/admin"
@@ -422,6 +429,15 @@ export default async function ManageDeckPage({
                   </p>
                   <p>Source type: {deck.source_type || 'Unknown'}</p>
                   <p>Source URL: {deck.source_url || 'None recorded'}</p>
+                </div>
+
+                <div className="mt-5">
+                  <Link
+                    href={`/auction-prototype?deckId=${deckId}`}
+                    className="inline-flex rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/15"
+                  >
+                    Try auction launch flow
+                  </Link>
                 </div>
               </div>
 

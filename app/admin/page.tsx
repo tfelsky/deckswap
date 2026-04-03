@@ -24,6 +24,13 @@ type DeckCardForBracket = {
   mana_cost?: string | null
 }
 
+type ReputationSummaryRow = {
+  user_id: string
+  internal_validation_score?: number | null
+  internal_validation_tier?: string | null
+  banned_status?: string | null
+}
+
 function formatPct(value: number, total: number) {
   if (total === 0) return '0%'
   return `${((value / total) * 100).toFixed(0)}%`
@@ -41,6 +48,10 @@ export default async function AdminDashboardPage() {
     .from('decks')
     .select('id, user_id, source_type, is_valid, commander, image_url, price_total_usd_foil')
     .order('id', { ascending: true })
+
+  const { data: reputationData } = await supabase
+    .from('profile_reputation_summary')
+    .select('user_id, internal_validation_score, internal_validation_tier, banned_status')
 
   if (decksError) {
     return (
@@ -75,6 +86,24 @@ export default async function AdminDashboardPage() {
   const sellers = new Set(
     decks.map((deck) => deck.user_id).filter((value): value is string => !!value)
   )
+  const reputationSummaries = (reputationData ?? []) as ReputationSummaryRow[]
+  const scoredUsers = reputationSummaries.filter(
+    (summary) => typeof summary.internal_validation_score === 'number'
+  )
+  const avgInternalValidationScore =
+    scoredUsers.length > 0
+      ? scoredUsers.reduce(
+          (sum, summary) => sum + Number(summary.internal_validation_score ?? 0),
+          0
+        ) / scoredUsers.length
+      : 0
+  const needsReviewUsers = reputationSummaries.filter(
+    (summary) =>
+      summary.internal_validation_tier === 'Needs Review' ||
+      summary.banned_status === 'watchlist' ||
+      summary.banned_status === 'restricted' ||
+      summary.banned_status === 'banned'
+  ).length
 
   const importedDecks = decks.filter(
     (deck) => (deck.source_type ?? '').trim() !== '' && deck.source_type !== 'text'
@@ -218,6 +247,27 @@ export default async function AdminDashboardPage() {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm text-zinc-400">Invalid Listings</div>
                 <div className="mt-2 text-3xl font-semibold text-yellow-300">{invalidDecks}</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Avg. Internal Validation</div>
+                <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                  {scoredUsers.length > 0 ? avgInternalValidationScore.toFixed(0) : 'N/A'}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Internal trust score across profiled users with review data.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Users Needing Review</div>
+                <div className="mt-2 text-2xl font-semibold text-yellow-300">
+                  {needsReviewUsers}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Includes watchlist, restricted, banned, or low-confidence internal scores.
+                </p>
               </div>
             </div>
           </div>

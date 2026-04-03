@@ -170,6 +170,13 @@ Suggested columns:
 
 - `user_id uuid primary key references auth.users(id)`
 - `reputation_score numeric`
+- `internal_validation_score integer`
+- `internal_validation_tier text`
+- `last_seen_at timestamptz`
+- `avg_trade_reply_hours numeric`
+- `last_login_ip_country text`
+- `internal_user_rating numeric`
+- `internal_validation_notes text[]`
 - `completed_trades_count integer`
 - `successful_shipments_count integer`
 - `claim_rate numeric`
@@ -254,6 +261,7 @@ Operational reputation.
 
 - create `profile_reputation_summary`
 - derive internal score from completed trades and support outcomes
+- blend in login recency, reply speed, IP-country consistency, and manual verification signals for internal review
 - expose reputation score and counts publicly
 
 ### Phase 4

@@ -1,12 +1,16 @@
 'use client'
 
-import { GUEST_IMPORT_DRAFT_KEY, type GuestImportDraft } from '@/lib/guest-import'
+import {
+  GUEST_IMPORT_DRAFT_KEY,
+  GUEST_IMPORT_SAVED_QUERY_KEY,
+  type GuestImportDraft,
+} from '@/lib/guest-import'
 import Link from 'next/link'
 import { Suspense, useActionState, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { importDeckAction } from './actions'
+import { importDeckAction, type ImportDeckActionState } from './actions'
 
-const initialState = {}
+const initialState: ImportDeckActionState = {}
 
 export default function ImportDeckPage() {
   return (
@@ -41,6 +45,7 @@ function ImportDeckPageContent() {
   }, [fields?.sourceType])
 
   const isMoxfield = sourceType === 'moxfield'
+  const guestDraftPresent = showGuestBanner || searchParams.get(GUEST_IMPORT_SAVED_QUERY_KEY) === '1'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -76,6 +81,7 @@ function ImportDeckPageContent() {
           className="rounded-3xl border border-white/10 bg-zinc-900 p-6 sm:p-8"
         >
           <div className="grid gap-5">
+            <input type="hidden" name="guest_draft_present" value={guestDraftPresent ? '1' : '0'} />
             {showGuestBanner && (
               <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                 Guest preview data was carried into your account import flow. Submit this form to

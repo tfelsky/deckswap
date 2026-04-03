@@ -137,9 +137,9 @@ const TOKEN_NAME_PATTERNS = [
   /^the ring$/i,
 ]
 
-function isLikelyArchidektToken(card: ImportedDeckCard) {
-  const normalizedName = card.cardName.trim().toLowerCase()
-  const normalizedSet = card.setCode?.trim().toLowerCase() ?? ''
+export function isLikelyTokenCard(cardName: string, setCode?: string | null) {
+  const normalizedName = cardName.trim().toLowerCase()
+  const normalizedSet = setCode?.trim().toLowerCase() ?? ''
 
   if (normalizedSet.startsWith('t')) {
     return true
@@ -149,7 +149,11 @@ function isLikelyArchidektToken(card: ImportedDeckCard) {
     return true
   }
 
-  return TOKEN_NAME_PATTERNS.some((pattern) => pattern.test(card.cardName.trim()))
+  return TOKEN_NAME_PATTERNS.some((pattern) => pattern.test(cardName.trim()))
+}
+
+function isLikelyArchidektToken(card: ImportedDeckCard) {
+  return isLikelyTokenCard(card.cardName, card.setCode)
 }
 
 function inferSectionFromArchidektRow(

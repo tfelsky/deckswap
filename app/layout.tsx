@@ -3,8 +3,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'DeckSwap - Custom Playing Card Marketplace & Trading',
-  description: 'Discover, collect, and trade custom playing card decks with collectors worldwide. Find rare decks, match with traders, and grow your collection.',
+  title: 'DeckSwap - Deck Trading, Pricing, And Trust For Paper Magic',
+  description: 'Import decks, estimate value, compare inventory, and build trust for safer deck-for-deck trading.',
   generator: 'v0.app',
   icons: {
     icon: [

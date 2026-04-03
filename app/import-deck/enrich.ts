@@ -42,6 +42,7 @@ type ScryfallCard = {
   id: string
   name: string
   set: string
+  set_name: string
   collector_number: string
 }
 
@@ -220,8 +221,7 @@ function toImportedDeckCard(card: EnrichedDeckCardRow): ImportedDeckCard {
 }
 
 function hasSingletonCommanderShape(cards: EnrichedDeckCardRow[]) {
-  const nonTokenCards = cards.filter((card) => card.section !== 'token')
-  const totalNonTokenCards = nonTokenCards.reduce((sum, card) => sum + card.quantity, 0)
+  const totalNonTokenCards = cards.reduce((sum, card) => sum + card.quantity, 0)
 
   if (totalNonTokenCards !== 100) {
     return false
@@ -229,7 +229,7 @@ function hasSingletonCommanderShape(cards: EnrichedDeckCardRow[]) {
 
   const seen = new Set<string>()
 
-  for (const card of nonTokenCards) {
+  for (const card of cards) {
     const key = card.card_name.trim().toLowerCase()
 
     if (card.quantity > 1 && !isBasicLand(key)) {

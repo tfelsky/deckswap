@@ -12,34 +12,37 @@ DeckSwap already has:
 
 - authenticated deck creation and import
 - guest import preview
+- guest preview handoff into authenticated save flow
 - Commander validation and bracket estimation
 - broader format ingest with partial support
 - per-card and deck-level blended pricing
 - admin tools for maintenance, trends, and marketplace metrics
+- basic public profiles, private shipping profiles, and seller trust controls
 - legal placeholder pages
-- escrow checkout prototype
+- escrow transaction foundation with persisted draft trades
 - campaign and community concept pages
 
 ## Loose Ends To Resolve
 
 ### Import and onboarding loose ends
 
-- Guest import preview is browser-session only and does not persist draft decks server-side.
-- Guest preview does not run the full authenticated enrichment/save path.
+- Guest import preview is still browser-session only and does not persist draft decks server-side.
+- Guest preview still stops short of full pricing/enrichment before account creation.
 - Moxfield and file imports need continued hardening around edge-case deck metadata.
 - Commander inference for unlabeled imports still needs more real-world testing and fallback handling.
 
 ### Marketplace and profile loose ends
 
-- User profiles, shipping data, reputation, and trust signals are still roadmap-only.
-- Deck detail pages do not yet show a full seller trust panel.
+- Profile tables now have a first pass, but real verification workflows and richer reputation math are still missing.
+- Internal validation scoring now has a first pass, but last-login telemetry, live offer-response timing, and automated IP-based checks are still partly manual.
+- ID upload is still represented as a reserved placeholder, not a live collection flow.
 - Filtering and personalization based on user deck interests and preferred archetypes are still missing.
 
 ### Commerce and escrow loose ends
 
-- Checkout is a prototype only, with no persistence, no real payment intent flow, and no order ledger.
-- Admin ecommerce counters still include placeholder values for sales, trades, and escrow balances.
-- Shipping, insurance, equalization, and escrow operations are modeled conceptually but not operationalized.
+- Draft trade records and event history now exist, but there are no real payment intents yet.
+- Admin ecommerce counters still include placeholder values for sales, paid escrows, and completed settlements.
+- Shipping, insurance, intake, inspection, and release operations are modeled but not yet operationalized.
 
 ### Format support loose ends
 
@@ -60,7 +63,7 @@ DeckSwap already has:
 
 ## Priority Order
 
-## Priority 1: Make import-to-save rock solid
+## Priority 1: Finish import reliability and guest onboarding
 
 Why this is first:
 
@@ -74,6 +77,7 @@ Scope:
 - harden Moxfield, Archidekt, file, and text import reliability
 - improve commander inference and post-import repair paths
 - surface better import diagnostics when parsing or schema issues occur
+- decide whether guest preview should gain server-side persistence or stay intentionally lightweight
 
 Expected outcome:
 
@@ -81,7 +85,7 @@ Expected outcome:
 - fewer failed or confusing import sessions
 - stronger first-run conversion from guest preview to account creation
 
-## Priority 2: Ship basic profiles and seller trust
+## Priority 2: Deepen profiles, trust, and reputation
 
 Why this is next:
 
@@ -91,10 +95,11 @@ Why this is next:
 
 Scope:
 
-- implement `profiles` and `profile_private`
-- add `/settings/profile`
-- show seller display name and ship-from region on deck pages
-- prepare the structure for verification badges and marketplace links
+- turn reserved trust fields into real workflows
+- automate more of the internal validation score from real login, messaging, and transaction events
+- add marketplace link verification and moderation
+- add ID collection and protected file storage
+- expose better seller/trader summaries across listing pages
 
 Expected outcome:
 
@@ -102,7 +107,7 @@ Expected outcome:
 - support and shipping data have a proper home
 - future escrow and reputation work has a clean base
 
-## Priority 3: Turn escrow prototype into a real transaction foundation
+## Priority 3: Turn the transaction foundation into live escrow operations
 
 Why this is high value:
 
@@ -112,9 +117,9 @@ Why this is high value:
 
 Scope:
 
-- create order / trade / escrow ledger tables
-- persist checkout sessions and user-side obligations
+- attach deck IDs and counterparties to transaction drafts
 - replace dummy payment method flow with real payment-intent placeholders
+- add shipment intake, inspection, dispute, and release states
 - connect admin dashboard counters to real transactional records
 
 Expected outcome:
@@ -195,8 +200,8 @@ Expected outcome:
 If we only pick the clearest near-term wins, they are:
 
 1. Persist guest import drafts and tighten import reliability.
-2. Build basic profiles and show seller trust on deck pages.
-3. Create real trade / escrow / order tables so checkout and admin metrics stop being prototypes.
+2. Turn basic profile data into real trust workflows and verification.
+3. Turn draft trade records into live transaction operations.
 
 ## What Can Wait
 

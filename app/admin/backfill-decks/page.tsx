@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import { redirect } from 'next/navigation'
 import BackfillDecksClient from './ui'
-
-const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +16,9 @@ export default async function Page() {
     redirect('/sign-in')
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  const access = await getAdminAccessForUser(user)
+
+  if (!access.isSuperadmin) {
     redirect('/decks')
   }
 

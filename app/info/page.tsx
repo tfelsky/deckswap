@@ -42,6 +42,12 @@ export default function InfoPage() {
                   View Checkout Prototype
                 </Link>
                 <Link
+                  href="/auction-prototype"
+                  className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
+                >
+                  View Auction Prototype
+                </Link>
+                <Link
                   href="/holiday-giveback"
                   className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
                 >

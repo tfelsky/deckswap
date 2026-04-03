@@ -4,11 +4,12 @@ import { parseDeckText } from '@/lib/commander/parse'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { extractMoxfieldPublicId, fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import { detectDeckFormat, normalizeDeckFormat } from '@/lib/decks/formats'
+import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichDeckWithScryfall } from './enrich'
 
-type ActionState = {
+export type ImportDeckActionState = {
   error?: string
   fields?: {
     deckName: string
@@ -51,9 +52,9 @@ function buildActionFields(
 }
 
 export async function importDeckAction(
-  _prevState: ActionState,
+  _prevState: ImportDeckActionState,
   formData: FormData
-): Promise<ActionState> {
+): Promise<ImportDeckActionState> {
   const supabase = await createClient()
 
   const {
@@ -68,6 +69,7 @@ export async function importDeckAction(
   const sourceType = String(formData.get('source_type') || 'text').trim()
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
+  const guestDraftPresent = String(formData.get('guest_draft_present') || '').trim() === '1'
   const deckFile = formData.get('deck_file')
   const fields = buildActionFields(deckName, sourceType, sourceUrl, rawList)
 
@@ -239,5 +241,13 @@ export async function importDeckAction(
     console.error('Scryfall enrichment failed:', error)
   }
 
-  redirect(`/decks/${deckId}${validation.isValid ? '' : '?imported=1'}`)
+  const params = new URLSearchParams()
+  if (!validation.isValid) {
+    params.set('imported', '1')
+  }
+  if (guestDraftPresent) {
+    params.set(GUEST_IMPORT_SAVED_QUERY_KEY, '1')
+  }
+
+  redirect(`/decks/${deckId}${params.size > 0 ? `?${params.toString()}` : ''}`)
 }
