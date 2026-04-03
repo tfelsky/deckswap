@@ -1,38 +1,39 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ChevronRight } from "lucide-react"
 
 const categories = [
   {
-    name: "Limited Editions",
-    count: 1243,
-    description: "Rare and numbered releases",
+    name: "Battlecruiser",
+    count: 3,
+    description: "Lower-power pods and big-mana finishers",
   },
   {
-    name: "Art Series",
-    count: 856,
-    description: "Decks featuring unique artwork",
+    name: "Casual",
+    count: 6,
+    description: "Table-friendly lists with upgrade headroom",
   },
   {
-    name: "Vintage & Classic",
-    count: 2341,
-    description: "Timeless designs from the past",
+    name: "High Power",
+    count: 8,
+    description: "Tuned lists with faster lines and dense interaction",
   },
   {
-    name: "Magician Decks",
-    count: 678,
-    description: "Perfect for card magic",
+    name: "cEDH",
+    count: 10,
+    description: "Competitive pods, compact wins, and premium staples",
   },
   {
-    name: "Luxury & Premium",
-    count: 423,
-    description: "High-end collector pieces",
+    name: "Partner Pair",
+    count: 2,
+    description: "Two-commander builds that validate as legal pairs",
   },
   {
-    name: "Kickstarter Exclusives",
-    count: 512,
-    description: "Crowdfunded originals",
+    name: "Token Package",
+    count: 14,
+    description: "Decks that also track their attached token suite",
   },
 ]
 
@@ -43,10 +44,10 @@ export function Categories() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Browse by Category
+              Browse by Deck Profile
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Find decks that match your collecting style
+              These categories map to the data the app already stores and displays
             </p>
           </div>
         </div>
@@ -70,8 +71,8 @@ export function Categories() {
         </div>
 
         <div className="mt-8 text-center">
-          <Button variant="outline" size="lg">
-            View All Categories
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/decks">Open Marketplace</Link>
           </Button>
         </div>
       </div>

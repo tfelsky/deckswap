@@ -64,7 +64,7 @@ export default function SignInPage() {
             href="/decks"
             className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
           >
-            ← Back to decks
+            {'<-'} Back to decks
           </Link>
 
           <div className="mt-8">
@@ -175,8 +175,8 @@ export default function SignInPage() {
             >
               {loading
                 ? mode === 'sign-in'
-                  ? 'Signing in…'
-                  : 'Creating account…'
+                  ? 'Signing in...'
+                  : 'Creating account...'
                 : mode === 'sign-in'
                 ? 'Sign in'
                 : 'Create account'}

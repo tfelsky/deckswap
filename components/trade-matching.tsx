@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeftRight, Check, MessageCircle, Shield } from "lucide-react"
@@ -9,36 +10,36 @@ import { ArrowLeftRight, Check, MessageCircle, Shield } from "lucide-react"
 const tradeMatches = [
   {
     id: 1,
-    user: "CardCollector_Mike",
-    avatar: "CM",
-    location: "New York, USA",
-    offering: "Celestial Nights (Sealed)",
-    seeking: "Midnight Casino",
+    user: "EsperTempo",
+    avatar: "ET",
+    location: "Toronto, CA",
+    offering: "Alela artifacts shell",
+    seeking: "Blue farm staples",
     matchScore: 98,
     verified: true,
-    trades: 156,
+    trades: 23,
   },
   {
     id: 2,
-    user: "DeckEnthusiast",
-    avatar: "DE",
-    location: "London, UK",
-    offering: "Vintage Series Bundle",
-    seeking: "Any Cyber Punk Edition",
+    user: "DocksideDan",
+    avatar: "DD",
+    location: "Chicago, USA",
+    offering: "Treasure-heavy Jund list",
+    seeking: "Fast mana swaps",
     matchScore: 85,
     verified: true,
-    trades: 89,
+    trades: 11,
   },
   {
     id: 3,
-    user: "PlayingCardPro",
-    avatar: "PP",
-    location: "Tokyo, Japan",
-    offering: "Limited Gold Foil Set",
-    seeking: "Botanical Dreams",
+    user: "ShadowNinjas",
+    avatar: "SN",
+    location: "Vancouver, CA",
+    offering: "Yuriko tempo pieces",
+    seeking: "Oracle combo upgrades",
     matchScore: 72,
     verified: false,
-    trades: 34,
+    trades: 7,
   },
 ]
 
@@ -49,16 +50,15 @@ export function TradeMatching() {
         <div className="mx-auto max-w-3xl text-center">
           <Badge className="mb-4">Smart Matching</Badge>
           <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Find Your Perfect Trade
+            Deck-level trade discovery
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Our intelligent matching system connects you with collectors who have exactly 
-            what you&apos;re looking for—and want what you have to offer.
+            The current app already tracks owner listings, power, and pricing. This section
+            now frames DeckSwap as a Commander trading hub instead of a generic playing-card shop.
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 lg:grid-cols-2">
-          {/* Trade matcher card */}
           <Card className="border-border bg-card p-6">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -66,7 +66,7 @@ export function TradeMatching() {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">Trade Matcher</h3>
-                <p className="text-sm text-muted-foreground">Based on your collection</p>
+                <p className="text-sm text-muted-foreground">Prototype matches based on listed decks</p>
               </div>
             </div>
 
@@ -114,13 +114,17 @@ export function TradeMatching() {
                       {match.trades} successful trades
                     </p>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <MessageCircle className="mr-1 h-3 w-3" />
-                        Chat
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/my-decks">
+                          <MessageCircle className="mr-1 h-3 w-3" />
+                          My Listings
+                        </Link>
                       </Button>
-                      <Button size="sm">
-                        <Check className="mr-1 h-3 w-3" />
-                        Accept
+                      <Button size="sm" asChild>
+                        <Link href="/decks">
+                          <Check className="mr-1 h-3 w-3" />
+                          Browse
+                        </Link>
                       </Button>
                     </div>
                   </div>
@@ -129,31 +133,30 @@ export function TradeMatching() {
             </div>
           </Card>
 
-          {/* Features */}
           <div className="flex flex-col justify-center space-y-6">
             {[
               {
-                title: "Smart Matching Algorithm",
+                title: "Parsed deck structure",
                 description:
-                  "Our AI analyzes your collection and wishlist to find the best trade opportunities in real-time.",
+                  "Imports are split into commander, mainboard, and token rows so listings carry more than a title and price.",
               },
               {
-                title: "Verified Traders",
+                title: "Commander-aware validation",
                 description:
-                  "Trade with confidence knowing verified members have completed successful trades before.",
+                  "The app already checks for 99-card and 98-card commander builds, duplicate nonbasics, and common pairing rules.",
               },
               {
-                title: "Secure Escrow System",
+                title: "Pricing enrichment",
                 description:
-                  "Both parties ship to our escrow service. We verify condition and handle the swap securely.",
+                  "Scryfall enrichment attaches print metadata, card images, and aggregate deck pricing that can power better trade decisions.",
               },
               {
-                title: "Global Reach",
+                title: "Owner-managed listings",
                 description:
-                  "Connect with collectors from 150+ countries. We handle international shipping logistics.",
+                  "Users can browse the public marketplace, then manage and update only the decks tied to their account.",
               },
-            ].map((feature, index) => (
-              <div key={index} className="flex gap-4">
+            ].map((feature) => (
+              <div key={feature.title} className="flex gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Check className="h-5 w-5 text-primary" />
                 </div>

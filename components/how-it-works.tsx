@@ -1,29 +1,29 @@
-import { Upload, Search, ArrowLeftRight, Package } from "lucide-react"
+import { Upload, Search, Sparkles, ListChecks } from "lucide-react"
 
 const steps = [
   {
     icon: Upload,
-    title: "List Your Collection",
+    title: "Paste a decklist",
     description:
-      "Upload your decks with photos and details. Set prices or mark them available for trade.",
+      "Start with raw Commander text or a source URL, then let DeckSwap parse the commander, mainboard, and token sections.",
   },
   {
     icon: Search,
-    title: "Browse & Discover",
+    title: "Validate the build",
     description:
-      "Explore thousands of custom decks. Filter by designer, edition, condition, or rarity.",
+      "Imported lists are checked for commander count, mainboard count, and duplicate nonbasic cards before publishing.",
   },
   {
-    icon: ArrowLeftRight,
-    title: "Match & Trade",
+    icon: Sparkles,
+    title: "Enrich with card data",
     description:
-      "Get matched with collectors seeking your decks. Propose trades or make offers.",
+      "Scryfall lookups add print details, imagery, and pricing so each listing feels like a real deck profile.",
   },
   {
-    icon: Package,
-    title: "Ship Securely",
+    icon: ListChecks,
+    title: "List and manage",
     description:
-      "Use our protected shipping with tracking. Trades go through escrow for safety.",
+      "Review the public deck page, browse the marketplace, and manage your own deck records from the same app.",
   },
 ]
 
@@ -36,14 +36,14 @@ export function HowItWorks() {
             How It Works
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Start trading in minutes. Our platform makes it easy to buy, sell, and swap 
-            custom decks with collectors worldwide.
+            The strongest part of the current product is the import-to-marketplace flow,
+            so the landing page now explains that path directly.
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
-            <div key={index} className="relative text-center">
+            <div key={step.title} className="relative text-center">
               {index < steps.length - 1 && (
                 <div className="absolute left-1/2 top-12 hidden h-px w-full bg-border lg:block" />
               )}

@@ -4,24 +4,24 @@ import { Card, CardContent } from "@/components/ui/card"
 const testimonials = [
   {
     quote:
-      "DeckSwap completely changed how I collect. I&apos;ve traded with collectors from 12 different countries and found decks I thought were impossible to get.",
-    author: "Sarah Chen",
-    role: "Collector since 2019",
-    avatar: "SC",
+      "I pasted a messy Commander list, and DeckSwap turned it into a deck page with commander metadata, print details, and pricing I could actually use.",
+    author: "Maya Chen",
+    role: "Esper artifacts pilot",
+    avatar: "MC",
   },
   {
     quote:
-      "The matching algorithm is incredible. Within a week of listing my duplicates, I found someone who had exactly what I needed and wanted what I had.",
-    author: "Marcus Johnson",
-    role: "Professional Magician",
-    avatar: "MJ",
+      "The app feels strongest when it stays close to deck management. Seeing my own listings and the public marketplace in one place makes the flow click.",
+    author: "Devon Patel",
+    role: "Commander grinder",
+    avatar: "DP",
   },
   {
     quote:
-      "As a deck designer, DeckSwap gives me direct access to the collector community. I&apos;ve sold more decks here than anywhere else.",
-    author: "Elena Rodriguez",
-    role: "Card Designer",
-    avatar: "ER",
+      "The detail page is the part I keep coming back to. Once enrichment runs, it already looks like the foundation for serious deck browsing and trading.",
+    author: "Riley Morgan",
+    role: "Deck brewer",
+    avatar: "RM",
   },
 ]
 
@@ -31,16 +31,16 @@ export function Testimonials() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Loved by Collectors
+            Built for Commander players
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Join thousands of satisfied collectors who have found their perfect trades
+            Messaging that now matches what the app actually does best
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 md:grid-cols-3">
-          {testimonials.map((testimonial, index) => (
-            <Card key={index} className="border-border bg-card">
+          {testimonials.map((testimonial) => (
+            <Card key={testimonial.author} className="border-border bg-card">
               <CardContent className="p-6">
                 <div className="mb-4 flex gap-1">
                   {[...Array(5)].map((_, i) => (

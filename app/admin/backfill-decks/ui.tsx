@@ -42,7 +42,7 @@ export default function BackfillDecksClient() {
           disabled={loading}
           className="mt-6 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:opacity-60"
         >
-          {loading ? 'Running…' : 'Run Backfill'}
+          {loading ? 'Running...' : 'Run Backfill'}
         </button>
 
         {result && (

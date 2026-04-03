@@ -17,7 +17,7 @@ export default function ImportDeckPage() {
             href="/decks"
             className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
           >
-            ← Back to decks
+            {'<-'} Back to decks
           </Link>
 
           <div className="mt-8">
@@ -128,7 +128,7 @@ Tokens
               disabled={pending}
               className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? 'Importing…' : 'Import Deck'}
+              {pending ? 'Importing...' : 'Import Deck'}
             </button>
           </div>
         </form>

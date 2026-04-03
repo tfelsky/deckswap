@@ -2,28 +2,28 @@ import Link from "next/link"
 
 const footerLinks = {
   marketplace: [
-    { name: "Browse Decks", href: "#" },
-    { name: "Featured Sellers", href: "#" },
-    { name: "New Arrivals", href: "#" },
-    { name: "Trending Now", href: "#" },
+    { name: "Browse Decks", href: "/decks" },
+    { name: "Create Deck", href: "/create-deck" },
+    { name: "Import Deck", href: "/import-deck" },
+    { name: "My Decks", href: "/my-decks" },
   ],
   trading: [
-    { name: "How Trading Works", href: "#" },
-    { name: "Trade Matching", href: "#" },
-    { name: "Escrow Service", href: "#" },
-    { name: "Shipping Guide", href: "#" },
+    { name: "Marketplace Flow", href: "/decks" },
+    { name: "Trade Concepts", href: "#trade" },
+    { name: "Import Guide", href: "#how-it-works" },
+    { name: "Commander Profiles", href: "/decks" },
   ],
   community: [
-    { name: "Forums", href: "#" },
-    { name: "Events", href: "#" },
-    { name: "Designer Spotlight", href: "#" },
-    { name: "Collector Stories", href: "#" },
+    { name: "Commander Players", href: "#community" },
+    { name: "Power Bands", href: "#" },
+    { name: "Partner Decks", href: "#" },
+    { name: "Token Builds", href: "#" },
   ],
   company: [
-    { name: "About Us", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Press", href: "#" },
-    { name: "Contact", href: "#" },
+    { name: "About DeckSwap", href: "/" },
+    { name: "Sign In", href: "/sign-in" },
+    { name: "Admin Tools", href: "/admin/backfill-decks" },
+    { name: "Home", href: "/" },
   ],
 }
 
@@ -40,7 +40,7 @@ export function Footer() {
               <span className="text-lg font-semibold text-foreground">DeckSwap</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
-              The premier marketplace for custom playing card collectors and traders.
+              A Commander-focused deck marketplace with import, validation, enrichment, and owner-managed listings.
             </p>
           </div>
 
@@ -114,14 +114,14 @@ export function Footer() {
             © {new Date().getFullYear()} DeckSwap. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Privacy Policy
+            <Link href="/decks" className="text-sm text-muted-foreground hover:text-foreground">
+              Marketplace
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Terms of Service
+            <Link href="/my-decks" className="text-sm text-muted-foreground hover:text-foreground">
+              My Decks
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Cookie Policy
+            <Link href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground">
+              Sign In
             </Link>
           </div>
         </div>

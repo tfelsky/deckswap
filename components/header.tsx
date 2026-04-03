@@ -19,26 +19,26 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <Link href="#decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Browse Decks
+          <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Marketplace
           </Link>
           <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Trade
+            Matchmaking
           </Link>
           <Link href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            How It Works
+            Import Flow
           </Link>
-          <Link href="#community" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Community
+          <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            My Decks
           </Link>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm">
-            Sign In
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/sign-in">Sign In</Link>
           </Button>
-          <Button size="sm">
-            Get Started
+          <Button size="sm" asChild>
+            <Link href="/import-deck">Import Deck</Link>
           </Button>
         </div>
 
@@ -58,24 +58,24 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="border-t border-border bg-background px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-4">
-            <Link href="#decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Browse Decks
+            <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              Marketplace
             </Link>
             <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Trade
+              Matchmaking
             </Link>
             <Link href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              How It Works
+              Import Flow
             </Link>
-            <Link href="#community" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Community
+            <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              My Decks
             </Link>
             <div className="flex flex-col gap-2 pt-4">
-              <Button variant="ghost" size="sm" className="w-full justify-center">
-                Sign In
+              <Button variant="ghost" size="sm" className="w-full justify-center" asChild>
+                <Link href="/sign-in">Sign In</Link>
               </Button>
-              <Button size="sm" className="w-full justify-center">
-                Get Started
+              <Button size="sm" className="w-full justify-center" asChild>
+                <Link href="/import-deck">Import Deck</Link>
               </Button>
             </div>
           </nav>

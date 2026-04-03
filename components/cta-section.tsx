@@ -1,5 +1,5 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ArrowRight } from "lucide-react"
 
 export function CTASection() {
@@ -12,27 +12,27 @@ export function CTASection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Start Your Collection Today
+            Start with the real product flow
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Join DeckSwap for free and connect with the world&apos;s largest community of 
-            playing card collectors.
+            Sign in, import a Commander list, and turn it into a browsable marketplace entry
+            with structured card data.
           </p>
 
-          <form className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              className="h-12 min-w-[300px] bg-background"
-            />
-            <Button size="lg" className="h-12">
-              Get Started Free
-              <ArrowRight className="ml-2 h-4 w-4" />
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button size="lg" className="h-12" asChild>
+              <Link href="/sign-in">
+                Sign In to Start
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
-          </form>
+            <Button variant="outline" size="lg" className="h-12" asChild>
+              <Link href="/create-deck">Create Manually</Link>
+            </Button>
+          </div>
 
           <p className="mt-4 text-xs text-muted-foreground">
-            No credit card required. Free forever for basic features.
+            Import if you have a full list. Create manually if you just want a quick listing.
           </p>
         </div>
       </div>
