@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { validateDeckForFormat } from '@/lib/commander/validate'
+import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
+import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -73,7 +75,7 @@ export default async function ManageDeckPage({
 
   const { data: deckCards } = await supabase
     .from('deck_cards')
-    .select('card_name, section, quantity, cmc, mana_cost, set_code, set_name, collector_number, foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity')
+    .select('id, card_name, section, quantity, cmc, mana_cost, set_code, set_name, collector_number, foil, condition, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity')
     .eq('deck_id', deckId)
 
   const { data: priceHistory } = await supabase
@@ -188,6 +190,9 @@ export default async function ManageDeckPage({
     }
 
     const nextFormat = normalizeDeckFormat(String(formData.get('format') || 'unknown'))
+    const isSleeved = formData.get('is_sleeved') === 'on'
+    const isBoxed = formData.get('is_boxed') === 'on'
+    const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
 
     const { data: currentCards } = await supabase
       .from('deck_cards')
@@ -237,6 +242,9 @@ export default async function ManageDeckPage({
         mainboard_count: validation.mainboardCount,
         token_count: validation.tokenCount,
         commander_mode: validation.commanderMode,
+        is_sleeved: isSleeved,
+        is_boxed: isBoxed,
+        box_type: boxType,
       })
       .eq('id', deckId)
       .eq('user_id', user.id)
@@ -264,6 +272,34 @@ export default async function ManageDeckPage({
       .eq('user_id', user.id)
 
     redirect('/my-decks')
+  }
+
+  async function updateCardCondition(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const cardId = Number(formData.get('card_id'))
+    const nextCondition = normalizeCardCondition(String(formData.get('condition') || 'near_mint'))
+
+    if (!Number.isFinite(cardId)) {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    await supabase
+      .from('deck_cards')
+      .update({ condition: nextCondition })
+      .eq('id', cardId)
+      .eq('deck_id', deckId)
+
+    redirect(`/my-decks/${deckId}?tab=settings`)
   }
 
   return (
@@ -448,6 +484,26 @@ export default async function ManageDeckPage({
                 </div>
               </div>
 
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                <h2 className="text-2xl font-semibold">Listing Presentation</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {getDeckMarketingChips(deck).length > 0 ? (
+                    getDeckMarketingChips(deck).map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                      >
+                        {chip}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-zinc-400">
+                      No packaging details added yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <form action={deleteDeck}>
                 <button className="w-full rounded-xl bg-red-500 py-3">
                   Delete Deck
@@ -456,7 +512,8 @@ export default async function ManageDeckPage({
             </div>
           </div>
         ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+          <div className="mt-6 space-y-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Deck Settings</h2>
               <p className="mt-2 text-sm text-zinc-400">
@@ -477,6 +534,45 @@ export default async function ManageDeckPage({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-medium text-white">Marketplace presentation</div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Show whether the deck is sleeved, boxed, and what deck box it comes in.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-200">
+                      <input
+                        type="checkbox"
+                        name="is_sleeved"
+                        defaultChecked={deck.is_sleeved ?? false}
+                        className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                      />
+                      Sleeved
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-200">
+                      <input
+                        type="checkbox"
+                        name="is_boxed"
+                        defaultChecked={deck.is_boxed ?? false}
+                        className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                      />
+                      Boxed
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm text-zinc-400">Box type</label>
+                    <input
+                      name="box_type"
+                      defaultValue={deck.box_type ?? ''}
+                      placeholder="Boulder 100+"
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                    />
+                  </div>
                 </div>
 
                 <button className="w-full rounded-xl bg-emerald-400 py-3 text-black">
@@ -512,6 +608,87 @@ export default async function ManageDeckPage({
                   <p className={changeTone(change60)}>
                     60-day move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
                   </p>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold">Card Conditions</h2>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Grade each listed card conservatively before sending it into the marketplace or escrow flow.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+                  {(deckCards ?? []).length} card rows
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+                <div className="space-y-3">
+                  {CARD_CONDITIONS.map((condition) => {
+                    const detail = CARD_CONDITION_DETAILS[condition]
+                    return (
+                      <div
+                        key={condition}
+                        className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                      >
+                        <div className="text-xs uppercase tracking-wide text-emerald-300">
+                          {detail.shortLabel}
+                        </div>
+                        <div className="mt-2 text-lg font-semibold text-white">{detail.label}</div>
+                        <p className="mt-2 text-sm text-zinc-400">{detail.description}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="space-y-3">
+                    {(deckCards ?? []).map((card) => (
+                      <form
+                        key={card.id}
+                        action={updateCardCondition}
+                        className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 md:grid-cols-[1fr_220px_120px]"
+                      >
+                        <input type="hidden" name="card_id" value={card.id} />
+                        <div>
+                          <div className="text-sm font-medium text-white">{card.card_name}</div>
+                          <div className="mt-1 text-xs text-zinc-500">
+                            {card.section} · Qty {card.quantity} · {card.set_code?.toUpperCase() || 'N/A'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                            Condition
+                          </label>
+                          <select
+                            name="condition"
+                            defaultValue={normalizeCardCondition(card.condition)}
+                            className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                          >
+                            {CARD_CONDITIONS.map((condition) => (
+                              <option key={condition} value={condition}>
+                                {CARD_CONDITION_DETAILS[condition].label}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-2 text-xs text-zinc-500">
+                            {getCardConditionMeta(card.condition).description}
+                          </p>
+                        </div>
+
+                        <div className="flex items-end">
+                          <button className="w-full rounded-xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950">
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

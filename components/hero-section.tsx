@@ -34,6 +34,8 @@ type HeroSectionProps = {
     topValue: number
     averageBracket: string
     totalTrackedCards: number
+    tradeOffers: number
+    deckComments: number
   }
 }
 
@@ -50,17 +52,17 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Live inventory, Scryfall enrichment, and Commander-ready importing
+              Live decks, trade offers, comments, and auction-ready sale flow
             </span>
           </div>
 
           <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-            Manage your <span className="text-primary">Commander deck marketplace</span>
+            Trade decks with <span className="text-primary">real inventory and real intent</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            DeckSwap helps you import full Commander lists, track pricing, browse community
-            builds, and move from collection management to trading without leaving the app.
+            Import a list, price it, launch trade offers, open an auction path for faster sales,
+            and browse a marketplace that reflects what users are actually listing right now.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -73,18 +75,21 @@ export function HeroSection({ inventory }: HeroSectionProps) {
             <Button variant="outline" size="lg" className="min-w-[180px]" asChild>
               <Link href="/decks">Browse Market</Link>
             </Button>
+            <Button variant="outline" size="lg" className="min-w-[180px]" asChild>
+              <Link href="/trade-offers">Trade Offers</Link>
+            </Button>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              Commander validation on import
+              Trade offers hand off into escrow drafts
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Scryfall-enriched card images and prices
+              Scryfall-enriched card images and pricing
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Personal listings and public browsing
+              Comments, trust signals, and auction-ready sale mode
             </div>
           </div>
 
@@ -139,19 +144,21 @@ export function HeroSection({ inventory }: HeroSectionProps) {
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
-              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Pricing</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Trade Activity</div>
               <div className="mt-3 text-2xl font-semibold text-foreground">
-                ${inventory.topValue.toFixed(0)}
+                {inventory.tradeOffers}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                current top-end blended value among live marketplace decks.
+                trade offers have already been opened through the marketplace flow.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
-              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Workflow</div>
-              <div className="mt-3 text-2xl font-semibold text-foreground">Text, file, link</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Discussion</div>
+              <div className="mt-3 text-2xl font-semibold text-foreground">
+                {inventory.deckComments}
+              </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                import supports pasted lists, uploads, and public Moxfield deck URLs.
+                public deck comments are already giving extra context around listed decks.
               </p>
             </div>
           </div>

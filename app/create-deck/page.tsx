@@ -1,6 +1,8 @@
 'use client'
 
 import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
+import MarketplaceNav from '@/components/marketplace-nav'
+import { normalizeBoxType } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -13,6 +15,9 @@ export default function CreateDeckPage() {
   const [name, setName] = useState('')
   const [commander, setCommander] = useState('')
   const [value, setValue] = useState<number | ''>('')
+  const [isSleeved, setIsSleeved] = useState(false)
+  const [isBoxed, setIsBoxed] = useState(false)
+  const [boxType, setBoxType] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,6 +48,9 @@ export default function CreateDeckPage() {
         name,
         commander: commander || null,
         price_estimate: value === '' ? null : Number(value),
+        is_sleeved: isSleeved,
+        is_boxed: isBoxed,
+        box_type: isBoxed ? normalizeBoxType(boxType) : null,
         user_id: user.id,
       },
     ])
@@ -78,6 +86,10 @@ export default function CreateDeckPage() {
             <p className="mt-3 max-w-2xl text-zinc-400">
               Add a Commander deck to the marketplace. Brackets are now estimated automatically from a full imported list instead of using a manual power-level number.
             </p>
+          </div>
+
+          <div className="mt-8">
+            <MarketplaceNav current="create" />
           </div>
         </div>
       </section>
@@ -142,6 +154,53 @@ export default function CreateDeckPage() {
                 placeholder="180"
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+              <h2 className="text-lg font-semibold text-white">Listing presentation</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Show buyers how the deck is packaged before they click into the listing.
+              </p>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isSleeved}
+                    onChange={(e) => setIsSleeved(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  Sleeved
+                </label>
+
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isBoxed}
+                    onChange={(e) => setIsBoxed(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  Boxed
+                </label>
+              </div>
+
+              <div className="mt-4">
+                <label
+                  htmlFor="boxType"
+                  className="mb-2 block text-sm font-medium text-zinc-300"
+                >
+                  Box type
+                </label>
+                <input
+                  id="boxType"
+                  type="text"
+                  value={boxType}
+                  onChange={(e) => setBoxType(e.target.value)}
+                  disabled={!isBoxed}
+                  placeholder="Boulder 100+"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">

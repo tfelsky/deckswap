@@ -28,6 +28,8 @@ import {
   getDeckFormatLabel,
   normalizeDeckFormat,
 } from '@/lib/decks/formats'
+import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
+import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
 import {
   calculateInternalValidationSummary,
@@ -63,6 +65,9 @@ type Deck = {
   price_total_usd?: number | null
   price_total_usd_foil?: number | null
   price_total_eur?: number | null
+  is_sleeved?: boolean | null
+  is_boxed?: boolean | null
+  box_type?: string | null
 }
 
 type DeckCard = {
@@ -85,6 +90,7 @@ type DeckCard = {
   keywords?: string[] | null
   partner_with_name?: string | null
   color_identity?: string[] | null
+  condition?: string | null
   finishes?: string[] | null
   oracle_text?: string | null
   type_line?: string | null
@@ -186,7 +192,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur'
+      'id, user_id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -216,7 +222,7 @@ export default async function DeckDetailPage({
   const { data: cards, error: cardsError } = await supabase
     .from('deck_cards')
     .select(
-      'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
+      'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, condition, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
     )
     .eq('deck_id', deckId)
     .order('section', { ascending: true })
@@ -281,6 +287,7 @@ export default async function DeckDetailPage({
   const deckFormat = normalizeDeckFormat(typedDeck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
+  const marketingChips = getDeckMarketingChips(typedDeck)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
     currentPrice,
@@ -759,7 +766,6 @@ export default async function DeckDetailPage({
                     )}
                   </div>
                 </div>
-              </div>
 
               <div className="p-6">
                 <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-200">
@@ -933,6 +939,27 @@ export default async function DeckDetailPage({
                       <div className="text-xs uppercase tracking-wide text-zinc-500">Commander Mode</div>
                       <div className="mt-2 text-sm font-medium capitalize text-white">
                         {(typedDeck.commander_mode ?? 'unknown').replace(/_/g, ' ')}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Presentation</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {marketingChips.length > 0 ? (
+                          marketingChips.map((chip) => (
+                            <span
+                              key={chip}
+                              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                            >
+                              {chip}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-zinc-400">
+                            No packaging details added yet.
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1213,10 +1240,9 @@ export default async function DeckDetailPage({
                   </button>
                 </form>
               )}
-                </div>
 
               {isCommanderDeck && (
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                   <div className="text-sm text-zinc-400">Bracket Notes</div>
                   <div className="mt-3 space-y-2 text-sm text-zinc-300">
                     {bracketSummary.notes.map((note) => (
@@ -1236,6 +1262,46 @@ export default async function DeckDetailPage({
           mainboard={mainboard}
           tokens={tokenCards}
         />
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+            <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-400">
+              Listing Guide
+            </div>
+            <h2 className="mt-4 text-2xl font-semibold text-white">How to check card condition before listing</h2>
+            <div className="mt-4 space-y-3 text-sm text-zinc-300">
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                Check cards in bright, indirect light and review the front, back, edges, and corners outside of sleeves.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                Use the worst visible issue on the card, not the best angle. Whitening, dents, bends, ink wear, and clouding all count.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                If a card is between two grades, list the lower one. Conservative grading reduces escrow disputes and keeps trust high.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+            <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-300">
+              Escrow Review
+            </div>
+            <h2 className="mt-4 text-2xl font-semibold text-white">Arbitration during escrow</h2>
+            <div className="mt-4 space-y-3 text-sm text-zinc-300">
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                DeckSwap compares received cards against the saved list, declared conditions, and any agreed notes before release.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                If a card arrives materially below the listed condition, release pauses while support reviews photos, timestamps, and the inventory record.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                Resolution can include proceed as-is, renegotiate equalization, partial credit, or return shipment depending on the severity of the mismatch.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-16">

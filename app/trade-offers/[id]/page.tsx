@@ -10,6 +10,7 @@ import {
   formatTradeOfferStatus,
   formatTradeOfferTimestamp,
   isTradeOffersSchemaMissing,
+  isUnreadTradeOffer,
   type TradeOfferRow,
 } from '@/lib/trade-offers'
 
@@ -77,7 +78,18 @@ export default async function TradeOfferDetailPage({
     redirect('/trade-offers')
   }
 
-  const [decksResult, privateProfilesResult] = await Promise.all([
+  if (isUnreadTradeOffer(offer, user.id)) {
+    await supabase
+      .from('trade_offers')
+      .update(
+        offer.offered_by_user_id === user.id
+          ? { offered_by_viewed_at: new Date().toISOString() }
+          : { requested_user_viewed_at: new Date().toISOString() }
+      )
+      .eq('id', offerId)
+  }
+
+  const [decksResult, privateProfilesResult, ownDecksResult] = await Promise.all([
     supabase
       .from('decks')
       .select('id, user_id, name, commander, image_url, price_total_usd_foil')
@@ -86,6 +98,11 @@ export default async function TradeOfferDetailPage({
       .from('profile_private')
       .select('user_id, shipping_country')
       .in('user_id', [offer.offered_by_user_id, offer.requested_user_id]),
+    supabase
+      .from('decks')
+      .select('id, user_id, name, commander, image_url, price_total_usd_foil')
+      .eq('user_id', user.id)
+      .order('id', { ascending: false }),
   ])
 
   const decks = new Map<number, DeckSummary>(
@@ -101,6 +118,16 @@ export default async function TradeOfferDetailPage({
   const requestedDeck = decks.get(offer.requested_deck_id)
   const canRespond = offer.requested_user_id === user.id && offer.status === 'pending'
   const canCancel = offer.offered_by_user_id === user.id && offer.status === 'pending'
+  const canCounter =
+    offer.status === 'pending' &&
+    offer.last_action_by_user_id !== user.id &&
+    (offer.offered_by_user_id === user.id || offer.requested_user_id === user.id)
+  const ownDecks = ((ownDecksResult.data ?? []) as DeckSummary[]).filter((deck) => {
+    const requestedDeckIdForCounter =
+      offer.offered_by_user_id === user.id ? offer.requested_deck_id : offer.offered_deck_id
+
+    return deck.id !== requestedDeckIdForCounter
+  })
 
   async function acceptOfferAction() {
     'use server'
@@ -284,9 +311,101 @@ export default async function TradeOfferDetailPage({
     redirect(`/trade-offers/${offerId}?cancelled=1`)
   }
 
+  async function counterOfferAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const currentOfferResult = await supabase
+      .from('trade_offers')
+      .select('*')
+      .eq('id', offerId)
+      .single()
+
+    if (currentOfferResult.error || !currentOfferResult.data) {
+      redirect(`/trade-offers/${offerId}?error=1`)
+    }
+
+    const currentOffer = currentOfferResult.data as TradeOfferRow
+    if (
+      currentOffer.status !== 'pending' ||
+      currentOffer.last_action_by_user_id === user.id ||
+      (currentOffer.offered_by_user_id !== user.id && currentOffer.requested_user_id !== user.id)
+    ) {
+      redirect(`/trade-offers/${offerId}`)
+    }
+
+    const offeredDeckId = Number(formData.get('offered_deck_id'))
+    const cashEqualizationValue = String(formData.get('cash_equalization_usd') || '').trim()
+    const cashEqualizationUsd =
+      cashEqualizationValue === '' ? 0 : Math.max(0, Number(cashEqualizationValue))
+    const message = String(formData.get('message') || '').trim()
+    const requestedDeckIdForCounter =
+      currentOffer.offered_by_user_id === user.id
+        ? currentOffer.requested_deck_id
+        : currentOffer.offered_deck_id
+    const requestedUserIdForCounter =
+      currentOffer.offered_by_user_id === user.id
+        ? currentOffer.requested_user_id
+        : currentOffer.offered_by_user_id
+
+    if (!Number.isFinite(offeredDeckId)) {
+      redirect(`/trade-offers/${offerId}?error=1`)
+    }
+
+    const offeredDeckResult = await supabase
+      .from('decks')
+      .select('id, user_id')
+      .eq('id', offeredDeckId)
+      .single()
+
+    if (offeredDeckResult.error || !offeredDeckResult.data || offeredDeckResult.data.user_id !== user.id) {
+      redirect(`/trade-offers/${offerId}?error=1`)
+    }
+
+    const insert = await supabase
+      .from('trade_offers')
+      .insert({
+        offered_by_user_id: user.id,
+        requested_user_id: requestedUserIdForCounter,
+        offered_deck_id: offeredDeckId,
+        requested_deck_id: requestedDeckIdForCounter,
+        cash_equalization_usd: cashEqualizationUsd,
+        message: message || null,
+        parent_offer_id: currentOffer.id,
+        last_action_by_user_id: user.id,
+        offered_by_viewed_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (insert.error || !insert.data) {
+      redirect(`/trade-offers/${offerId}?error=1`)
+    }
+
+    await supabase
+      .from('trade_offers')
+      .update({
+        status: 'countered',
+        superseded_by_offer_id: insert.data.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', currentOffer.id)
+
+    redirect(`/trade-offers/${insert.data.id}?countered=1`)
+  }
+
   const accepted = resolvedSearchParams.accepted === '1'
   const declined = resolvedSearchParams.declined === '1'
   const cancelled = resolvedSearchParams.cancelled === '1'
+  const countered = resolvedSearchParams.countered === '1'
   const error = resolvedSearchParams.error === '1'
   const schemaMissing = resolvedSearchParams.schemaMissing === '1'
 
@@ -332,6 +451,11 @@ export default async function TradeOfferDetailPage({
           {cancelled && (
             <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
               Offer cancelled.
+            </div>
+          )}
+          {countered && (
+            <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-sm text-emerald-200">
+              Counteroffer sent.
             </div>
           )}
           {schemaMissing && (
@@ -389,6 +513,18 @@ export default async function TradeOfferDetailPage({
                   {formatUsd(offer.cash_equalization_usd)}
                 </div>
               </div>
+
+              {offer.superseded_by_offer_id && (
+                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                  This offer has been superseded by a counteroffer.
+                  <Link
+                    href={`/trade-offers/${offer.superseded_by_offer_id}`}
+                    className="ml-2 font-medium text-emerald-300 hover:underline"
+                  >
+                    Open latest offer
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
@@ -435,7 +571,63 @@ export default async function TradeOfferDetailPage({
               </div>
             )}
 
-            {!canRespond && !canCancel && (
+            {canCounter && (
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                <h2 className="text-2xl font-semibold">Counteroffer</h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Change the deck you&apos;re putting on the table, adjust equalization, and send the negotiation back.
+                </p>
+                {ownDecks.length > 0 ? (
+                  <form action={counterOfferAction} className="mt-5 space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-400">Your deck to offer back</label>
+                      <select
+                        name="offered_deck_id"
+                        defaultValue={String(ownDecks[0]?.id ?? '')}
+                        style={{ colorScheme: 'dark' }}
+                        className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white"
+                      >
+                        {ownDecks.map((deck) => (
+                          <option key={deck.id} value={deck.id} className="bg-zinc-900 text-white">
+                            {deck.name} | {formatUsd(deck.price_total_usd_foil)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-400">Cash equalization</label>
+                      <input
+                        name="cash_equalization_usd"
+                        defaultValue={String(offer.cash_equalization_usd ?? 0)}
+                        inputMode="decimal"
+                        className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-400">Counter message</label>
+                      <textarea
+                        name="message"
+                        rows={4}
+                        placeholder="Explain what changed in the counteroffer."
+                        className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white"
+                      />
+                    </div>
+
+                    <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15">
+                      Send Counteroffer
+                    </button>
+                  </form>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-sm text-zinc-400">
+                    You need at least one deck in your account to send a counteroffer.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!canRespond && !canCancel && !canCounter && (
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
                 <h2 className="text-2xl font-semibold">Offer State</h2>
                 <p className="mt-2 text-sm text-zinc-400">

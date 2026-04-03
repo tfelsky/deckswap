@@ -1,14 +1,12 @@
 import { Header } from "@/components/header"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturedDecks } from "@/components/featured-decks"
-import { TradeMatching } from "@/components/trade-matching"
-import { HowItWorks } from "@/components/how-it-works"
-import { Categories } from "@/components/categories"
-import { Testimonials } from "@/components/testimonials"
 import { CTASection } from "@/components/cta-section"
 import { Footer } from "@/components/footer"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
+import { getDeckMarketingChips } from "@/lib/decks/marketing"
 import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +19,9 @@ type LandingDeck = {
   commander_count?: number | null
   mainboard_count?: number | null
   token_count?: number | null
+  is_sleeved?: boolean | null
+  is_boxed?: boolean | null
+  box_type?: string | null
 }
 
 type LandingDeckCard = {
@@ -32,13 +33,26 @@ type LandingDeckCard = {
   mana_cost?: string | null
 }
 
+type TradeOfferRow = {
+  id: number
+  offered_deck_id: number
+  requested_deck_id: number
+  status: string
+  created_at?: string | null
+}
+
+type DeckCommentRow = {
+  id: number
+  deck_id: number
+}
+
 export default async function HomePage() {
   const supabase = await createClient()
 
   const { data: decksData } = await supabase
     .from("decks")
     .select(
-      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count"
+      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, box_type"
     )
     .order("id", { ascending: false })
 
@@ -51,6 +65,15 @@ export default async function HomePage() {
         .select("deck_id, section, quantity, card_name, cmc, mana_cost")
         .in("deck_id", deckIds)
     : { data: [] as LandingDeckCard[] }
+
+  const { data: tradeOffersData } = await supabase
+    .from("trade_offers")
+    .select("id, offered_deck_id, requested_deck_id, status, created_at")
+    .order("created_at", { ascending: false })
+
+  const { data: deckCommentsData } = await supabase
+    .from("deck_comments")
+    .select("id, deck_id")
 
   const cardsByDeck = new Map<number, LandingDeckCard[]>()
 
@@ -99,7 +122,21 @@ export default async function HomePage() {
       gameChangerCount: deck.bracket.gameChangerCount,
       totalCards: deck.totalCards,
       tokenCount: Number(deck.token_count ?? 0),
+      marketingChips: getDeckMarketingChips(deck).slice(0, 3),
     }))
+
+  const tradeOffers = (tradeOffersData ?? []) as TradeOfferRow[]
+  const deckComments = (deckCommentsData ?? []) as DeckCommentRow[]
+  const activeTradeOffers = tradeOffers.filter((offer) => offer.status === "pending")
+  const acceptedTradeOffers = tradeOffers.filter((offer) => offer.status === "accepted")
+  const auctionCandidates = [...deckViews]
+    .filter((deck) => Number(deck.price_total_usd_foil ?? 0) >= 150)
+    .sort((a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0))
+    .slice(0, 3)
+  const recentCommentedDecks = [...new Set(deckComments.map((comment) => comment.deck_id))]
+    .map((deckId) => deckViews.find((deck) => deck.id === deckId))
+    .filter(Boolean)
+    .slice(0, 3) as typeof deckViews
 
   const inventory = {
     liveDecks: deckViews.length,
@@ -110,17 +147,8 @@ export default async function HomePage() {
         : 0,
     averageBracket,
     totalTrackedCards: deckViews.reduce((sum, deck) => sum + deck.totalCards, 0),
-  }
-
-  const categoryCounts = {
-    bracketTwoOrLower: deckViews.filter(
-      (deck) => deck.bracket.bracket != null && Number(deck.bracket.bracket) <= 2
-    ).length,
-    upgraded: deckViews.filter((deck) => Number(deck.bracket.bracket ?? 0) === 3).length,
-    optimizedPlus: deckViews.filter((deck) => Number(deck.bracket.bracket ?? 0) >= 4).length,
-    tokenReady: inventory.tokenReadyDecks,
-    highValue: deckViews.filter((deck) => Number(deck.price_total_usd_foil ?? 0) >= 300).length,
-    fullInventory: deckViews.filter((deck) => deck.totalCards >= 100).length,
+    tradeOffers: tradeOffers.length,
+    deckComments: deckComments.length,
   }
 
   return (
@@ -129,10 +157,166 @@ export default async function HomePage() {
       <main>
         <HeroSection inventory={inventory} />
         <FeaturedDecks decks={featuredDecks} />
-        <TradeMatching />
-        <HowItWorks />
-        <Categories counts={categoryCounts} />
-        <Testimonials />
+
+        <section className="py-12 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-3xl border border-border bg-card p-8">
+                <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                  Live Market Activity
+                </div>
+                <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                  The homepage should feel like a marketplace, not a brochure
+                </h2>
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
+                  The strongest signals on DeckSwap now are live listings, open trade intent, deck discussion,
+                  and the faster-sale auction path. This front page now leans into those product loops instead of
+                  filler sections.
+                </p>
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                    <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Pending offers</div>
+                    <div className="mt-3 text-3xl font-semibold text-foreground">{activeTradeOffers.length}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Deck-for-deck negotiations currently waiting on a response.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                    <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Accepted offers</div>
+                    <div className="mt-3 text-3xl font-semibold text-foreground">{acceptedTradeOffers.length}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Offers that have already handed off into the escrow draft workflow.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                    <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Deck comments</div>
+                    <div className="mt-3 text-3xl font-semibold text-foreground">{deckComments.length}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Public comments giving context, deck notes, and trade questions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent p-8">
+                <div className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-amber-300">
+                  Auction Path
+                </div>
+                <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                  Faster sale mode is ready for testing
+                </h2>
+                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                  You don&apos;t have live bidding yet, but you do have a working auction launch prototype
+                  for reserve and no-reserve sale math. High-value decks can already move into that path.
+                </p>
+
+                <div className="mt-6 space-y-3">
+                  {auctionCandidates.length > 0 ? (
+                    auctionCandidates.map((deck) => (
+                      <Link
+                        key={deck.id}
+                        href={`/auction-prototype?deckId=${deck.id}`}
+                        className="block rounded-2xl border border-border bg-background/80 px-4 py-4 text-sm hover:bg-secondary"
+                      >
+                        <div className="font-medium text-foreground">{deck.name}</div>
+                        <div className="mt-1 text-muted-foreground">
+                          {deck.commander || "Commander not set"} | ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-border bg-background/80 px-4 py-4 text-sm text-muted-foreground">
+                      Import a few more decks to surface auction-ready candidates here.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="pb-12 sm:pb-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-3xl border border-border bg-card p-8">
+                <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                  Recent Discussion
+                </div>
+                <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                  Decks getting actual conversation
+                </h2>
+                <div className="mt-6 space-y-3">
+                  {recentCommentedDecks.length > 0 ? (
+                    recentCommentedDecks.map((deck) => (
+                      <Link
+                        key={deck.id}
+                        href={`/decks/${deck.id}`}
+                        className="block rounded-2xl border border-border bg-secondary/30 px-4 py-4 hover:bg-secondary"
+                      >
+                        <div className="font-medium text-foreground">{deck.name}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {deck.commander || "Commander not set"} | {deck.bracket.label}
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-4 text-sm text-muted-foreground">
+                      Deck comments will start surfacing here once users add context and questions on listings.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-border bg-card p-8">
+                <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                  Best Next Actions
+                </div>
+                <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                  Do something meaningful from the first screen
+                </h2>
+                <div className="mt-6 grid gap-3">
+                  <Link
+                    href="/import-deck"
+                    className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary"
+                  >
+                    <div className="font-medium text-foreground">Import a deck</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Paste text, upload a file, or use a public Moxfield list.
+                    </div>
+                  </Link>
+                  <Link
+                    href="/decks"
+                    className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary"
+                  >
+                    <div className="font-medium text-foreground">Browse featured decks</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Open live listings with pricing, comments, and trade intent.
+                    </div>
+                  </Link>
+                  <Link
+                    href="/trade-offers"
+                    className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary"
+                  >
+                    <div className="font-medium text-foreground">Review trade offers</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Negotiate, counter, accept, and hand off into escrow drafts.
+                    </div>
+                  </Link>
+                  <Link
+                    href="/auction-prototype"
+                    className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary"
+                  >
+                    <div className="font-medium text-foreground">Test the auction sale path</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Compare reserve and no-reserve outcomes for a quicker sale.
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         <CTASection />
       </main>
       <Footer />

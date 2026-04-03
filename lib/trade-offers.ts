@@ -1,4 +1,4 @@
-export type TradeOfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
+export type TradeOfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'countered'
 
 export type TradeOfferRow = {
   id: number
@@ -9,7 +9,12 @@ export type TradeOfferRow = {
   cash_equalization_usd?: number | null
   status: TradeOfferStatus
   message?: string | null
+  parent_offer_id?: number | null
+  superseded_by_offer_id?: number | null
   accepted_trade_transaction_id?: number | null
+  last_action_by_user_id?: string | null
+  offered_by_viewed_at?: string | null
+  requested_user_viewed_at?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -39,4 +44,14 @@ export function formatTradeOfferTimestamp(value?: string | null) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+export function isUnreadTradeOffer(offer: TradeOfferRow, userId: string) {
+  if (offer.offered_by_user_id === userId) {
+    return offer.last_action_by_user_id !== userId && !offer.offered_by_viewed_at
+  }
+  if (offer.requested_user_id === userId) {
+    return offer.last_action_by_user_id !== userId && !offer.requested_user_viewed_at
+  }
+  return false
 }

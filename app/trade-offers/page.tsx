@@ -5,6 +5,7 @@ import {
   formatTradeOfferStatus,
   formatTradeOfferTimestamp,
   isTradeOffersSchemaMissing,
+  isUnreadTradeOffer,
   type TradeOfferRow,
 } from '@/lib/trade-offers'
 
@@ -65,6 +66,8 @@ export default async function TradeOffersPage() {
 
   const inboundOffers = offers.filter((offer) => offer.requested_user_id === user.id)
   const outboundOffers = offers.filter((offer) => offer.offered_by_user_id === user.id)
+  const inboundUnreadCount = inboundOffers.filter((offer) => isUnreadTradeOffer(offer, user.id)).length
+  const outboundUnreadCount = outboundOffers.filter((offer) => isUnreadTradeOffer(offer, user.id)).length
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -94,14 +97,21 @@ export default async function TradeOffersPage() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-6 lg:grid-cols-2">
           {[
-            { title: 'Incoming offers', offers: inboundOffers, kind: 'inbound' as const },
-            { title: 'Sent offers', offers: outboundOffers, kind: 'outbound' as const },
+            { title: 'Incoming offers', offers: inboundOffers, unread: inboundUnreadCount, kind: 'inbound' as const },
+            { title: 'Sent offers', offers: outboundOffers, unread: outboundUnreadCount, kind: 'outbound' as const },
           ].map((group) => (
             <div key={group.title} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-2xl font-semibold">{group.title}</h2>
-                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300">
-                  {group.offers.length}
+                <div className="flex items-center gap-2">
+                  {group.unread > 0 && (
+                    <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-medium text-emerald-300">
+                      {group.unread} new
+                    </div>
+                  )}
+                  <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300">
+                    {group.offers.length}
+                  </div>
                 </div>
               </div>
 
@@ -110,12 +120,17 @@ export default async function TradeOffersPage() {
                   group.offers.map((offer) => {
                     const offeredDeck = decks.get(offer.offered_deck_id)
                     const requestedDeck = decks.get(offer.requested_deck_id)
+                    const unread = isUnreadTradeOffer(offer, user.id)
 
                     return (
                       <Link
                         key={offer.id}
                         href={`/trade-offers/${offer.id}`}
-                        className="block rounded-3xl border border-white/10 bg-white/5 p-5 hover:bg-white/10"
+                        className={`block rounded-3xl border p-5 hover:bg-white/10 ${
+                          unread
+                            ? 'border-emerald-400/30 bg-emerald-400/10'
+                            : 'border-white/10 bg-white/5'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -135,6 +150,11 @@ export default async function TradeOffersPage() {
                             <div className="text-sm text-zinc-300">
                               {formatTradeOfferStatus(offer.status)}
                             </div>
+                            {unread && (
+                              <div className="mt-2 text-xs font-medium uppercase tracking-wide text-emerald-300">
+                                Unread
+                              </div>
+                            )}
                             <div className="mt-2 text-sm text-emerald-300">
                               +{formatUsd(offer.cash_equalization_usd)}
                             </div>

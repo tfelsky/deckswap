@@ -5,6 +5,7 @@ import {
   GUEST_IMPORT_SAVED_QUERY_KEY,
   type GuestImportDraft,
 } from '@/lib/guest-import'
+import MarketplaceNav from '@/components/marketplace-nav'
 import Link from 'next/link'
 import { Suspense, useActionState, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -71,6 +72,10 @@ function ImportDeckPageContent() {
               Bring in a deck from text, file, or a public Moxfield link, then let DeckSwap
               handle parsing, commander detection, and validation.
             </p>
+          </div>
+
+          <div className="mt-8">
+            <MarketplaceNav current="import" />
           </div>
         </div>
       </section>
@@ -293,6 +298,10 @@ function ImportDeckPageFallback() {
             <p className="mt-3 max-w-2xl text-zinc-400">
               Loading import tools...
             </p>
+          </div>
+
+          <div className="mt-8">
+            <MarketplaceNav current="import" />
           </div>
         </div>
       </section>

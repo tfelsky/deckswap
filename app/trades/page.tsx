@@ -6,6 +6,7 @@ import {
   isEscrowSchemaMissing,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
+import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,11 @@ export default async function TradesPage() {
   if (!user) {
     redirect('/sign-in')
   }
+
+  const { data: offersData } = await supabase
+    .from('trade_offers')
+    .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
+    .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
 
   const { data, error } = await supabase
     .from('trade_transactions')
@@ -40,6 +46,9 @@ export default async function TradesPage() {
   }
 
   const trades = (data ?? []) as TradeTransactionRow[]
+  const unreadOffers = ((offersData ?? []) as TradeOfferRow[]).filter((offer) =>
+    isUnreadTradeOffer(offer, user.id)
+  ).length
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -50,7 +59,7 @@ export default async function TradesPage() {
               {'<-'} Back to My Decks
             </Link>
             <Link href="/trade-offers" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
-              Trade Offers
+              Trade Offers{unreadOffers > 0 ? ` (${unreadOffers})` : ''}
             </Link>
             <Link href="/checkout-prototype" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
               New Trade Draft

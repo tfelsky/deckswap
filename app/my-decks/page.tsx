@@ -1,7 +1,10 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import MarketplaceNav from '@/components/marketplace-nav'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/server'
+import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +16,9 @@ type Deck = {
   format?: string | null
   price_total_usd_foil?: number | null
   image_url?: string | null
+  is_sleeved?: boolean | null
+  is_boxed?: boolean | null
+  box_type?: string | null
 }
 
 type DeckCardForBracket = {
@@ -62,7 +68,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, format, price_total_usd_foil, image_url')
+    .select('id, name, commander, format, price_total_usd_foil, image_url, is_sleeved, is_boxed, box_type')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -77,7 +83,15 @@ export default async function MyDecksPage() {
     )
   }
 
+  const { data: tradeOffersData } = await supabase
+    .from('trade_offers')
+    .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
+    .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
+
   const decks = (data ?? []) as Deck[]
+  const unreadTradeOffers = ((tradeOffersData ?? []) as TradeOfferRow[]).filter((offer) =>
+    isUnreadTradeOffer(offer, user.id)
+  ).length
   const deckIds = decks.map((deck) => deck.id)
 
   const { data: deckCards } = deckIds.length
@@ -134,51 +148,15 @@ export default async function MyDecksPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
-                >
-                  Admin Dashboard
-                </Link>
-              )}
+          </div>
 
-              <Link
-                href="/create-deck"
-                className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
-              >
-                + Create Deck
-              </Link>
-
-              <Link
-                href="/import-deck"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Import Deck
-              </Link>
-
-              <Link
-                href="/settings/profile"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Profile Settings
-              </Link>
-
-              <Link
-                href="/trade-offers"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Trade Offers
-              </Link>
-
-              <Link
-                href="/decks"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Back to marketplace
-              </Link>
-            </div>
+          <div className="mt-8">
+            <MarketplaceNav
+              current="my-decks"
+              isSignedIn
+              isAdmin={isAdmin}
+              unreadTradeOffers={unreadTradeOffers}
+            />
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -298,6 +276,14 @@ export default async function MyDecksPage() {
                         {deck.bracket.gameChangerCount === 1 ? '' : 's'}
                       </span>
                     )}
+                    {getDeckMarketingChips(deck).map((chip) => (
+                      <span
+                        key={`${deck.id}-${chip}`}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                      >
+                        {chip}
+                      </span>
+                    ))}
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                       Owned by You
                     </span>

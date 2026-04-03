@@ -120,6 +120,8 @@ export default async function ProposeTradeOfferPage({
         requested_deck_id: requestedDeckId,
         cash_equalization_usd: cashEqualizationUsd,
         message: message || null,
+        last_action_by_user_id: user.id,
+        offered_by_viewed_at: new Date().toISOString(),
       })
       .select('id')
       .single()

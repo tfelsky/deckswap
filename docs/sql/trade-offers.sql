@@ -7,11 +7,23 @@ create table if not exists public.trade_offers (
   cash_equalization_usd numeric not null default 0,
   status text not null default 'pending',
   message text,
+  parent_offer_id bigint references public.trade_offers(id) on delete set null,
+  superseded_by_offer_id bigint references public.trade_offers(id) on delete set null,
   accepted_trade_transaction_id bigint references public.trade_transactions(id) on delete set null,
+  last_action_by_user_id uuid references auth.users(id) on delete set null,
+  offered_by_viewed_at timestamptz,
+  requested_user_viewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (status in ('pending', 'accepted', 'declined', 'cancelled'))
+  check (status in ('pending', 'accepted', 'declined', 'cancelled', 'countered'))
 );
+
+alter table public.trade_offers
+  add column if not exists parent_offer_id bigint references public.trade_offers(id) on delete set null,
+  add column if not exists superseded_by_offer_id bigint references public.trade_offers(id) on delete set null,
+  add column if not exists last_action_by_user_id uuid references auth.users(id) on delete set null,
+  add column if not exists offered_by_viewed_at timestamptz,
+  add column if not exists requested_user_viewed_at timestamptz;
 
 create index if not exists trade_offers_offered_by_idx
   on public.trade_offers (offered_by_user_id, created_at desc);

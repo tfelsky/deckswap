@@ -172,6 +172,9 @@ export async function importDeckAction(
         validation_errors: validation.errors,
         source_type: sourceType || 'text',
         source_url: sourceUrl || null,
+        is_sleeved: false,
+        is_boxed: false,
+        box_type: null,
       },
     ])
     .select('id')
@@ -193,6 +196,7 @@ export async function importDeckAction(
       section: card.section,
       quantity: card.quantity,
       card_name: card.cardName,
+      condition: 'near_mint',
       set_code: card.setCode ?? null,
       set_name: card.setName ?? null,
       collector_number: card.collectorNumber ?? null,

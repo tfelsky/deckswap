@@ -5,11 +5,12 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
+import MarketplaceNav from '@/components/marketplace-nav'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/server'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
-import SignOutButton from '@/components/sign-out-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,9 @@ type Deck = {
   commander_count?: number | null
   mainboard_count?: number | null
   token_count?: number | null
+  is_sleeved?: boolean | null
+  is_boxed?: boolean | null
+  box_type?: string | null
 }
 
 type DeckCardForBracket = {
@@ -46,7 +50,7 @@ export default async function DecksPage() {
   const { data, error } = await supabase
     .from('decks')
     .select(
-      'id, name, commander, format, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count'
+      'id, name, commander, format, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, box_type'
     )
     .order('id', { ascending: true })
 
@@ -138,46 +142,14 @@ export default async function DecksPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
-                >
-                  Admin Dashboard
-                </Link>
-              )}
+          </div>
 
-              <Link
-                href="/create-deck"
-                className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
-              >
-                + Create Deck
-              </Link>
-              <Link
-                href="/import-deck"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Import Deck
-              </Link>
-              <Link
-                href="/my-decks"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                My Decks
-              </Link>
-
-              {!user ? (
-                <Link
-                  href="/sign-in"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-                >
-                  Sign in
-                </Link>
-              ) : (
-                <SignOutButton />
-              )}
-            </div>
+          <div className="mt-8">
+            <MarketplaceNav
+              current="decks"
+              isSignedIn={!!user}
+              isAdmin={isAdmin}
+            />
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -448,6 +420,14 @@ export default async function DecksPage() {
                         {Number(deck.token_count ?? 0)} token
                         {Number(deck.token_count ?? 0) === 1 ? '' : 's'}
                       </span>
+                      {getDeckMarketingChips(deck).map((chip) => (
+                        <span
+                          key={`${deck.id}-${chip}`}
+                          className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                        >
+                          {chip}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </article>

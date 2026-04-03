@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, Swords, Zap } from "lucide-react"
+import { ArrowRight, Gavel, Swords, Zap } from "lucide-react"
 
 type FeaturedDeck = {
   id: number
@@ -15,6 +15,7 @@ type FeaturedDeck = {
   gameChangerCount: number
   totalCards: number
   tokenCount: number
+  marketingChips: string[]
 }
 
 export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
@@ -27,7 +28,7 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
               Marketplace Snapshot
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Live inventory pulled from the marketplace, with imagery, bracket signal, and tracked deck contents
+              Real listings pulled from the marketplace, with pricing, bracket signal, and clear next actions
             </p>
           </div>
           <Button variant="ghost" className="gap-2" asChild>
@@ -112,8 +113,16 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
                       {deck.tokenCount} token{deck.tokenCount === 1 ? "" : "s"}
                     </span>
                     <span className="rounded-full border border-border bg-secondary/50 px-3 py-1">
-                      Live inventory
+                      Featured listing
                     </span>
+                    {deck.marketingChips.map((chip) => (
+                      <span
+                        key={`${deck.id}-${chip}`}
+                        className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300"
+                      >
+                        {chip}
+                      </span>
+                    ))}
                   </div>
                   <div className="mt-4 flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1" asChild>
@@ -123,9 +132,17 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
                       </Link>
                     </Button>
                     <Button size="sm" className="flex-1" asChild>
-                      <Link href="/import-deck">
+                      <Link href={`/trade-offers/propose?deckId=${deck.id}`}>
                         <Swords className="mr-2 h-4 w-4" />
-                        Import
+                        Trade
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <Link href={`/auction-prototype?deckId=${deck.id}`}>
+                        <Gavel className="mr-2 h-4 w-4" />
+                        Auction
                       </Link>
                     </Button>
                   </div>

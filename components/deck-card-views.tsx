@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { CARD_CONDITION_DETAILS, getCardConditionMeta } from '@/lib/decks/conditions'
 
 type BaseCard = {
   id: number
@@ -21,6 +22,7 @@ type BaseCard = {
   toughness?: string | null
   oracle_text?: string | null
   keywords?: string[] | null
+  condition?: string | null
   section: 'commander' | 'mainboard' | 'token'
 }
 
@@ -240,6 +242,7 @@ function CardModal({
                 <MetaChip>{card.foil ? 'Foil' : 'Non-foil'}</MetaChip>
                 <MetaChip>Qty {card.quantity}</MetaChip>
                 <MetaChip>{card.section}</MetaChip>
+                <MetaChip>{getCardConditionMeta(card.condition).shortLabel}</MetaChip>
                 {card.cmc != null && <MetaChip>CMC {card.cmc}</MetaChip>}
                 {card.power && card.toughness && (
                   <MetaChip>
@@ -282,6 +285,13 @@ function CardModal({
                 <div className="text-sm text-zinc-400">Finish</div>
                 <div className="mt-2 text-lg font-medium text-white">
                   {card.foil ? 'Foil' : 'Non-foil'}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Condition</div>
+                <div className="mt-2 text-lg font-medium text-white">
+                  {getCardConditionMeta(card.condition).label}
                 </div>
               </div>
 
@@ -343,6 +353,13 @@ function CardModal({
                 Press <strong>Escape</strong> to close, <strong>Left Arrow</strong> for previous, and <strong>Right Arrow</strong> for next.
               </p>
             </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <div className="text-sm text-zinc-400">Condition Guide</div>
+              <p className="mt-2 text-sm text-zinc-300">
+                {getCardConditionMeta(card.condition).description}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -394,7 +411,9 @@ function CardTile({
           {printLine(card) || 'No print metadata'}
         </div>
         <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-          <span className="text-zinc-300">Qty: {card.quantity}</span>
+          <span className="text-zinc-300">
+            Qty: {card.quantity} · {getCardConditionMeta(card.condition).shortLabel}
+          </span>
           <span className="font-medium text-emerald-300">
             {formatUsd(getUnitPrice(card))}
           </span>
@@ -472,10 +491,11 @@ export default function DeckCardViews({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {card.mana_cost && <MetaChip>{card.mana_cost}</MetaChip>}
-                    <MetaChip>{formatColorIdentity(card.color_identity)}</MetaChip>
-                    {card.cmc != null && <MetaChip>CMC {card.cmc}</MetaChip>}
+                <div className="flex flex-wrap gap-2">
+                  {card.mana_cost && <MetaChip>{card.mana_cost}</MetaChip>}
+                  <MetaChip>{formatColorIdentity(card.color_identity)}</MetaChip>
+                  <MetaChip>{getCardConditionMeta(card.condition).label}</MetaChip>
+                  {card.cmc != null && <MetaChip>CMC {card.cmc}</MetaChip>}
                     {card.power && card.toughness && (
                       <MetaChip>
                         {card.power}/{card.toughness}
@@ -610,6 +630,24 @@ export default function DeckCardViews({
               />
             ))
           )}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+        <h2 className="text-2xl font-semibold">Card Condition Reference</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {Object.entries(CARD_CONDITION_DETAILS).map(([key, detail]) => (
+            <div
+              key={key}
+              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+            >
+              <div className="text-xs uppercase tracking-wide text-emerald-300">
+                {detail.shortLabel}
+              </div>
+              <div className="mt-2 text-lg font-semibold text-white">{detail.label}</div>
+              <p className="mt-2 text-sm text-zinc-400">{detail.description}</p>
+            </div>
+          ))}
         </div>
       </div>
 

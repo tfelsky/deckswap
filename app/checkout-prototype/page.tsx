@@ -396,6 +396,21 @@ export default async function CheckoutPrototypePage({
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Condition Checks and Arbitration</h2>
+              <div className="mt-4 space-y-3 text-sm text-zinc-300">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  Sellers should grade cards before listing under Near Mint, Light Play, Moderate Play, Heavy Play, or Damaged, using the lowest honest grade when a card is borderline.
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  During escrow, DeckSwap compares the received deck against the saved inventory, declared conditions, and any agreed packaging notes before release.
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  If a card arrives materially below the listed condition, settlement pauses while support reviews photos, timestamps, and the transaction record to decide whether to proceed, adjust value, or return inventory.
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Foundation Status</h2>
               <div className="mt-4 space-y-3 text-sm text-zinc-300">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
