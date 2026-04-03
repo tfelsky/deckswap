@@ -28,6 +28,8 @@ type DeckCard = {
   foil?: boolean | null
   sort_order?: number | null
   image_url?: string | null
+  price_usd?: number | null
+  price_usd_foil?: number | null
 }
 
 type DeckToken = {
@@ -40,6 +42,8 @@ type DeckToken = {
   foil?: boolean | null
   sort_order?: number | null
   image_url?: string | null
+  price_usd?: number | null
+  price_usd_foil?: number | null
 }
 
 export default async function DeckDetailPage({
@@ -84,7 +88,7 @@ export default async function DeckDetailPage({
   const { data: cards, error: cardsError } = await supabase
     .from('deck_cards')
     .select(
-      'id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url'
+      'id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil'
     )
     .eq('deck_id', deckId)
     .order('section', { ascending: true })
@@ -93,7 +97,7 @@ export default async function DeckDetailPage({
   const { data: tokens, error: tokensError } = await supabase
     .from('deck_tokens')
     .select(
-      'id, quantity, token_name, set_code, set_name, collector_number, foil, sort_order, image_url'
+      'id, quantity, token_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil'
     )
     .eq('deck_id', deckId)
     .order('sort_order', { ascending: true })
@@ -136,6 +140,8 @@ export default async function DeckDetailPage({
     collector_number: token.collector_number,
     foil: token.foil,
     image_url: token.image_url,
+    price_usd: token.price_usd,
+    price_usd_foil: token.price_usd_foil,
     section: 'token' as const,
   }))
 

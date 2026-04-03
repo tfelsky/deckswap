@@ -11,6 +11,8 @@ type BaseCard = {
   collector_number?: string | null
   foil?: boolean | null
   image_url?: string | null
+  price_usd?: number | null
+  price_usd_foil?: number | null
   section: 'commander' | 'mainboard' | 'token'
 }
 
@@ -41,6 +43,22 @@ function getScryfallUrl(card: BaseCard) {
   return `https://scryfall.com/search?q=%21%22${encodeURIComponent(
     card.card_name
   )}%22`
+}
+
+function getUnitPrice(card: BaseCard) {
+  return card.foil
+    ? (card.price_usd_foil ?? card.price_usd ?? null)
+    : (card.price_usd ?? null)
+}
+
+function getLineTotal(card: BaseCard) {
+  const unitPrice = getUnitPrice(card)
+  return unitPrice != null ? unitPrice * card.quantity : null
+}
+
+function formatUsd(value?: number | null) {
+  if (value == null) return 'N/A'
+  return `$${value.toFixed(2)}`
 }
 
 function MetaChip({ children }: { children: React.ReactNode }) {
@@ -103,13 +121,13 @@ function CardModal({
               onClick={onPrev}
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
             >
-              ← Prev
+              {'<-'} Prev
             </button>
             <button
               onClick={onNext}
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
             >
-              Next →
+              Next {'->'}
             </button>
             <a
               href={getScryfallUrl(card)}
@@ -159,6 +177,21 @@ function CardModal({
                 {card.card_name}
               </div>
 
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="text-sm text-zinc-400">Unit Price</div>
+                  <div className="mt-1 text-lg font-medium text-emerald-300">
+                    {formatUsd(getUnitPrice(card))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-zinc-400">Line Total</div>
+                  <div className="mt-1 text-lg font-medium text-emerald-300">
+                    {formatUsd(getLineTotal(card))}
+                  </div>
+                </div>
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-2">
                 {card.set_code && <MetaChip>{card.set_code.toUpperCase()}</MetaChip>}
                 {card.collector_number && <MetaChip>#{card.collector_number}</MetaChip>}
@@ -179,14 +212,14 @@ function CardModal({
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-zinc-400">Set Code</div>
                 <div className="mt-2 text-lg font-medium text-white">
-                  {card.set_code?.toUpperCase() || '—'}
+                  {card.set_code?.toUpperCase() || 'N/A'}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-zinc-400">Collector Number</div>
                 <div className="mt-2 text-lg font-medium text-white">
-                  {card.collector_number || '—'}
+                  {card.collector_number || 'N/A'}
                 </div>
               </div>
 
@@ -205,6 +238,13 @@ function CardModal({
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Unit Price</div>
+                <div className="mt-2 text-lg font-medium text-emerald-300">
+                  {formatUsd(getUnitPrice(card))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:col-span-2">
                 <div className="text-sm text-zinc-400">Section</div>
                 <div className="mt-2 text-lg font-medium capitalize text-white">
                   {card.section}
@@ -268,7 +308,12 @@ function CardTile({
         <div className="mt-1 text-xs text-zinc-400">
           {printLine(card) || 'No print metadata'}
         </div>
-        <div className="mt-2 text-sm text-zinc-300">Qty: {card.quantity}</div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-zinc-300">Qty: {card.quantity}</span>
+          <span className="font-medium text-emerald-300">
+            {formatUsd(getUnitPrice(card))}
+          </span>
+        </div>
       </div>
     </button>
   )
@@ -367,21 +412,25 @@ export default function DeckCardViews({
           <div className="mt-5 text-sm text-zinc-400">No mainboard cards saved.</div>
         ) : view === 'table' ? (
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
-            <div className="grid grid-cols-[70px_1fr_320px_120px] gap-3 border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-wide text-zinc-400">
+            <div className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-wide text-zinc-400">
               <div>Qty</div>
               <div>Card</div>
               <div>Printing</div>
+              <div>Price</div>
               <div>Preview</div>
             </div>
 
             {mainboard.map((card) => (
               <div
                 key={card.id}
-                className="grid grid-cols-[70px_1fr_320px_120px] gap-3 border-b border-white/10 px-4 py-3 text-sm last:border-b-0"
+                className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 px-4 py-3 text-sm last:border-b-0"
               >
                 <div className="text-zinc-300">{card.quantity}</div>
                 <div className="font-medium text-white">{card.card_name}</div>
-                <div className="text-zinc-400">{printLine(card) || '—'}</div>
+                <div className="text-zinc-400">{printLine(card) || 'N/A'}</div>
+                <div className="font-medium text-emerald-300">
+                  {formatUsd(getUnitPrice(card))}
+                </div>
                 <div>
                   <button
                     type="button"
