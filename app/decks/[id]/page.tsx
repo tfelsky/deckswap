@@ -743,10 +743,11 @@ export default async function DeckDetailPage({
               </details>
             )}
 
-          <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:items-start 2xl:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] 2xl:gap-10">
-            <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-              <div className="mx-auto w-full max-w-[13rem] p-5 pb-0">
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
+          <div className="mt-8 space-y-6">
+            <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.35)] xl:grid xl:grid-cols-[280px_minmax(0,1fr)] xl:items-stretch">
+              <div className="p-5 xl:border-r xl:border-white/10 xl:p-6">
+                <div className="mx-auto w-full max-w-[13rem] xl:max-w-none">
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
                   <div className="aspect-[5/7]">
                     {typedDeck.image_url ? (
                       <img
@@ -768,14 +769,16 @@ export default async function DeckDetailPage({
                     )}
                   </div>
                 </div>
+                </div>
+              </div>
 
-              <div className="p-6">
+              <div className="p-6 xl:flex xl:flex-col xl:justify-between xl:p-8">
                 <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-200">
                   {getDeckFormatLabel(deckFormat)}
                 </div>
                 <h1 className="mt-4 text-3xl font-semibold">{typedDeck.name}</h1>
                 <p className="mt-2 text-zinc-400">{typedDeck.commander || 'Commander pending review'}</p>
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 xl:max-w-sm">
                   <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Imported</div>
                   <div className="mt-2 text-sm text-zinc-300">{formatImportedAt(typedDeck.imported_at)}</div>
                 </div>
@@ -1261,7 +1264,6 @@ export default async function DeckDetailPage({
               </div>
             </div>
           </div>
-        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10">
