@@ -281,7 +281,7 @@ export default async function HomePage({
 
               <div className="mt-8 space-y-6">
                 {[
-                  { title: "Mono / Colorless", items: MONO_COLOR_FILTERS, collapsible: false },
+                  { title: "Mono / Colorless", items: MONO_COLOR_FILTERS, collapsible: true },
                   { title: "Color Pairs", items: PAIR_COLOR_FILTERS, collapsible: true },
                   { title: "Three-Color", items: TRI_COLOR_FILTERS, collapsible: true },
                   { title: "Four-Color", items: FOUR_COLOR_FILTERS, collapsible: true },
@@ -349,19 +349,7 @@ export default async function HomePage({
                       </summary>
                       {content}
                     </details>
-                  ) : (
-                    <div key={group.title}>
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {group.title}
-                        </div>
-                        <div className="hidden text-xs text-muted-foreground sm:block">
-                          {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
-                        </div>
-                      </div>
-                      {content}
-                    </div>
-                  )
+                  ) : null
                 })}
               </div>
             </div>
