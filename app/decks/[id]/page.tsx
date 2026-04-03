@@ -10,8 +10,11 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { isLikelyTokenCard } from '@/lib/commander/parse'
+import { normalizeImportedCommanderOverlap } from '@/lib/commander/normalize'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateDeckForFormat } from '@/lib/commander/validate'
+import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import {
   formatCommentTimestamp,
   isDeckCommentsSchemaMissing,
@@ -25,6 +28,7 @@ import {
   type DeckPriceSnapshot,
 } from '@/lib/decks/price-history'
 import {
+  detectDeckFormat,
   formatSupportsCommanderRules,
   getDeckFormatLabel,
   normalizeDeckFormat,
@@ -62,6 +66,7 @@ type Deck = {
   id: number
   user_id?: string | null
   source_type?: string | null
+  source_url?: string | null
   name: string
   commander?: string | null
   power_level?: number | null
@@ -202,7 +207,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -726,6 +731,325 @@ export default async function DeckDetailPage({
     }
   }
 
+  async function reimportFromSourceAction() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const access = await getAdminAccessForUser(user)
+
+    if (!user || (typedDeck.user_id !== user.id && !access.isAdmin)) {
+      redirect(`/decks/${deckId}`)
+    }
+
+    if (typedDeck.source_type !== 'moxfield' || !typedDeck.source_url) {
+      redirect(`/decks/${deckId}?reimportFailed=1`)
+    }
+
+    try {
+      const fetchedDeck = await fetchMoxfieldDeck(typedDeck.source_url)
+      const normalizedCards = normalizeImportedCommanderOverlap(fetchedDeck.cards)
+      const detectedFormat = normalizeDeckFormat(
+        detectDeckFormat(normalizedCards, fetchedDeck.format)
+      )
+      const validation = validateDeckForFormat(normalizedCards, detectedFormat)
+      const commanderNames = normalizedCards
+        .filter((card) => card.section === 'commander')
+        .map((card) => card.cardName)
+
+      const deckCards = normalizedCards
+        .filter((card) => card.section === 'commander' || card.section === 'mainboard')
+        .map((card, index) => ({
+          deck_id: deckId,
+          section: card.section,
+          quantity: card.quantity,
+          card_name: card.cardName,
+          condition: 'near_mint',
+          condition_source: 'import_default',
+          set_code: card.setCode ?? null,
+          set_name: card.setName ?? null,
+          collector_number: card.collectorNumber ?? null,
+          foil: card.foil ?? false,
+          sort_order: index,
+        }))
+
+      const deckTokens = normalizedCards
+        .filter((card) => card.section === 'token')
+        .map((card, index) => ({
+          deck_id: deckId,
+          quantity: card.quantity,
+          token_name: card.cardName,
+          set_code: card.setCode ?? null,
+          set_name: card.setName ?? null,
+          collector_number: card.collectorNumber ?? null,
+          foil: card.foil ?? false,
+          sort_order: index,
+        }))
+
+      const { error: deleteCardsError } = await supabase
+        .from('deck_cards')
+        .delete()
+        .eq('deck_id', deckId)
+
+      if (deleteCardsError) {
+        throw new Error(deleteCardsError.message)
+      }
+
+      const { error: deleteTokensError } = await supabase
+        .from('deck_tokens')
+        .delete()
+        .eq('deck_id', deckId)
+
+      if (deleteTokensError) {
+        throw new Error(deleteTokensError.message)
+      }
+
+      if (deckCards.length > 0) {
+        const { error: insertCardsError } = await supabase.from('deck_cards').insert(deckCards)
+
+        if (insertCardsError) {
+          throw new Error(insertCardsError.message)
+        }
+      }
+
+      if (deckTokens.length > 0) {
+        const { error: insertTokensError } = await supabase.from('deck_tokens').insert(deckTokens)
+
+        if (insertTokensError) {
+          throw new Error(insertTokensError.message)
+        }
+      }
+
+      const { error: updateDeckError } = await supabase
+        .from('decks')
+        .update({
+          commander: commanderNames[0] ?? null,
+          format: detectedFormat,
+          commander_count: validation.commanderCount,
+          mainboard_count: validation.mainboardCount,
+          token_count: validation.tokenCount,
+          commander_mode: validation.commanderMode,
+          commander_names: commanderNames,
+          is_valid: validation.isValid,
+          validation_errors: validation.errors,
+        })
+        .eq('id', deckId)
+
+      if (updateDeckError) {
+        throw new Error(updateDeckError.message)
+      }
+
+      await enrichDeckWithScryfall(deckId, 'refresh')
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'source_reimport_succeeded',
+        severity: 'info',
+        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} re-imported the deck from its saved source.`,
+        details: {
+          sourceUrl: typedDeck.source_url,
+          detectedFormat,
+          deckCards: deckCards.length,
+          deckTokens: deckTokens.length,
+        },
+      })
+      redirect(`/decks/${deckId}?reimported=1`)
+    } catch (error) {
+      console.error('Source re-import failed:', error)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user?.id ?? null,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'source_reimport_failed',
+        severity: 'warning',
+        message: error instanceof Error ? error.message : 'Source re-import failed.',
+        details: {
+          sourceUrl: typedDeck.source_url,
+          trigger: 'deck_detail_source_reimport',
+        },
+      })
+      redirect(`/decks/${deckId}?reimportFailed=1`)
+    }
+  }
+
+  async function reclassifyTokensAction() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const access = await getAdminAccessForUser(user)
+
+    if (!user || (typedDeck.user_id !== user.id && !access.isAdmin)) {
+      redirect(`/decks/${deckId}`)
+    }
+
+    try {
+      const { data: currentCards, error: currentCardsError } = await supabase
+        .from('deck_cards')
+        .select(
+          'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, condition, condition_source'
+        )
+        .eq('deck_id', deckId)
+        .order('sort_order', { ascending: true })
+
+      const { data: currentTokens, error: currentTokensError } = await supabase
+        .from('deck_tokens')
+        .select(
+          'id, quantity, token_name, set_code, set_name, collector_number, foil, sort_order'
+        )
+        .eq('deck_id', deckId)
+        .order('sort_order', { ascending: true })
+
+      if (currentCardsError) {
+        throw new Error(currentCardsError.message)
+      }
+
+      if (currentTokensError) {
+        throw new Error(currentTokensError.message)
+      }
+
+      const cardsToMoveToTokens = ((currentCards ?? []) as Array<{
+        id: number
+        quantity: number
+        card_name: string
+        set_code?: string | null
+        set_name?: string | null
+        collector_number?: string | null
+        foil?: boolean | null
+        sort_order?: number | null
+        section: 'commander' | 'mainboard'
+      }>).filter(
+        (card) =>
+          card.section === 'mainboard' &&
+          isLikelyTokenCard(card.card_name, card.set_code)
+      )
+
+      const tokensToMoveToCards = ((currentTokens ?? []) as Array<{
+        id: number
+        quantity: number
+        token_name: string
+        set_code?: string | null
+        set_name?: string | null
+        collector_number?: string | null
+        foil?: boolean | null
+        sort_order?: number | null
+      }>).filter((token) => !isLikelyTokenCard(token.token_name, token.set_code))
+
+      const nextCardSortBase =
+        ((currentCards ?? []) as Array<{ sort_order?: number | null }>).reduce(
+          (max, card) => Math.max(max, Number(card.sort_order ?? 0)),
+          0
+        ) + 1
+      const nextTokenSortBase =
+        ((currentTokens ?? []) as Array<{ sort_order?: number | null }>).reduce(
+          (max, token) => Math.max(max, Number(token.sort_order ?? 0)),
+          0
+        ) + 1
+
+      if (cardsToMoveToTokens.length > 0) {
+        const { error: insertTokensError } = await supabase.from('deck_tokens').insert(
+          cardsToMoveToTokens.map((card, index) => ({
+            deck_id: deckId,
+            quantity: card.quantity,
+            token_name: card.card_name,
+            set_code: card.set_code ?? null,
+            set_name: card.set_name ?? null,
+            collector_number: card.collector_number ?? null,
+            foil: card.foil ?? false,
+            sort_order: nextTokenSortBase + index,
+          }))
+        )
+
+        if (insertTokensError) {
+          throw new Error(insertTokensError.message)
+        }
+
+        const { error: deleteCardsError } = await supabase
+          .from('deck_cards')
+          .delete()
+          .in(
+            'id',
+            cardsToMoveToTokens.map((card) => card.id)
+          )
+
+        if (deleteCardsError) {
+          throw new Error(deleteCardsError.message)
+        }
+      }
+
+      if (tokensToMoveToCards.length > 0) {
+        const { error: insertCardsError } = await supabase.from('deck_cards').insert(
+          tokensToMoveToCards.map((token, index) => ({
+            deck_id: deckId,
+            section: 'mainboard',
+            quantity: token.quantity,
+            card_name: token.token_name,
+            condition: 'near_mint',
+            condition_source: 'import_default',
+            set_code: token.set_code ?? null,
+            set_name: token.set_name ?? null,
+            collector_number: token.collector_number ?? null,
+            foil: token.foil ?? false,
+            sort_order: nextCardSortBase + index,
+          }))
+        )
+
+        if (insertCardsError) {
+          throw new Error(insertCardsError.message)
+        }
+
+        const { error: deleteTokensError } = await supabase
+          .from('deck_tokens')
+          .delete()
+          .in(
+            'id',
+            tokensToMoveToCards.map((token) => token.id)
+          )
+
+        if (deleteTokensError) {
+          throw new Error(deleteTokensError.message)
+        }
+      }
+
+      await syncDeckDerivedState(deckId)
+      await enrichDeckWithScryfall(deckId, 'refresh')
+
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'token_reclassification_succeeded',
+        severity: 'info',
+        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} reclassified saved rows between mainboard and tokens.`,
+        details: {
+          movedCardsToTokens: cardsToMoveToTokens.length,
+          movedTokensToCards: tokensToMoveToCards.length,
+        },
+      })
+
+      redirect(`/decks/${deckId}?tokensReclassified=1`)
+    } catch (error) {
+      console.error('Token reclassification failed:', error)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user?.id ?? null,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'token_reclassification_failed',
+        severity: 'warning',
+        message: error instanceof Error ? error.message : 'Token reclassification failed.',
+        details: {
+          trigger: 'deck_detail_reclassify_tokens',
+        },
+      })
+      redirect(`/decks/${deckId}?tokenReclassifyFailed=1`)
+    }
+  }
+
   const commanders = typedCards.filter((card) => card.section === 'commander')
   const mainboard = typedCards.filter((card) => card.section === 'mainboard')
   const commanderCandidates = getCommanderCandidates(typedCards)
@@ -741,7 +1065,15 @@ export default async function DeckDetailPage({
   const showEnrichRetryFailed = resolvedSearchParams?.enrichRetryFailed === '1'
   const showReprocessed = resolvedSearchParams?.reprocessed === '1'
   const showReprocessFailed = resolvedSearchParams?.reprocessFailed === '1'
+  const showReimported = resolvedSearchParams?.reimported === '1'
+  const showReimportFailed = resolvedSearchParams?.reimportFailed === '1'
+  const showTokensReclassified = resolvedSearchParams?.tokensReclassified === '1'
+  const showTokenReclassifyFailed = resolvedSearchParams?.tokenReclassifyFailed === '1'
   const canRunImportRecovery = !!user && (isOwner || isAdmin)
+  const canReimportFromSource =
+    canRunImportRecovery &&
+    typedDeck.source_type === 'moxfield' &&
+    !!typedDeck.source_url
   const importSourceLabel =
     typedDeck.source_type === 'moxfield'
       ? 'Moxfield'
@@ -894,6 +1226,18 @@ export default async function DeckDetailPage({
             </div>
           )}
 
+          {showReimported && (
+            <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+              Deck re-imported successfully from the saved source.
+            </div>
+          )}
+
+          {showTokensReclassified && (
+            <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+              Saved rows were reclassified between mainboard and tokens, then refreshed.
+            </div>
+          )}
+
           {showEnrichRetryFailed && (
             <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
               <div className="font-medium text-red-200">Enrichment retry failed</div>
@@ -910,6 +1254,26 @@ export default async function DeckDetailPage({
               <p className="mt-3 text-red-100/90">
                 {latestImportIssue?.message ||
                   'Reprocessing deck state failed. The deck data may still be missing supporting metadata.'}
+              </p>
+            </div>
+          )}
+
+          {showReimportFailed && (
+            <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
+              <div className="font-medium text-red-200">Deck re-import failed</div>
+              <p className="mt-3 text-red-100/90">
+                {latestImportIssue?.message ||
+                  'The saved source could not be re-imported right now. Check that the source is still public and available.'}
+              </p>
+            </div>
+          )}
+
+          {showTokenReclassifyFailed && (
+            <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
+              <div className="font-medium text-red-200">Token reclassification failed</div>
+              <p className="mt-3 text-red-100/90">
+                {latestImportIssue?.message ||
+                  'Saved rows could not be reclassified right now. You can still try a source re-import or standard reprocess.'}
               </p>
             </div>
           )}
@@ -938,6 +1302,18 @@ export default async function DeckDetailPage({
                         Retry enrichment
                       </button>
                     </form>
+                    {canReimportFromSource && (
+                      <form action={reimportFromSourceAction}>
+                        <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                          Re-import from source
+                        </button>
+                      </form>
+                    )}
+                    <form action={reclassifyTokensAction}>
+                      <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                        Reclassify tokens
+                      </button>
+                    </form>
                   </div>
                 )}
               </details>
@@ -963,6 +1339,18 @@ export default async function DeckDetailPage({
                       Reprocess deck state
                     </button>
                   </form>
+                  {canReimportFromSource && (
+                    <form action={reimportFromSourceAction}>
+                      <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                        Re-import from source
+                      </button>
+                    </form>
+                  )}
+                  <form action={reclassifyTokensAction}>
+                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                      Reclassify tokens
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
@@ -983,6 +1371,18 @@ export default async function DeckDetailPage({
                 <form action={reprocessDeckStateAction}>
                   <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
                     Reprocess validation
+                  </button>
+                </form>
+                {canReimportFromSource && (
+                  <form action={reimportFromSourceAction}>
+                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                      Re-import from source
+                    </button>
+                  </form>
+                )}
+                <form action={reclassifyTokensAction}>
+                  <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                    Reclassify tokens
                   </button>
                 </form>
               </div>
