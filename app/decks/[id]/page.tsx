@@ -1,4 +1,5 @@
 import DeckCardViews from '@/components/deck-card-views'
+import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateCommanderDeck } from '@/lib/commander/validate'
 import { createClient } from '@/lib/supabase/server'
@@ -333,6 +334,7 @@ export default async function DeckDetailPage({
   const commanders = typedCards.filter((card) => card.section === 'commander')
   const mainboard = typedCards.filter((card) => card.section === 'mainboard')
   const commanderCandidates = getCommanderCandidates(typedCards)
+  const bracketSummary = getCommanderBracketSummary(typedCards)
   const showImportedWarning =
     resolvedSearchParams?.imported === '1' || typedDeck.is_valid === false
   const showCommanderUpdated = resolvedSearchParams?.commanderUpdated === '1'
@@ -449,10 +451,36 @@ export default async function DeckDetailPage({
                 )}
 
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Power Level</div>
+                <div className="text-sm text-zinc-400">Commander Bracket</div>
                 <div className="mt-2 text-3xl font-semibold">
-                  {typedDeck.power_level ?? 'N/A'}
+                  {bracketSummary.label}
                 </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  {bracketSummary.description}
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">{bracketSummary.bracketRule}</p>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Bracket Signals</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {bracketSummary.gameChangerCount}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
+                </p>
+                {bracketSummary.gameChangers.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
+                      <span
+                        key={cardName}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
+                      >
+                        {cardName}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
@@ -481,6 +509,15 @@ export default async function DeckDetailPage({
                   <div>Commanders: {commanders.reduce((sum, card) => sum + card.quantity, 0)}</div>
                   <div>Mainboard: {mainboard.reduce((sum, card) => sum + card.quantity, 0)}</div>
                   <div>Tokens: {tokenCards.reduce((sum, card) => sum + card.quantity, 0)}</div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Bracket Notes</div>
+                <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                  {bracketSummary.notes.map((note) => (
+                    <p key={note}>{note}</p>
+                  ))}
                 </div>
               </div>
             </div>

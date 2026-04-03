@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function CreateDeckPage() {
   const supabase = createClient()
@@ -11,7 +12,6 @@ export default function CreateDeckPage() {
 
   const [name, setName] = useState('')
   const [commander, setCommander] = useState('')
-  const [power, setPower] = useState<number | ''>('')
   const [value, setValue] = useState<number | ''>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +42,6 @@ export default function CreateDeckPage() {
       {
         name,
         commander: commander || null,
-        power_level: power === '' ? null : Number(power),
         price_estimate: value === '' ? null : Number(value),
         user_id: user.id,
       },
@@ -74,13 +73,10 @@ export default function CreateDeckPage() {
               Marketplace Listing
             </div>
 
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Create a deck
-            </h1>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight">Create a deck</h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Add a Commander deck to the marketplace with its commander, power
-              level, and estimated value.
+              Add a Commander deck to the marketplace. Brackets are now estimated automatically from a full imported list instead of using a manual power-level number.
             </p>
           </div>
         </div>
@@ -127,47 +123,48 @@ export default function CreateDeckPage() {
               />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="power"
-                  className="mb-2 block text-sm font-medium text-zinc-300"
-                >
-                  Power level
-                </label>
-                <input
-                  id="power"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={power}
-                  onChange={(e) =>
-                    setPower(e.target.value === '' ? '' : Number(e.target.value))
-                  }
-                  placeholder="6"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
-                />
-              </div>
+            <div>
+              <label
+                htmlFor="value"
+                className="mb-2 block text-sm font-medium text-zinc-300"
+              >
+                Estimated value ($)
+              </label>
+              <input
+                id="value"
+                type="number"
+                min="0"
+                step="1"
+                value={value}
+                onChange={(e) =>
+                  setValue(e.target.value === '' ? '' : Number(e.target.value))
+                }
+                placeholder="180"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
+              />
+            </div>
 
-              <div>
-                <label
-                  htmlFor="value"
-                  className="mb-2 block text-sm font-medium text-zinc-300"
-                >
-                  Estimated value ($)
-                </label>
-                <input
-                  id="value"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={value}
-                  onChange={(e) =>
-                    setValue(e.target.value === '' ? '' : Number(e.target.value))
-                  }
-                  placeholder="180"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
-                />
+            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+              <h2 className="text-lg font-semibold text-white">Commander Brackets</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                To estimate an official bracket automatically, import a full deck list. Manual listings can still be created now and upgraded with `/import-deck` later.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(Object.entries(COMMANDER_BRACKETS) as Array<
+                  [string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]
+                >).map(([key, bracket]) => (
+                  <div
+                    key={key}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <div className="text-sm font-medium text-white">
+                      Bracket {key}: {bracket.label}
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {bracket.shortDescription}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 

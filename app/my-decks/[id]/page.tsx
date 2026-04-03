@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -42,6 +43,19 @@ export default async function ManageDeckPage({
     .select('*')
     .eq('id', deckId)
     .single()
+
+  const { data: deckCards } = await supabase
+    .from('deck_cards')
+    .select('card_name, section, quantity, cmc, mana_cost')
+    .eq('deck_id', deckId)
+
+  const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
+    card_name: string
+    section: 'commander' | 'mainboard' | 'token'
+    quantity: number
+    cmc?: number | null
+    mana_cost?: string | null
+  }>)
 
   if (error || !deck) {
     return (
@@ -97,11 +111,8 @@ export default async function ManageDeckPage({
 
     const name = formData.get('name') as string
     const commander = formData.get('commander') as string
-    const powerRaw = formData.get('power_level') as string
     const valueRaw = formData.get('price_estimate') as string
 
-    const power =
-      powerRaw && powerRaw.trim() !== '' ? Number(powerRaw) : null
     const value =
       valueRaw && valueRaw.trim() !== '' ? Number(valueRaw) : null
 
@@ -110,7 +121,6 @@ export default async function ManageDeckPage({
       .update({
         name,
         commander: commander || null,
-        power_level: power,
         price_estimate: value,
       })
       .eq('id', deckId)
@@ -153,6 +163,16 @@ export default async function ManageDeckPage({
 
         <h1 className="mt-4 mb-6 text-2xl font-semibold">Manage Deck</h1>
 
+        <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-sm text-zinc-400">Auto-estimated Commander Bracket</div>
+          <div className="mt-2 text-xl font-semibold text-white">
+            {bracketSummary.label}
+          </div>
+          <p className="mt-2 text-sm text-zinc-400">
+            {bracketSummary.description}
+          </p>
+        </div>
+
         <form action={updateDeck} className="space-y-4">
           <input
             name="name"
@@ -163,13 +183,6 @@ export default async function ManageDeckPage({
           <input
             name="commander"
             defaultValue={deck.commander ?? ''}
-            className="w-full rounded-xl border border-white/10 bg-white/5 p-3"
-          />
-
-          <input
-            name="power_level"
-            type="number"
-            defaultValue={deck.power_level ?? ''}
             className="w-full rounded-xl border border-white/10 bg-white/5 p-3"
           />
 

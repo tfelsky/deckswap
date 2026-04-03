@@ -1,5 +1,6 @@
 'use client'
 
+import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { importDeckAction } from './actions'
@@ -134,6 +135,30 @@ Tokens
                 {state.error}
               </div>
             )}
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+              <h2 className="text-lg font-semibold text-white">Commander Bracket Guide</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Imported decks are automatically estimated against the official Commander bracket beta system using Game Changers and other visible deck signals.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(Object.entries(COMMANDER_BRACKETS) as Array<
+                  [string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]
+                >).map(([key, bracket]) => (
+                  <div
+                    key={key}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <div className="text-sm font-medium text-white">
+                      Bracket {key}: {bracket.label}
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {bracket.shortDescription}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <button
               type="submit"

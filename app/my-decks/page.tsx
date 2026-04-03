@@ -1,3 +1,4 @@
+import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -5,17 +6,17 @@ type Deck = {
   id: number
   name: string
   commander?: string | null
-  power_level?: number | null
-  price_estimate?: number | null
+  price_total_usd_foil?: number | null
   image_url?: string | null
 }
 
-function powerLabel(power?: number | null) {
-  if (power == null) return 'Unrated'
-  if (power <= 3) return 'Battlecruiser'
-  if (power <= 6) return 'Casual'
-  if (power <= 8) return 'High Power'
-  return 'cEDH'
+type DeckCardForBracket = {
+  deck_id: number
+  section: 'commander' | 'mainboard' | 'token'
+  quantity: number
+  card_name: string
+  cmc?: number | null
+  mana_cost?: string | null
 }
 
 export default async function MyDecksPage() {
@@ -31,9 +32,7 @@ export default async function MyDecksPage() {
         <section className="mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-8">
             <h1 className="text-3xl font-semibold">My Decks</h1>
-            <p className="mt-3 text-zinc-400">
-              You need to sign in to view your decks.
-            </p>
+            <p className="mt-3 text-zinc-400">You need to sign in to view your decks.</p>
 
             <div className="mt-6 flex gap-3">
               <Link
@@ -58,13 +57,13 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, power_level, price_estimate, image_url')
+    .select('id, name, commander, price_total_usd_foil, image_url')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
   if (error) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-white p-8">
+      <main className="min-h-screen bg-zinc-950 p-8 text-white">
         <div className="mx-auto max-w-4xl rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
           <h1 className="text-2xl font-semibold text-red-400">My Decks Error</h1>
           <p className="mt-3 text-sm text-zinc-300">{error.message}</p>
@@ -74,6 +73,38 @@ export default async function MyDecksPage() {
   }
 
   const decks = (data ?? []) as Deck[]
+  const deckIds = decks.map((deck) => deck.id)
+
+  const { data: deckCards } = deckIds.length
+    ? await supabase
+        .from('deck_cards')
+        .select('deck_id, section, quantity, card_name, cmc, mana_cost')
+        .in('deck_id', deckIds)
+    : { data: [] as DeckCardForBracket[] }
+
+  const cardsByDeck = new Map<number, DeckCardForBracket[]>()
+
+  for (const card of ((deckCards ?? []) as DeckCardForBracket[])) {
+    const existing = cardsByDeck.get(card.deck_id) ?? []
+    existing.push(card)
+    cardsByDeck.set(card.deck_id, existing)
+  }
+
+  const deckViews = decks.map((deck) => {
+    const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
+    return { ...deck, bracket }
+  })
+
+  const ratedDecks = deckViews.filter((deck) => deck.bracket.bracket != null)
+  const averageBracket =
+    ratedDecks.length > 0
+      ? (
+          ratedDecks.reduce(
+            (sum, deck) => sum + (deck.bracket.bracket ?? 0),
+            0
+          ) / ratedDecks.length
+        ).toFixed(1)
+      : '0.0'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -114,7 +145,7 @@ export default async function MyDecksPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">My Listings</div>
-              <div className="mt-2 text-3xl font-semibold">{decks.length}</div>
+              <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -123,35 +154,24 @@ export default async function MyDecksPage() {
                 $
                 {Math.max(
                   0,
-                  ...decks.map((deck) => Number(deck.price_estimate ?? 0))
-                ).toFixed(0)}
+                  ...deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
+                ).toFixed(2)}
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Avg. Power</div>
-              <div className="mt-2 text-3xl font-semibold">
-                {decks.length
-                  ? (
-                      decks.reduce(
-                        (sum, deck) => sum + (deck.power_level ?? 0),
-                        0
-                      ) / decks.length
-                    ).toFixed(1)
-                  : '0.0'}
-              </div>
+              <div className="text-sm text-zinc-400">Avg. Bracket</div>
+              <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-10">
-        {decks.length === 0 ? (
+        {deckViews.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
             <h3 className="text-xl font-semibold">No decks yet</h3>
-            <p className="mt-2 text-zinc-400">
-              You have not created any decks yet.
-            </p>
+            <p className="mt-2 text-zinc-400">You have not created any decks yet.</p>
             <Link
               href="/create-deck"
               className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
@@ -161,7 +181,7 @@ export default async function MyDecksPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {decks.map((deck) => (
+            {deckViews.map((deck) => (
               <article
                 key={deck.id}
                 className="group overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900"
@@ -169,37 +189,37 @@ export default async function MyDecksPage() {
                 <Link href={`/decks/${deck.id}`} className="block">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
-  <>
-    <img
-      src={deck.image_url}
-      alt={deck.name}
-      className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]"
-    />
+                      <>
+                        <img
+                          src={deck.image_url}
+                          alt={deck.name}
+                          className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]"
+                        />
 
-    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
-      <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-        Commander Deck
-      </div>
-      <div className="mt-2 text-2xl font-semibold text-white">
-        {deck.commander || 'Unknown Commander'}
-      </div>
-    </div>
-  </>
-) : (
-  <div className="flex h-full w-full items-end p-5">
-    <div>
-      <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-        Commander Deck
-      </div>
-      <div className="mt-2 text-2xl font-semibold text-white">
-        {deck.commander || 'Unknown Commander'}
-      </div>
-    </div>
-  </div>
-)}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
+                          <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
+                            Commander Deck
+                          </div>
+                          <div className="mt-2 text-2xl font-semibold text-white">
+                            {deck.commander || 'Unknown Commander'}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex h-full w-full items-end p-5">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
+                            Commander Deck
+                          </div>
+                          <div className="mt-2 text-2xl font-semibold text-white">
+                            {deck.commander || 'Unknown Commander'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-                      Power {deck.power_level ?? '—'}
+                      {deck.bracket.label}
                     </div>
                   </div>
                 </Link>
@@ -207,9 +227,7 @@ export default async function MyDecksPage() {
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-xl font-semibold tracking-tight">
-                        {deck.name}
-                      </h3>
+                      <h3 className="text-xl font-semibold tracking-tight">{deck.name}</h3>
                       <p className="mt-1 text-sm text-zinc-400">
                         Commander: {deck.commander || 'Not set'}
                       </p>
@@ -220,17 +238,18 @@ export default async function MyDecksPage() {
                         Est. Value
                       </div>
                       <div className="text-lg font-semibold text-emerald-300">
-                        $
-                        {deck.price_estimate != null
-                          ? Number(deck.price_estimate).toFixed(0)
-                          : '—'}
+                        ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                      {powerLabel(deck.power_level)}
+                      {deck.bracket.label}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                      {deck.bracket.gameChangerCount} Game Changer
+                      {deck.bracket.gameChangerCount === 1 ? '' : 's'}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                       Owned by You

@@ -1,3 +1,4 @@
+import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import SignOutButton from '@/components/sign-out-button'
@@ -6,18 +7,17 @@ type Deck = {
   id: number
   name: string
   commander?: string | null
-  power_level?: number | null
-  price_estimate?: number | null
   price_total_usd_foil?: number | null
   image_url?: string | null
 }
 
-function powerLabel(power?: number | null) {
-  if (power == null) return 'Unrated'
-  if (power <= 3) return 'Battlecruiser'
-  if (power <= 6) return 'Casual'
-  if (power <= 8) return 'High Power'
-  return 'cEDH'
+type DeckCardForBracket = {
+  deck_id: number
+  section: 'commander' | 'mainboard' | 'token'
+  quantity: number
+  card_name: string
+  cmc?: number | null
+  mana_cost?: string | null
 }
 
 export default async function DecksPage() {
@@ -29,18 +29,50 @@ export default async function DecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, power_level, price_estimate, price_total_usd_foil, image_url')
+    .select('id, name, commander, price_total_usd_foil, image_url')
     .order('id', { ascending: true })
 
   if (error) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-white p-8">
+      <main className="min-h-screen bg-zinc-950 p-8 text-white">
         <h1 className="text-red-500">Error: {error.message}</h1>
       </main>
     )
   }
 
   const decks = (data ?? []) as Deck[]
+  const deckIds = decks.map((deck) => deck.id)
+
+  const { data: deckCards } = deckIds.length
+    ? await supabase
+        .from('deck_cards')
+        .select('deck_id, section, quantity, card_name, cmc, mana_cost')
+        .in('deck_id', deckIds)
+    : { data: [] as DeckCardForBracket[] }
+
+  const cardsByDeck = new Map<number, DeckCardForBracket[]>()
+
+  for (const card of ((deckCards ?? []) as DeckCardForBracket[])) {
+    const existing = cardsByDeck.get(card.deck_id) ?? []
+    existing.push(card)
+    cardsByDeck.set(card.deck_id, existing)
+  }
+
+  const deckViews = decks.map((deck) => {
+    const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
+    return { ...deck, bracket }
+  })
+
+  const ratedDecks = deckViews.filter((deck) => deck.bracket.bracket != null)
+  const averageBracket =
+    ratedDecks.length > 0
+      ? (
+          ratedDecks.reduce(
+            (sum, deck) => sum + (deck.bracket.bracket ?? 0),
+            0
+          ) / ratedDecks.length
+        ).toFixed(1)
+      : '0.0'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -57,7 +89,7 @@ export default async function DecksPage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-                Discover Commander decks by power, style, and blended card value.
+                Discover Commander decks by official bracket estimate, Game Changers, and blended card value.
               </p>
             </div>
 
@@ -97,21 +129,12 @@ export default async function DecksPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Live Decks</div>
-              <div className="mt-2 text-3xl font-semibold">{decks.length}</div>
+              <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Avg. Power</div>
-              <div className="mt-2 text-3xl font-semibold">
-                {decks.length
-                  ? (
-                      decks.reduce(
-                        (sum, deck) => sum + (deck.power_level ?? 0),
-                        0
-                      ) / decks.length
-                    ).toFixed(1)
-                  : '0.0'}
-              </div>
+              <div className="text-sm text-zinc-400">Avg. Bracket</div>
+              <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -120,7 +143,7 @@ export default async function DecksPage() {
                 $
                 {Math.max(
                   0,
-                  ...decks.map((deck) => Number(deck.price_total_usd_foil ?? 0))
+                  ...deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
                 ).toFixed(2)}
               </div>
             </div>
@@ -138,16 +161,14 @@ export default async function DecksPage() {
       <section className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Available Decks
-            </h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Available Decks</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Marketplace-style grid with commander, power level, and blended value.
+              Marketplace grid with commander, bracket estimate, Game Changers, and blended value.
             </p>
           </div>
         </div>
 
-        {decks.length === 0 ? (
+        {deckViews.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
             <h3 className="text-xl font-semibold">No decks yet</h3>
             <p className="mt-2 text-zinc-400">
@@ -156,7 +177,7 @@ export default async function DecksPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {decks.map((deck) => (
+            {deckViews.map((deck) => (
               <Link key={deck.id} href={`/decks/${deck.id}`}>
                 <article className="group cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
@@ -191,16 +212,14 @@ export default async function DecksPage() {
                     )}
 
                     <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-                      Power {deck.power_level ?? 'N/A'}
+                      {deck.bracket.label}
                     </div>
                   </div>
 
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-xl font-semibold tracking-tight">
-                          {deck.name}
-                        </h3>
+                        <h3 className="text-xl font-semibold tracking-tight">{deck.name}</h3>
                         <p className="mt-1 text-sm text-zinc-400">
                           Commander: {deck.commander || 'Not set'}
                         </p>
@@ -218,10 +237,11 @@ export default async function DecksPage() {
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                        {powerLabel(deck.power_level)}
+                        {deck.bracket.label}
                       </span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                        Salt Match Pending
+                        {deck.bracket.gameChangerCount} Game Changer
+                        {deck.bracket.gameChangerCount === 1 ? '' : 's'}
                       </span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                         Trade Eligible
