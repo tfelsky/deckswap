@@ -818,169 +818,162 @@ export default async function DeckDetailPage({
                   </div>
                 )}
 
-              <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:gap-5">
-                <div className="min-w-0 space-y-4 lg:contents">
-                  {isCommanderDeck ? (
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="flex items-center gap-2 text-sm text-zinc-400">
-                        Commander Bracket
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <button type="button" className="text-zinc-500 hover:text-white">
-                              <Info className="h-4 w-4" />
-                            </button>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
-                            <div className="space-y-2 text-sm">
-                              <p className="font-medium text-white">{bracketSummary.label}</p>
-                              <p>{bracketSummary.description}</p>
-                              <p className="text-zinc-400">{bracketSummary.bracketRule}</p>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </div>
-                      <div className="mt-2 text-3xl font-semibold">
-                        {bracketSummary.label}
-                      </div>
-                      <p className="mt-2 text-sm text-zinc-400">
-                        {bracketSummary.description}
-                      </p>
+              <div className="grid gap-4 xl:grid-cols-3">
+                {isCommanderDeck ? (
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      Commander Bracket
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <button type="button" className="text-zinc-500 hover:text-white">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                          <div className="space-y-2 text-sm">
+                            <p className="font-medium text-white">{bracketSummary.label}</p>
+                            <p>{bracketSummary.description}</p>
+                            <p className="text-zinc-400">{bracketSummary.bracketRule}</p>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
                     </div>
-                  ) : (
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Deck Format</div>
-                      <div className="mt-2 text-3xl font-semibold">
-                        {getDeckFormatLabel(deckFormat)}
-                      </div>
-                      <p className="mt-2 text-sm text-zinc-400">
-                        This deck is using the relaxed import flow for broader supported formats.
-                      </p>
+                    <div className="mt-2 text-3xl font-semibold">
+                      {bracketSummary.label}
                     </div>
-                  )}
+                    <p className="mt-2 text-sm text-zinc-400">
+                      {bracketSummary.description}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Deck Format</div>
+                    <div className="mt-2 text-3xl font-semibold">
+                      {getDeckFormatLabel(deckFormat)}
+                    </div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      This deck is using the relaxed import flow for broader supported formats.
+                    </p>
+                  </div>
+                )}
 
-                  {isCommanderDeck && (
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Bracket Signals</div>
-                      <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                        {bracketSummary.gameChangerCount}
-                      </div>
-                      <p className="mt-2 text-sm text-zinc-400">
-                        Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
-                      </p>
-                      {bracketSummary.gameChangers.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
-                            <span
-                              key={cardName}
-                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
-                            >
-                              {cardName}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                  <div className="text-sm text-zinc-400">Price Trend</div>
+                  <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                    <div>
+                      Import snapshot:{' '}
+                      {importSnapshot?.price_total_usd_foil != null
+                        ? `$${Number(importSnapshot.price_total_usd_foil).toFixed(2)}`
+                        : 'Awaiting first snapshot'}
                     </div>
-                  )}
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                      <div className="text-sm text-emerald-100/80">Estimated Card Pricing</div>
-                      <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                        ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
-                      </div>
-                      <p className="mt-2 text-sm text-emerald-50/70">
-                        Blended using each card&apos;s current foil or non-foil print setting.
-                      </p>
+                    <div className={changeTone(change30)}>
+                      30d move: {formatPercentChange(change30) ?? 'Awaiting enough history'}
                     </div>
-
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Price Trend</div>
-                      <div className="mt-3 space-y-2 text-sm text-zinc-300">
-                        <div>
-                          Import snapshot:{' '}
-                          {importSnapshot?.price_total_usd_foil != null
-                            ? `$${Number(importSnapshot.price_total_usd_foil).toFixed(2)}`
-                            : 'Awaiting first snapshot'}
-                        </div>
-                        <div className={changeTone(change30)}>
-                          30d move: {formatPercentChange(change30) ?? 'Awaiting enough history'}
-                        </div>
-                        <div className={changeTone(change60)}>
-                          60d move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
-                        </div>
-                      </div>
+                    <div className={changeTone(change60)}>
+                      60d move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid gap-4 sm:grid-cols-3 lg:col-span-2">
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Commanders</div>
-                      <div className="mt-2 text-3xl font-semibold text-white">
-                        {commanders.reduce((sum, card) => sum + card.quantity, 0)}
-                      </div>
+                {isCommanderDeck ? (
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Bracket Signals</div>
+                    <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                      {bracketSummary.gameChangerCount}
                     </div>
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Mainboard</div>
-                      <div className="mt-2 text-3xl font-semibold text-white">
-                        {mainboard.reduce((sum, card) => sum + card.quantity, 0)}
-                      </div>
-                    </div>
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                      <div className="text-sm text-zinc-400">Tokens</div>
-                      <div className="mt-2 text-3xl font-semibold text-white">
-                        {tokenCards.reduce((sum, card) => sum + card.quantity, 0)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 lg:col-span-2">
-                    <div className="text-sm text-zinc-400">Deck Snapshot</div>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="text-xs uppercase tracking-wide text-zinc-500">Validation</div>
-                        <div className="mt-2 text-sm font-medium text-white">
-                          {typedDeck.is_valid ? 'Ready for listing' : 'Needs review'}
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="text-xs uppercase tracking-wide text-zinc-500">Commander Mode</div>
-                        <div className="mt-2 text-sm font-medium capitalize text-white">
-                          {(typedDeck.commander_mode ?? 'unknown').replace(/_/g, ' ')}
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
-                        <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Presentation</div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {marketingChips.length > 0 ? (
-                            marketingChips.map((chip) => (
-                              <span
-                                key={chip}
-                                className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
-                              >
-                                {chip}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-zinc-400">
-                              No packaging details added yet.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {isCommanderDeck && (
-                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 lg:col-span-2">
-                      <div className="text-sm text-zinc-400">Bracket Notes</div>
-                      <div className="mt-3 space-y-2 text-sm text-zinc-300">
-                        {bracketSummary.notes.map((note) => (
-                          <p key={note}>{note}</p>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
+                    </p>
+                    {bracketSummary.gameChangers.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
+                          <span
+                            key={cardName}
+                            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
+                          >
+                            {cardName}
+                          </span>
                         ))}
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Deck Snapshot</div>
+                    <div className="mt-3 text-sm text-zinc-300">
+                      Imported {formatImportedAt(typedDeck.imported_at)} and ready for broader format review.
                     </div>
-                  )}
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-3 xl:col-span-3">
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Commanders</div>
+                    <div className="mt-2 text-3xl font-semibold text-white">
+                      {commanders.reduce((sum, card) => sum + card.quantity, 0)}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Mainboard</div>
+                    <div className="mt-2 text-3xl font-semibold text-white">
+                      {mainboard.reduce((sum, card) => sum + card.quantity, 0)}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Tokens</div>
+                    <div className="mt-2 text-3xl font-semibold text-white">
+                      {tokenCards.reduce((sum, card) => sum + card.quantity, 0)}
+                    </div>
+                  </div>
                 </div>
+
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 xl:col-span-2">
+                  <div className="text-sm text-zinc-400">Deck Snapshot</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Validation</div>
+                      <div className="mt-2 text-sm font-medium text-white">
+                        {typedDeck.is_valid ? 'Ready for listing' : 'Needs review'}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Commander Mode</div>
+                      <div className="mt-2 text-sm font-medium capitalize text-white">
+                        {(typedDeck.commander_mode ?? 'unknown').replace(/_/g, ' ')}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Presentation</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {marketingChips.length > 0 ? (
+                          marketingChips.map((chip) => (
+                            <span
+                              key={chip}
+                              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                            >
+                              {chip}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-zinc-400">
+                            No packaging details added yet.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isCommanderDeck && (
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5 xl:col-span-3">
+                    <div className="text-sm text-zinc-400">Bracket Notes</div>
+                    <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                      {bracketSummary.notes.map((note) => (
+                        <p key={note}>{note}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="min-w-0 space-y-4 lg:contents">
                   <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
