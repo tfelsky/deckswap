@@ -281,21 +281,13 @@ export default async function HomePage({
 
               <div className="mt-8 space-y-6">
                 {[
-                  { title: "Mono / Colorless", items: MONO_COLOR_FILTERS },
-                  { title: "Color Pairs", items: PAIR_COLOR_FILTERS },
-                  { title: "Three-Color", items: TRI_COLOR_FILTERS },
-                  { title: "Four-Color", items: FOUR_COLOR_FILTERS },
-                  { title: "Five-Color", items: FIVE_COLOR_FILTERS },
-                ].map((group) => (
-                  <div key={group.title}>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                        {group.title}
-                      </div>
-                      <div className="hidden text-xs text-muted-foreground sm:block">
-                        {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
-                      </div>
-                    </div>
+                  { title: "Mono / Colorless", items: MONO_COLOR_FILTERS, collapsible: false },
+                  { title: "Color Pairs", items: PAIR_COLOR_FILTERS, collapsible: true },
+                  { title: "Three-Color", items: TRI_COLOR_FILTERS, collapsible: true },
+                  { title: "Four-Color", items: FOUR_COLOR_FILTERS, collapsible: true },
+                  { title: "Five-Color", items: FIVE_COLOR_FILTERS, collapsible: true },
+                ].map((group) => {
+                  const content = (
                     <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {group.items.map((item) => {
                         const active = selectedColor === item.code
@@ -337,14 +329,40 @@ export default async function HomePage({
                             </div>
 
                             <div className="mt-3 text-xs text-muted-foreground transition group-hover:text-foreground/80">
-                              Browse {item.label.toLowerCase()} decks now live on DeckSwap.
+                              Browse {item.label.toLowerCase()} decks now live on Mythiverse Exchange.
                             </div>
                           </Link>
                         )
                       })}
                     </div>
-                  </div>
-                ))}
+                  )
+
+                  return group.collapsible ? (
+                    <details key={group.title} className="rounded-2xl border border-border/70 bg-black/10 px-4 py-3">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                        <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {group.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
+                        </span>
+                      </summary>
+                      {content}
+                    </details>
+                  ) : (
+                    <div key={group.title}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {group.title}
+                        </div>
+                        <div className="hidden text-xs text-muted-foreground sm:block">
+                          {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
+                        </div>
+                      </div>
+                      {content}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
