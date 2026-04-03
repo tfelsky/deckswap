@@ -18,6 +18,24 @@ type ActionState = {
   }
 }
 
+function toFriendlyImportError(message?: string) {
+  if (!message) return 'Failed to create deck.'
+
+  if (message.includes("Could not find the 'imported_at' column of 'decks'")) {
+    return 'Your database is missing the new decks.imported_at column. Run the latest Supabase migration for deck format and price history, then try the import again.'
+  }
+
+  if (message.includes("Could not find the 'format' column of 'decks'")) {
+    return 'Your database is missing the new decks.format column. Run the latest Supabase migration for deck format and price history, then try the import again.'
+  }
+
+  if (message.includes("Could not find the relation 'public.deck_price_history'")) {
+    return 'Your database is missing the deck_price_history table. Run the latest Supabase migration for deck format and price history, then try again.'
+  }
+
+  return message
+}
+
 function buildActionFields(
   deckName: string,
   sourceType: string,
@@ -152,7 +170,7 @@ export async function importDeckAction(
 
   if (deckError || !deckRow) {
     return {
-      error: deckError?.message || 'Failed to create deck.',
+      error: toFriendlyImportError(deckError?.message),
       fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
     }
   }
@@ -191,7 +209,7 @@ export async function importDeckAction(
 
     if (cardError) {
       return {
-        error: cardError.message,
+        error: toFriendlyImportError(cardError.message),
         fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
       }
     }
@@ -202,7 +220,7 @@ export async function importDeckAction(
 
     if (tokenError) {
       return {
-        error: tokenError.message,
+        error: toFriendlyImportError(tokenError.message),
         fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
       }
     }
