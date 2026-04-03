@@ -1,5 +1,7 @@
 import { getTrendWatcherReport } from '@/lib/admin/trend-watcher'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminTrendsPage() {
   const report = await getTrendWatcherReport()
 

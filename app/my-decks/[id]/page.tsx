@@ -8,6 +8,8 @@ import { redirect } from 'next/navigation'
 
 const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
+export const dynamic = 'force-dynamic'
+
 function formatImportedAt(value?: string | null) {
   if (!value) return 'Unknown'
   return new Date(value).toLocaleString('en-CA', {

@@ -12,6 +12,8 @@ import SignOutButton from '@/components/sign-out-button'
 
 const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
+export const dynamic = 'force-dynamic'
+
 type Deck = {
   id: number
   name: string

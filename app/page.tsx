@@ -10,6 +10,8 @@ import { Footer } from "@/components/footer"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
 import { createClient } from "@/lib/supabase/server"
 
+export const dynamic = 'force-dynamic'
+
 type LandingDeck = {
   id: number
   name: string

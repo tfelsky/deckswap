@@ -26,6 +26,8 @@ import { redirect } from 'next/navigation'
 
 const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
+export const dynamic = 'force-dynamic'
+
 type Deck = {
   id: number
   user_id?: string | null

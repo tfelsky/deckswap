@@ -3,6 +3,8 @@ import { getTrendWatcherReport } from '@/lib/admin/trend-watcher'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 type DeckRow = {
   id: number
   user_id?: string | null
