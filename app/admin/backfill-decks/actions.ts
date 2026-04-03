@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { enrichDeckWithScryfall } from '@/app/import-deck/enrich'
 
 const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
@@ -95,6 +96,41 @@ export async function backfillDeckCommanderImages(): Promise<BackfillResult> {
     }
 
     updated++
+  }
+
+  return {
+    updated,
+    skipped,
+    errors,
+  }
+}
+
+export async function reEnrichAllDecks(): Promise<BackfillResult> {
+  const supabase = await requireAdmin()
+
+  const { data: decks, error: decksError } = await supabase
+    .from('decks')
+    .select('id')
+    .order('id', { ascending: true })
+
+  if (decksError) {
+    throw new Error(decksError.message)
+  }
+
+  let updated = 0
+  let skipped = 0
+  const errors: string[] = []
+
+  for (const deck of decks ?? []) {
+    try {
+      await enrichDeckWithScryfall(deck.id)
+      updated++
+    } catch (error) {
+      skipped++
+      errors.push(
+        `Deck ${deck.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
   }
 
   return {
