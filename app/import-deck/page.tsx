@@ -1,6 +1,5 @@
 'use client'
 
-import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
 import { GUEST_IMPORT_DRAFT_KEY, type GuestImportDraft } from '@/lib/guest-import'
 import Link from 'next/link'
 import { useActionState, useEffect, useState } from 'react'
@@ -27,6 +26,13 @@ export default function ImportDeckPage() {
 
   const fields = state?.fields ?? guestDraft ?? undefined
   const showGuestBanner = !!guestDraft || searchParams.get('fromGuest') === '1'
+  const [sourceType, setSourceType] = useState(fields?.sourceType ?? 'text')
+
+  useEffect(() => {
+    setSourceType(fields?.sourceType ?? 'text')
+  }, [fields?.sourceType])
+
+  const isMoxfield = sourceType === 'moxfield'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -45,11 +51,12 @@ export default function ImportDeckPage() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Import deck inventory across formats
+              Import a Commander deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link. Commander gets the richest validation today, while other formats are accepted as inventory and can be reviewed in Deck Settings.
+              Bring in a deck from text, file, or a public Moxfield link, then let DeckSwap
+              handle parsing, commander detection, and validation.
             </p>
           </div>
         </div>
@@ -68,6 +75,55 @@ export default function ImportDeckPage() {
               </div>
             )}
 
+            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+              <div className="text-sm font-medium text-white">Import type</div>
+              <p className="mt-2 text-sm text-zinc-400">
+                Start by choosing how you want to bring the deck in.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  {
+                    value: 'text',
+                    title: 'Paste text',
+                    description: 'Best for copied decklists with commander and token sections.',
+                  },
+                  {
+                    value: 'archidekt',
+                    title: 'Upload or paste Archidekt',
+                    description: 'Use an Archidekt export or pasted list.',
+                  },
+                  {
+                    value: 'moxfield',
+                    title: 'Public Moxfield link',
+                    description: 'Fastest path when the deck is public and ready to fetch.',
+                  },
+                ].map((option) => {
+                  const selected = sourceType === option.value
+                  return (
+                    <label
+                      key={option.value}
+                      className={`cursor-pointer rounded-2xl border p-4 transition ${
+                        selected
+                          ? 'border-emerald-400/30 bg-emerald-400/10'
+                          : 'border-white/10 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="source_type"
+                        value={option.value}
+                        checked={selected}
+                        onChange={(e) => setSourceType(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="text-sm font-medium text-white">{option.title}</div>
+                      <div className="mt-2 text-sm text-zinc-400">{option.description}</div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
             <div>
               <label className="mb-2 block text-sm font-medium text-zinc-300">
                 Deck name
@@ -83,62 +139,62 @@ export default function ImportDeckPage() {
               </p>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">
-                  Source type
-                </label>
-                <select
-                  name="source_type"
-                  defaultValue={fields?.sourceType ?? 'text'}
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
-                >
-                  <option value="text" className="bg-zinc-900 text-white">Text</option>
-                  <option value="moxfield" className="bg-zinc-900 text-white">Moxfield</option>
-                  <option value="archidekt" className="bg-zinc-900 text-white">Archidekt</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">
-                  Source URL (optional)
-                </label>
-                <input
-                  name="source_url"
-                  defaultValue={fields?.sourceUrl ?? ''}
-                  placeholder="https://www.moxfield.com/decks/..."
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
-                />
-                <p className="mt-2 text-xs text-zinc-500">
-                  Moxfield imports only work for public deck links.
+            {isMoxfield ? (
+              <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+                <div className="text-sm font-medium text-white">Moxfield link</div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Paste a public Moxfield deck URL. The importer will try to pull the deck name,
+                  cards, and commander data directly from the link.
                 </p>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-medium text-zinc-300">
+                    Source URL
+                  </label>
+                  <input
+                    name="source_url"
+                    defaultValue={fields?.sourceUrl ?? ''}
+                    placeholder="https://www.moxfield.com/decks/..."
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
+                  />
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Moxfield imports only work for public deck links.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+                  <div className="text-sm font-medium text-white">Upload a file</div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Upload a `.txt`, `.csv`, or `.tsv` deck export if you do not want to paste the
+                    list manually.
+                  </p>
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-medium text-zinc-300">
+                      Deck file
+                    </label>
+                    <input
+                      name="deck_file"
+                      type="file"
+                      accept=".txt,.csv,.tsv"
+                      className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-300">
-                Deck file (optional)
-              </label>
-              <input
-                name="deck_file"
-                type="file"
-                accept=".txt,.csv,.tsv"
-                className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
-              />
-              <p className="mt-2 text-xs text-zinc-500">
-                Upload a plain text, CSV, or TSV deck export if you don&apos;t want to paste it.
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-300">
-                Raw deck list
-              </label>
-              <textarea
-                name="raw_list"
-                rows={18}
-                placeholder={`Commander
+                <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+                  <div className="text-sm font-medium text-white">Paste deck list</div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Use this for direct text imports or if you prefer to paste an Archidekt export.
+                  </p>
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-medium text-zinc-300">
+                      Raw deck list
+                    </label>
+                    <textarea
+                      name="raw_list"
+                      rows={16}
+                      placeholder={`Commander
 1 Alela, Artful Provocateur
 
 Mainboard
@@ -150,13 +206,28 @@ Mainboard
 
 Tokens
 1 Faerie Rogue`}
-                defaultValue={fields?.rawList ?? ''}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
-              />
-              <p className="mt-2 text-xs text-zinc-500">
-                For `Moxfield`, the link is enough, but the deck must be public. For `Text` or `Archidekt`, you can paste here or upload a file above. The importer will try to auto-detect format, and you can override it later in Deck Settings.
-              </p>
-            </div>
+                      defaultValue={fields?.rawList ?? ''}
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
+                    />
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Full Commander lists import best. If commander detection misses, you can fix
+                      it from the deck page after import.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!isMoxfield && (
+              <input type="hidden" name="source_url" value={fields?.sourceUrl ?? ''} />
+            )}
+
+            {isMoxfield && (
+              <>
+                <input type="hidden" name="deck_file" value="" />
+                <input type="hidden" name="raw_list" value={fields?.rawList ?? ''} />
+              </>
+            )}
 
             {state?.error && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -164,53 +235,19 @@ Tokens
               </div>
             )}
 
-            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-              <h2 className="text-lg font-semibold text-white">Supported Formats</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Commander has the richest rules support today. Other formats can still be imported and labeled, but deeper legality enforcement is still on the roadmap.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {['Commander', 'Standard', 'Pauper', 'Canadian Highlander', 'Legacy', 'Modern', 'Premodern'].map((format) => (
-                  <span
-                    key={format}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300"
-                  >
-                    {format}
-                  </span>
-                ))}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-zinc-500">
+                Commander validation is live. Broader format rules will return once that support is
+                cleaned up.
               </div>
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-medium text-white">Commander Bracket Guide</div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Commander imports are still automatically estimated against the official Commander bracket beta system using Game Changers and other visible deck signals.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {(Object.entries(COMMANDER_BRACKETS) as Array<
-                    [string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]
-                  >).map(([key, bracket]) => (
-                    <div
-                      key={key}
-                      className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
-                    >
-                      <div className="text-sm font-medium text-white">
-                        Bracket {key}: {bracket.label}
-                      </div>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        {bracket.shortDescription}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pending ? 'Importing...' : 'Import Deck'}
+              </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {pending ? 'Importing...' : 'Import Deck'}
-            </button>
           </div>
         </form>
       </section>

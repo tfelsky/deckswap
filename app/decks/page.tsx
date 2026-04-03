@@ -1,6 +1,12 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
+import { Info } from 'lucide-react'
 import Link from 'next/link'
 import SignOutButton from '@/components/sign-out-button'
 
@@ -179,7 +185,26 @@ export default async function DecksPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Avg. Bracket</div>
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                Avg. Bracket
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <button type="button" className="text-zinc-500 hover:text-white">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                    <div className="space-y-2 text-sm">
+                      <p className="font-medium text-white">Commander bracket help</p>
+                      <p>
+                        Brackets are a pregame matching signal for Commander decks. Lower brackets
+                        tend to be more casual, while higher brackets reflect stronger optimization
+                        and more powerful card signals.
+                      </p>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              </div>
               <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
             </div>
 

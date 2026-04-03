@@ -1,4 +1,9 @@
 import DeckCardViews from '@/components/deck-card-views'
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateDeckForFormat } from '@/lib/commander/validate'
@@ -15,6 +20,7 @@ import {
   normalizeDeckFormat,
 } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
+import { Info } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -535,14 +541,29 @@ export default async function DeckDetailPage({
 
               {isCommanderDeck ? (
                 <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                  <div className="text-sm text-zinc-400">Commander Bracket</div>
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    Commander Bracket
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <button type="button" className="text-zinc-500 hover:text-white">
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                        <div className="space-y-2 text-sm">
+                          <p className="font-medium text-white">{bracketSummary.label}</p>
+                          <p>{bracketSummary.description}</p>
+                          <p className="text-zinc-400">{bracketSummary.bracketRule}</p>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </div>
                   <div className="mt-2 text-3xl font-semibold">
                     {bracketSummary.label}
                   </div>
                   <p className="mt-2 text-sm text-zinc-400">
                     {bracketSummary.description}
                   </p>
-                  <p className="mt-2 text-xs text-zinc-500">{bracketSummary.bracketRule}</p>
                 </div>
               ) : (
                 <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
