@@ -33,6 +33,12 @@ import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
 import {
+  formatDeckImportEventTimestamp,
+  isDeckImportEventsSchemaMissing,
+  logDeckImportEvent,
+  type DeckImportEventRow,
+} from '@/lib/import-events'
+import {
   calculateInternalValidationSummary,
   formatShipFrom,
   getTrustBadges,
@@ -44,6 +50,7 @@ import {
   type ReputationSummary,
 } from '@/lib/profiles'
 import { createClient } from '@/lib/supabase/server'
+import { enrichDeckWithScryfall, syncDeckDerivedState } from '@/app/import-deck/enrich'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -53,6 +60,7 @@ export const dynamic = 'force-dynamic'
 type Deck = {
   id: number
   user_id?: string | null
+  source_type?: string | null
   name: string
   commander?: string | null
   power_level?: number | null
@@ -193,7 +201,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
+      'id, user_id, source_type, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -285,6 +293,14 @@ export default async function DeckDetailPage({
   const activeInternalTab =
     isSuperadmin && resolvedSearchParams?.view === 'superadmin' ? 'superadmin' : 'deck'
   const showInternalAdminPanel = isAdmin && (!isSuperadmin || activeInternalTab === 'superadmin')
+  const { data: importEventsData, error: importEventsError } = showInternalAdminPanel
+    ? await supabase
+        .from('deck_import_events')
+        .select('id, deck_id, actor_user_id, source_type, event_type, severity, message, details, created_at')
+        .eq('deck_id', deckId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+    : { data: [] as DeckImportEventRow[], error: null }
   const deckFormat = normalizeDeckFormat(typedDeck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
@@ -568,6 +584,20 @@ export default async function DeckDetailPage({
       })
       .eq('id', deckId)
 
+    await logDeckImportEvent(supabase, {
+      deckId,
+      actorUserId: user.id,
+      sourceType: typedDeck.source_type ?? null,
+      eventType: 'commander_repaired',
+      severity: 'info',
+      message: `Commander was manually set to ${commanderNames[0] ?? 'unknown commander'} and validation was recalculated.`,
+      details: {
+        commanderNames,
+        commanderMode: validation.commanderMode,
+        isValid: validation.isValid,
+      },
+    })
+
     redirect(`/decks/${deckId}?commanderUpdated=1`)
   }
 
@@ -598,6 +628,88 @@ export default async function DeckDetailPage({
     redirect(`/decks/${deckId}?commentAdded=1`)
   }
 
+  async function retryEnrichmentAction() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const access = await getAdminAccessForUser(user)
+
+    if (!user || (typedDeck.user_id !== user.id && !access.isAdmin)) {
+      redirect(`/decks/${deckId}`)
+    }
+
+    try {
+      await enrichDeckWithScryfall(deckId, 'refresh')
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'manual_enrichment_retry_succeeded',
+        severity: 'info',
+        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} re-ran deck enrichment successfully.`,
+      })
+      redirect(`/decks/${deckId}?enrichRetried=1`)
+    } catch (error) {
+      console.error('Retry enrichment failed:', error)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'manual_enrichment_retry_failed',
+        severity: 'warning',
+        message: error instanceof Error ? error.message : 'Manual enrichment retry failed.',
+        details: {
+          trigger: 'deck_detail_retry_enrichment',
+        },
+      })
+      redirect(`/decks/${deckId}?enrichRetryFailed=1`)
+    }
+  }
+
+  async function reprocessDeckStateAction() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const access = await getAdminAccessForUser(user)
+
+    if (!user || (typedDeck.user_id !== user.id && !access.isAdmin)) {
+      redirect(`/decks/${deckId}`)
+    }
+
+    try {
+      await syncDeckDerivedState(deckId)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'manual_reprocess_succeeded',
+        severity: 'info',
+        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} recalculated deck validation and derived state.`,
+      })
+      redirect(`/decks/${deckId}?reprocessed=1`)
+    } catch (error) {
+      console.error('Deck reprocess failed:', error)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType: typedDeck.source_type ?? null,
+        eventType: 'manual_reprocess_failed',
+        severity: 'warning',
+        message: error instanceof Error ? error.message : 'Manual deck reprocess failed.',
+        details: {
+          trigger: 'deck_detail_reprocess',
+        },
+      })
+      redirect(`/decks/${deckId}?reprocessFailed=1`)
+    }
+  }
+
   const commanders = typedCards.filter((card) => card.section === 'commander')
   const mainboard = typedCards.filter((card) => card.section === 'mainboard')
   const commanderCandidates = getCommanderCandidates(typedCards)
@@ -608,6 +720,21 @@ export default async function DeckDetailPage({
   const showGuestSaved = resolvedSearchParams?.[GUEST_IMPORT_SAVED_QUERY_KEY] === '1'
   const showCommentAdded = resolvedSearchParams?.commentAdded === '1'
   const showCommentError = resolvedSearchParams?.commentError === '1'
+  const showImportEnrichFailed = resolvedSearchParams?.enrich === 'failed'
+  const showEnrichRetried = resolvedSearchParams?.enrichRetried === '1'
+  const showEnrichRetryFailed = resolvedSearchParams?.enrichRetryFailed === '1'
+  const showReprocessed = resolvedSearchParams?.reprocessed === '1'
+  const showReprocessFailed = resolvedSearchParams?.reprocessFailed === '1'
+  const canRunImportRecovery = !!user && (isOwner || isAdmin)
+  const importSourceLabel =
+    typedDeck.source_type === 'moxfield'
+      ? 'Moxfield'
+      : typedDeck.source_type === 'archidekt'
+      ? 'Archidekt'
+      : 'Text or file'
+  const likelyNeedsEnrichment =
+    Number(typedDeck.price_total_usd_foil ?? 0) === 0 ||
+    !typedDeck.image_url?.trim()
 
   const tokenCards = typedTokens.map((token) => ({
     id: token.id,
@@ -620,6 +747,8 @@ export default async function DeckDetailPage({
     image_url: token.image_url,
     section: 'token' as const,
   }))
+  const importEventsSchemaMissing = isDeckImportEventsSchemaMissing(importEventsError?.message)
+  const importEvents = (importEventsData ?? []) as DeckImportEventRow[]
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
@@ -728,6 +857,30 @@ export default async function DeckDetailPage({
             </div>
           )}
 
+          {showEnrichRetried && (
+            <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+              Import enrichment was retried and the deck metadata was refreshed.
+            </div>
+          )}
+
+          {showReprocessed && (
+            <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+              Deck validation and derived state were recalculated.
+            </div>
+          )}
+
+          {showEnrichRetryFailed && (
+            <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              Re-running enrichment failed. Check source coverage, pricing migrations, or try again from admin maintenance.
+            </div>
+          )}
+
+          {showReprocessFailed && (
+            <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              Reprocessing deck state failed. The deck data may still be missing supporting metadata.
+            </div>
+          )}
+
           {showImportedWarning &&
             typedDeck.validation_errors &&
             typedDeck.validation_errors.length > 0 && (
@@ -740,8 +893,68 @@ export default async function DeckDetailPage({
                     <li key={index}>{error}</li>
                   ))}
                 </ul>
+                {canRunImportRecovery && (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <form action={reprocessDeckStateAction}>
+                      <button className="rounded-xl border border-yellow-200/20 bg-yellow-100/10 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-yellow-100/15">
+                        Reprocess validation
+                      </button>
+                    </form>
+                    <form action={retryEnrichmentAction}>
+                      <button className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30">
+                        Retry enrichment
+                      </button>
+                    </form>
+                  </div>
+                )}
               </details>
             )}
+
+          {showImportEnrichFailed && (
+            <div className="mt-6 rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-100 shadow-[0_0_0_1px_rgba(245,158,11,0.06)]">
+              <div className="font-medium text-amber-200">
+                Import completed, but source enrichment did not finish.
+              </div>
+              <p className="mt-3 text-amber-100/90">
+                DeckSwap saved the deck from {importSourceLabel}, but image, pricing, or commander metadata may still be incomplete until enrichment succeeds.
+              </p>
+              {canRunImportRecovery && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <form action={retryEnrichmentAction}>
+                    <button className="rounded-xl border border-amber-200/20 bg-amber-100/10 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-amber-100/15">
+                      Retry enrichment now
+                    </button>
+                  </form>
+                  <form action={reprocessDeckStateAction}>
+                    <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30">
+                      Reprocess deck state
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          )}
+
+          {likelyNeedsEnrichment && !showImportEnrichFailed && canRunImportRecovery && (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-200">
+              <div className="font-medium text-white">Import recovery tools</div>
+              <p className="mt-3 text-zinc-400">
+                This deck is still missing some enriched metadata, such as pricing or lead imagery. You can retry the source pull or just recalculate deck state from the saved card rows.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <form action={retryEnrichmentAction}>
+                  <button className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15">
+                    Retry enrichment
+                  </button>
+                </form>
+                <form action={reprocessDeckStateAction}>
+                  <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30">
+                    Reprocess validation
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 space-y-6">
             <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.35)] xl:grid xl:grid-cols-[280px_minmax(0,1fr)] xl:items-stretch">
@@ -1149,109 +1362,171 @@ export default async function DeckDetailPage({
                   </div>
 
                   {showInternalAdminPanel && typedDeck.user_id && (
-                    <form action={updateSellerTrustAction} className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                      <div className="text-sm font-medium text-emerald-200">
-                        {isSuperadmin ? 'Superadmin Trust Controls' : 'Admin Trust Controls'}
-                      </div>
-                      <p className="mt-2 text-sm text-emerald-50/80">
-                        Manual trust overrides for known users, friends, and restricted accounts.
-                      </p>
-
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-emerald-50/80">
-                        Internal access: {isSuperadmin ? 'Superadmin' : 'Admin'}
-                      </div>
-
-                      <div className="mt-4 space-y-3 text-sm text-zinc-100">
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" name="is_manually_verified" defaultChecked={sellerSummary?.is_manually_verified ?? false} />
-                          Manually verified
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" name="is_known_user" defaultChecked={sellerSummary?.is_known_user ?? false} />
-                          Known user
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" name="is_friend_of_platform" defaultChecked={sellerSummary?.is_friend_of_platform ?? false} />
-                          Friend of DeckSwap
-                        </label>
-                      </div>
-
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-2 block text-sm text-emerald-50/80">Last seen at</label>
-                          <input
-                            type="datetime-local"
-                            name="last_seen_at"
-                            defaultValue={sellerSummary?.last_seen_at?.slice(0, 16) ?? ''}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                          />
+                    <div className="space-y-5">
+                      <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                        <div className="text-sm font-medium text-emerald-200">
+                          Import Event Log
                         </div>
-                        <div>
-                          <label className="mb-2 block text-sm text-emerald-50/80">Avg. trade reply hours</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            name="avg_trade_reply_hours"
-                            defaultValue={sellerSummary?.avg_trade_reply_hours ?? ''}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                          />
+                        <p className="mt-2 text-sm text-emerald-50/80">
+                          Internal deck-import timeline for failures, enrichment retries, and repair actions.
+                        </p>
+
+                        {importEventsSchemaMissing ? (
+                          <div className="mt-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                            Run <code>docs/sql/deck-import-events.sql</code> in Supabase to enable per-deck import event logging.
+                          </div>
+                        ) : importEventsError ? (
+                          <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+                            Could not load import events: {importEventsError.message}
+                          </div>
+                        ) : importEvents.length > 0 ? (
+                          <div className="mt-4 space-y-3">
+                            {importEvents.map((event) => (
+                              <div
+                                key={event.id}
+                                className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${
+                                        event.severity === 'error'
+                                          ? 'bg-red-500/20 text-red-200'
+                                          : event.severity === 'warning'
+                                          ? 'bg-amber-500/20 text-amber-200'
+                                          : 'bg-emerald-500/20 text-emerald-200'
+                                      }`}
+                                    >
+                                      {event.severity}
+                                    </span>
+                                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] uppercase tracking-wide text-zinc-300">
+                                      {event.event_type.replace(/_/g, ' ')}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-zinc-400">
+                                    {formatDeckImportEventTimestamp(event.created_at)}
+                                  </div>
+                                </div>
+                                <div className="mt-3 text-sm text-white">{event.message}</div>
+                                {event.source_type && (
+                                  <div className="mt-2 text-xs uppercase tracking-wide text-zinc-500">
+                                    Source: {event.source_type}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-emerald-50/80">
+                            No import events have been recorded for this deck yet.
+                          </div>
+                        )}
+                      </div>
+
+                      <form action={updateSellerTrustAction} className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                        <div className="text-sm font-medium text-emerald-200">
+                          {isSuperadmin ? 'Superadmin Trust Controls' : 'Admin Trust Controls'}
                         </div>
-                        <div>
-                          <label className="mb-2 block text-sm text-emerald-50/80">Last login IP country</label>
-                          <input
-                            name="last_login_ip_country"
-                            defaultValue={sellerSummary?.last_login_ip_country ?? ''}
-                            placeholder="Canada"
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                          />
+                        <p className="mt-2 text-sm text-emerald-50/80">
+                          Manual trust overrides for known users, friends, and restricted accounts.
+                        </p>
+
+                        <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-emerald-50/80">
+                          Internal access: {isSuperadmin ? 'Superadmin' : 'Admin'}
                         </div>
-                        <div>
-                          <label className="mb-2 block text-sm text-emerald-50/80">Internal user rating</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="5"
-                            name="internal_user_rating"
-                            defaultValue={sellerSummary?.internal_user_rating ?? ''}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                          />
+
+                        <div className="mt-4 space-y-3 text-sm text-zinc-100">
+                          <label className="flex items-center gap-2">
+                            <input type="checkbox" name="is_manually_verified" defaultChecked={sellerSummary?.is_manually_verified ?? false} />
+                            Manually verified
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input type="checkbox" name="is_known_user" defaultChecked={sellerSummary?.is_known_user ?? false} />
+                            Known user
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input type="checkbox" name="is_friend_of_platform" defaultChecked={sellerSummary?.is_friend_of_platform ?? false} />
+                            Friend of DeckSwap
+                          </label>
                         </div>
-                      </div>
 
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-emerald-50/80">
-                        Internal score inputs combine last login recency, trade reply speed, IP country consistency, past transaction history, and user rating. Manual verification and restricted statuses then nudge the score up or down.
-                      </div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-2 block text-sm text-emerald-50/80">Last seen at</label>
+                            <input
+                              type="datetime-local"
+                              name="last_seen_at"
+                              defaultValue={sellerSummary?.last_seen_at?.slice(0, 16) ?? ''}
+                              className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-sm text-emerald-50/80">Avg. trade reply hours</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              name="avg_trade_reply_hours"
+                              defaultValue={sellerSummary?.avg_trade_reply_hours ?? ''}
+                              className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-sm text-emerald-50/80">Last login IP country</label>
+                            <input
+                              name="last_login_ip_country"
+                              defaultValue={sellerSummary?.last_login_ip_country ?? ''}
+                              placeholder="Canada"
+                              className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-sm text-emerald-50/80">Internal user rating</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="5"
+                              name="internal_user_rating"
+                              defaultValue={sellerSummary?.internal_user_rating ?? ''}
+                              className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                            />
+                          </div>
+                        </div>
 
-                      <div className="mt-4">
-                        <label className="mb-2 block text-sm text-emerald-50/80">Banned status</label>
-                        <select
-                          name="banned_status"
-                          defaultValue={sellerSummary?.banned_status ?? 'active'}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                        >
-                          <option value="active">Active</option>
-                          <option value="watchlist">Watchlist</option>
-                          <option value="restricted">Restricted</option>
-                          <option value="banned">Banned</option>
-                        </select>
-                      </div>
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-emerald-50/80">
+                          Internal score inputs combine last login recency, trade reply speed, IP country consistency, past transaction history, and user rating. Manual verification and restricted statuses then nudge the score up or down.
+                        </div>
 
-                      <div className="mt-4">
-                        <label className="mb-2 block text-sm text-emerald-50/80">Banned / review reason</label>
-                        <textarea name="banned_reason" rows={3} defaultValue={sellerSummary?.banned_reason ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
-                      </div>
+                        <div className="mt-4">
+                          <label className="mb-2 block text-sm text-emerald-50/80">Banned status</label>
+                          <select
+                            name="banned_status"
+                            defaultValue={sellerSummary?.banned_status ?? 'active'}
+                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                          >
+                            <option value="active">Active</option>
+                            <option value="watchlist">Watchlist</option>
+                            <option value="restricted">Restricted</option>
+                            <option value="banned">Banned</option>
+                          </select>
+                        </div>
 
-                      <div className="mt-4">
-                        <label className="mb-2 block text-sm text-emerald-50/80">Manual review notes</label>
-                        <textarea name="manual_review_notes" rows={3} defaultValue={sellerSummary?.manual_review_notes ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
-                      </div>
+                        <div className="mt-4">
+                          <label className="mb-2 block text-sm text-emerald-50/80">Banned / review reason</label>
+                          <textarea name="banned_reason" rows={3} defaultValue={sellerSummary?.banned_reason ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
+                        </div>
 
-                      <button className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">
-                        Save Trust Controls
-                      </button>
-                    </form>
+                        <div className="mt-4">
+                          <label className="mb-2 block text-sm text-emerald-50/80">Manual review notes</label>
+                          <textarea name="manual_review_notes" rows={3} defaultValue={sellerSummary?.manual_review_notes ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
+                        </div>
+
+                        <button className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">
+                          Save Trust Controls
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
               </div>

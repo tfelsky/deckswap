@@ -388,7 +388,7 @@ async function inferCommanderDeckState(deckId: number) {
   }
 }
 
-async function syncDeckDerivedState(deckId: number) {
+export async function syncDeckDerivedState(deckId: number) {
   const supabase = await createClient()
 
   const { data: deckData, error: deckError } = await supabase

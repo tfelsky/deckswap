@@ -1,5 +1,6 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getTrendWatcherReport } from '@/lib/admin/trend-watcher'
+import { isGuestImportSchemaMissing } from '@/lib/guest-import'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -9,6 +10,7 @@ type DeckRow = {
   id: number
   user_id?: string | null
   source_type?: string | null
+  imported_at?: string | null
   is_valid?: boolean | null
   commander?: string | null
   image_url?: string | null
@@ -40,18 +42,37 @@ function formatUsd(value: number) {
   return `$${value.toFixed(2)}`
 }
 
+function isDeckPriceHistorySchemaMissing(message?: string | null) {
+  if (!message) return false
+
+  return (
+    message.includes("relation 'public.deck_price_history'") ||
+    message.includes('relation "public.deck_price_history"') ||
+    message.includes("Could not find the relation 'public.deck_price_history'")
+  )
+}
+
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
   const trendReport = await getTrendWatcherReport()
 
   const { data: decksData, error: decksError } = await supabase
     .from('decks')
-    .select('id, user_id, source_type, is_valid, commander, image_url, price_total_usd_foil')
+    .select('id, user_id, source_type, imported_at, is_valid, commander, image_url, price_total_usd_foil')
     .order('id', { ascending: true })
 
   const { data: reputationData } = await supabase
     .from('profile_reputation_summary')
     .select('user_id, internal_validation_score, internal_validation_tier, banned_status')
+
+  const [guestDraftsResult, priceHistoryResult] = await Promise.all([
+    supabase
+      .from('guest_import_drafts')
+      .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('deck_price_history')
+      .select('deck_id', { count: 'exact', head: true }),
+  ])
 
   if (decksError) {
     return (
@@ -108,11 +129,21 @@ export default async function AdminDashboardPage() {
   const importedDecks = decks.filter(
     (deck) => (deck.source_type ?? '').trim() !== '' && deck.source_type !== 'text'
   ).length
+  const moxfieldDecks = decks.filter((deck) => deck.source_type === 'moxfield').length
+  const archidektDecks = decks.filter((deck) => deck.source_type === 'archidekt').length
+  const textDecks = decks.filter(
+    (deck) => !deck.source_type || deck.source_type === 'text'
+  ).length
   const validDecks = decks.filter((deck) => deck.is_valid === true).length
   const invalidDecks = decks.filter((deck) => deck.is_valid === false).length
   const withCommander = decks.filter((deck) => !!deck.commander?.trim()).length
   const withImage = decks.filter((deck) => !!deck.image_url?.trim()).length
   const withPricing = decks.filter((deck) => Number(deck.price_total_usd_foil ?? 0) > 0).length
+  const recentImports = decks.filter((deck) => {
+    const importedAt = (deck as { imported_at?: string | null }).imported_at
+    if (!importedAt) return false
+    return Date.now() - new Date(importedAt).getTime() <= 1000 * 60 * 60 * 24 * 7
+  }).length
   const totalMarketplaceValue = decks.reduce(
     (sum, deck) => sum + Number(deck.price_total_usd_foil ?? 0),
     0
@@ -144,6 +175,12 @@ export default async function AdminDashboardPage() {
   const completedTrades = 0
   const openEscrows = 0
   const escrowBalance = 0
+  const guestDraftsSchemaReady = !isGuestImportSchemaMissing(guestDraftsResult.error?.message)
+  const guestDraftsCount = guestDraftsSchemaReady ? Number(guestDraftsResult.count ?? 0) : null
+  const deckPriceHistoryReady = !isDeckPriceHistorySchemaMissing(priceHistoryResult.error?.message)
+  const deckPriceHistoryCount = deckPriceHistoryReady
+    ? Number(priceHistoryResult.count ?? 0)
+    : null
 
   const bracketCounts = new Map<number, number>()
 
@@ -217,6 +254,93 @@ export default async function AdminDashboardPage() {
                 <p className="mt-2 text-sm text-zinc-400">
                   Listings missing commander identity or needing repair after import.
                 </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Import Health</h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Source mix, migration readiness, and recovery paths for guest and authenticated imports.
+                </p>
+              </div>
+              <Link
+                href="/import-deck"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+              >
+                Open import flow
+              </Link>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Recent Imports</div>
+                <div className="mt-2 text-3xl font-semibold">{recentImports}</div>
+                <div className="mt-1 text-sm text-zinc-500">Last 7 days</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Moxfield</div>
+                <div className="mt-2 text-3xl font-semibold">{moxfieldDecks}</div>
+                <div className="mt-1 text-sm text-zinc-500">Link imports</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Archidekt</div>
+                <div className="mt-2 text-3xl font-semibold">{archidektDecks}</div>
+                <div className="mt-1 text-sm text-zinc-500">Structured text/file imports</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Text or File</div>
+                <div className="mt-2 text-3xl font-semibold">{textDecks}</div>
+                <div className="mt-1 text-sm text-zinc-500">Manual or uploaded lists</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Schema Readiness</div>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                    <span className="text-zinc-300">Guest draft recovery</span>
+                    <span className={guestDraftsSchemaReady ? 'text-emerald-300' : 'text-yellow-300'}>
+                      {guestDraftsSchemaReady ? `Ready${guestDraftsCount != null ? ` • ${guestDraftsCount} drafts` : ''}` : 'Migration needed'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                    <span className="text-zinc-300">Deck price history</span>
+                    <span className={deckPriceHistoryReady ? 'text-emerald-300' : 'text-yellow-300'}>
+                      {deckPriceHistoryReady ? `Ready${deckPriceHistoryCount != null ? ` • ${deckPriceHistoryCount} snapshots` : ''}` : 'Migration needed'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                    <span className="text-zinc-300">Import recovery coverage</span>
+                    <span className="text-emerald-300">
+                      {withPricing < decks.length || withImage < decks.length ? 'Recovery tools available' : 'Healthy'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Quick Read</div>
+                <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                  <p>
+                    {withPricing < decks.length
+                      ? `${decks.length - withPricing} decks still need pricing coverage or a retry pass.`
+                      : 'Pricing coverage is healthy across current decks.'}
+                  </p>
+                  <p>
+                    {withCommander < decks.length
+                      ? `${decks.length - withCommander} decks are missing commander identity and may need repair or better source metadata.`
+                      : 'Commander identity is present on current listings.'}
+                  </p>
+                  <p>
+                    {guestDraftsSchemaReady
+                      ? 'Guest preview recovery is backed by server-side draft tokens.'
+                      : 'Guest preview still needs the guest draft migration before recovery works server-side.'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

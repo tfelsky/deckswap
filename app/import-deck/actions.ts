@@ -9,6 +9,7 @@ import {
   GUEST_IMPORT_SAVED_QUERY_KEY,
   isGuestImportSchemaMissing,
 } from '@/lib/guest-import'
+import { logDeckImportEvent } from '@/lib/import-events'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichDeckWithScryfall } from './enrich'
@@ -59,6 +60,39 @@ function buildActionFields(
   }
 }
 
+function getNoCardsParsedError(args: {
+  sourceType: string
+  usedFileInput: boolean
+  hasRawList: boolean
+  hasSourceUrl: boolean
+}) {
+  const normalizedSourceType = args.sourceType.toLowerCase()
+
+  if (normalizedSourceType === 'moxfield') {
+    return 'That Moxfield link did not return any readable cards. Make sure the deck is public and not an empty shell.'
+  }
+
+  if (normalizedSourceType === 'archidekt') {
+    return args.usedFileInput
+      ? 'We could not read any cards from that Archidekt file. Export a plain text, CSV, or TSV list with quantity and card-name columns, then try again.'
+      : 'We could not read any cards from that Archidekt paste. Try an Archidekt export with quantity and card-name columns, or paste a plain text list with lines like "1 Sol Ring".'
+  }
+
+  if (args.usedFileInput) {
+    return 'The uploaded file did not contain any recognizable deck lines. Try a plain .txt export or a CSV/TSV with quantity and card-name columns.'
+  }
+
+  if (args.hasRawList) {
+    return 'No cards could be parsed from that text. Try lines like "1 Sol Ring" or add Commander/Mainboard/Tokens headers before retrying.'
+  }
+
+  if (args.hasSourceUrl) {
+    return 'That source URL did not produce a readable deck list.'
+  }
+
+  return 'Paste a deck list, upload a .txt file, or provide a supported deck URL.'
+}
+
 export async function importDeckAction(
   _prevState: ImportDeckActionState,
   formData: FormData
@@ -80,6 +114,7 @@ export async function importDeckAction(
   const guestDraftPresent = String(formData.get('guest_draft_present') || '').trim() === '1'
   const guestDraftToken = String(formData.get('guest_draft_token') || '').trim()
   const deckFile = formData.get('deck_file')
+  const hasUploadedFile = deckFile instanceof File && deckFile.size > 0
   const fields = buildActionFields(deckName, sourceType, sourceUrl, rawList)
 
   let resolvedDeckName = deckName
@@ -143,15 +178,17 @@ export async function importDeckAction(
     }
   }
 
-  if (parsedCards.length === 0) {
-    return {
-      error:
-        resolvedRawList || deckFile instanceof File
-          ? 'No cards could be parsed from that input.'
-          : 'Paste a deck list, upload a .txt file, or provide a supported deck URL.',
-      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+    if (parsedCards.length === 0) {
+      return {
+        error: getNoCardsParsedError({
+          sourceType,
+          usedFileInput: hasUploadedFile,
+          hasRawList: !!resolvedRawList,
+          hasSourceUrl: !!sourceUrl,
+        }),
+        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      }
     }
-  }
 
   const detectedFormat = normalizeDeckFormat(
     detectDeckFormat(parsedCards, sourceFormatHint)
@@ -199,6 +236,22 @@ export async function importDeckAction(
 
   const deckId = deckRow.id
 
+  await logDeckImportEvent(supabase, {
+    deckId,
+    actorUserId: user.id,
+    sourceType,
+    eventType: 'import_created',
+    severity: 'info',
+    message: `Deck import created from ${sourceType || 'text'} source.`,
+    details: {
+      detectedFormat,
+      commanderCount: validation.commanderCount,
+      mainboardCount: validation.mainboardCount,
+      tokenCount: validation.tokenCount,
+      isValid: validation.isValid,
+    },
+  })
+
   const deckCards = parsedCards
     .filter((card) => card.section === 'commander' || card.section === 'mainboard')
     .map((card, index) => ({
@@ -232,6 +285,18 @@ export async function importDeckAction(
     const { error: cardError } = await supabase.from('deck_cards').insert(deckCards)
 
     if (cardError) {
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType,
+        eventType: 'deck_cards_insert_failed',
+        severity: 'error',
+        message: cardError.message,
+        details: {
+          stage: 'deck_cards_insert',
+          attemptedRows: deckCards.length,
+        },
+      })
       return {
         error: toFriendlyImportError(cardError.message),
         fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
@@ -243,6 +308,18 @@ export async function importDeckAction(
     const { error: tokenError } = await supabase.from('deck_tokens').insert(deckTokens)
 
     if (tokenError) {
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType,
+        eventType: 'deck_tokens_insert_failed',
+        severity: 'error',
+        message: tokenError.message,
+        details: {
+          stage: 'deck_tokens_insert',
+          attemptedRows: deckTokens.length,
+        },
+      })
       return {
         error: toFriendlyImportError(tokenError.message),
         fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
@@ -250,10 +327,44 @@ export async function importDeckAction(
     }
   }
 
+  await logDeckImportEvent(supabase, {
+    deckId,
+    actorUserId: user.id,
+    sourceType,
+    eventType: 'parsed_cards_saved',
+    severity: 'info',
+    message: 'Parsed cards and tokens were saved to the deck.',
+    details: {
+      deckCards: deckCards.length,
+      deckTokens: deckTokens.length,
+    },
+  })
+
+  let enrichFailed = false
   try {
     await enrichDeckWithScryfall(deckId, 'import')
+    await logDeckImportEvent(supabase, {
+      deckId,
+      actorUserId: user.id,
+      sourceType,
+      eventType: 'import_enrichment_succeeded',
+      severity: 'info',
+      message: 'Initial Scryfall enrichment completed successfully.',
+    })
   } catch (error) {
     console.error('Scryfall enrichment failed:', error)
+    enrichFailed = true
+    await logDeckImportEvent(supabase, {
+      deckId,
+      actorUserId: user.id,
+      sourceType,
+      eventType: 'import_enrichment_failed',
+      severity: 'warning',
+      message: error instanceof Error ? error.message : 'Initial Scryfall enrichment failed.',
+      details: {
+        stage: 'initial_enrichment',
+      },
+    })
   }
 
   if (guestDraftToken) {
@@ -264,6 +375,23 @@ export async function importDeckAction(
 
     if (claimResult.error && !isGuestImportSchemaMissing(claimResult.error.message)) {
       console.error('Failed to claim guest import draft:', claimResult.error)
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType,
+        eventType: 'guest_draft_claim_failed',
+        severity: 'warning',
+        message: claimResult.error.message ?? 'Failed to claim guest draft after import.',
+      })
+    } else if (!claimResult.error) {
+      await logDeckImportEvent(supabase, {
+        deckId,
+        actorUserId: user.id,
+        sourceType,
+        eventType: 'guest_draft_claimed',
+        severity: 'info',
+        message: 'Guest preview draft was claimed into the authenticated deck import.',
+      })
     }
   }
 
@@ -276,6 +404,9 @@ export async function importDeckAction(
   }
   if (guestDraftToken) {
     params.set(GUEST_IMPORT_DRAFT_QUERY_KEY, guestDraftToken)
+  }
+  if (enrichFailed) {
+    params.set('enrich', 'failed')
   }
 
   redirect(`/decks/${deckId}${params.size > 0 ? `?${params.toString()}` : ''}`)

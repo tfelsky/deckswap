@@ -4,6 +4,10 @@ function normalizeLine(line: string) {
   return line.trim().replace(/\s+/g, ' ')
 }
 
+function stripBulletPrefix(line: string) {
+  return line.replace(/^[-*•]+\s*/, '')
+}
+
 function splitDelimitedLine(line: string, delimiter: string) {
   const cells: string[] = []
   let current = ''
@@ -61,6 +65,18 @@ function parseFoilValue(value: string) {
     normalized === 'yes' ||
     normalized === 'y' ||
     normalized === '1'
+  )
+}
+
+function parseTruthyValue(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return (
+    normalized === 'true' ||
+    normalized === 'yes' ||
+    normalized === 'y' ||
+    normalized === '1' ||
+    normalized === 'commander' ||
+    normalized === 'primary'
   )
 }
 
@@ -159,6 +175,17 @@ function isLikelyArchidektToken(card: ImportedDeckCard) {
 function inferSectionFromArchidektRow(
   row: Record<string, string>
 ): 'commander' | 'mainboard' | 'token' {
+  const commanderFlag = getFirstValue(row, [
+    'commander',
+    'iscommander',
+    'isprimarycommander',
+    'ispartnercommander',
+  ])
+
+  if (parseTruthyValue(commanderFlag)) {
+    return 'commander'
+  }
+
   const category = getFirstValue(row, [
     'category',
     'categories',
@@ -197,10 +224,10 @@ function parseArchidektTable(input: string): ImportedDeckCard[] {
   const headers = splitDelimitedLine(lines[0], delimiter).map(normalizeHeader)
 
   const quantityIndex = headers.findIndex((header) =>
-    ['quantity', 'qty', 'count'].includes(header)
+    ['quantity', 'qty', 'count', 'amount'].includes(header)
   )
   const nameIndex = headers.findIndex((header) =>
-    ['card', 'name', 'cardname'].includes(header)
+    ['card', 'name', 'cardname', 'cardtitle'].includes(header)
   )
 
   if (quantityIndex === -1 || nameIndex === -1) {
@@ -242,10 +269,14 @@ function parseCardLine(
   line: string,
   currentSection: 'commander' | 'mainboard' | 'token'
 ): ImportedDeckCard | null {
-  const cleaned = normalizeLine(line)
+  const cleaned = normalizeLine(stripBulletPrefix(line))
 
   if (!cleaned) return null
   if (cleaned.startsWith('//')) return null
+  if (cleaned.startsWith('#')) return null
+  if (/^(sideboard|maybeboard|companion|companions)\b[:\s-]*$/i.test(cleaned)) {
+    return null
+  }
 
   // Supports:
   // 1 Sol Ring
@@ -254,10 +285,41 @@ function parseCardLine(
   // 1x Adventurer's Inn (fin) 271 *F*
   // 1 Leonin Relic-Warder (plst) C17-65
   const qtyMatch = cleaned.match(/^(\d+)x?\s+(.+)$/i)
-  if (!qtyMatch) return null
+  const trailingQtyMatch = cleaned.match(/^(.+?)\s+x?(\d+)$/i)
+  const colonSectionMatch = cleaned.match(
+    /^(commander|commanders|mainboard|maindeck|deck|tokens|token)\s*:\s*(.+)$/i
+  )
 
-  const quantity = Number(qtyMatch[1])
-  let rest = qtyMatch[2].trim()
+  if (colonSectionMatch) {
+    const inlineSection = colonSectionMatch[1].toLowerCase()
+    const inlineCard = parseCardLine(
+      colonSectionMatch[2],
+      inlineSection.startsWith('commander')
+        ? 'commander'
+        : inlineSection.startsWith('token')
+        ? 'token'
+        : 'mainboard'
+    )
+    return inlineCard
+  }
+
+  const prefixedSectionMatch = cleaned.match(/^(sb|sideboard|maybeboard|mb|cmdr|commander)\s*[:\-]\s*(.+)$/i)
+  if (prefixedSectionMatch) {
+    const sectionLabel = prefixedSectionMatch[1].toLowerCase()
+    if (sectionLabel === 'sb' || sectionLabel === 'sideboard' || sectionLabel === 'maybeboard') {
+      return null
+    }
+
+    return parseCardLine(
+      prefixedSectionMatch[2],
+      sectionLabel === 'cmdr' || sectionLabel === 'commander' ? 'commander' : currentSection
+    )
+  }
+
+  if (!qtyMatch && !trailingQtyMatch) return null
+
+  const quantity = Number(qtyMatch ? qtyMatch[1] : trailingQtyMatch?.[2] ?? 0)
+  let rest = (qtyMatch ? qtyMatch[2] : trailingQtyMatch?.[1] ?? '').trim()
 
   let foil = false
   if (/\*F\*$/i.test(rest)) {
@@ -304,7 +366,7 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
   const cards: ImportedDeckCard[] = []
 
   for (const raw of lines) {
-    const line = normalizeLine(raw)
+    const line = normalizeLine(stripBulletPrefix(raw))
     if (!line) continue
 
     const lower = line.toLowerCase()
@@ -317,6 +379,7 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
     if (
       lower === 'mainboard' ||
       lower === 'deck' ||
+      lower === 'decklist' ||
       lower === '99' ||
       lower === '98' ||
       lower === 'maindeck'
@@ -327,6 +390,16 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
 
     if (lower === 'tokens' || lower === 'token') {
       currentSection = 'token'
+      continue
+    }
+
+    if (
+      lower === 'sideboard' ||
+      lower === 'maybeboard' ||
+      lower === 'companion' ||
+      lower === 'companions'
+    ) {
+      currentSection = 'mainboard'
       continue
     }
 

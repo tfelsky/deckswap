@@ -156,6 +156,12 @@ export async function fetchMoxfieldDeck(
     ...parseMoxfieldBoard(deck.boards?.tokens ?? deck.tokens, 'token'),
   ]
 
+  if (cards.length === 0) {
+    throw new Error(
+      'Moxfield returned a deck shell but no readable cards. The deck may be private, empty, unsupported, or using a payload shape DeckSwap does not understand yet.'
+    )
+  }
+
   const fallbackName =
     deck.name?.trim() ||
     deck.deckName?.trim() ||
