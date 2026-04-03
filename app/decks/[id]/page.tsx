@@ -157,7 +157,7 @@ export default async function DeckDetailPage({
                   <img
                     src={typedDeck.image_url}
                     alt={typedDeck.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover object-top"
                   />
                 ) : (
                   <div className="flex h-full items-end p-6">
