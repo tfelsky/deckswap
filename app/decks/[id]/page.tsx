@@ -150,27 +150,31 @@ export default async function DeckDetailPage({
             ← Back to marketplace
           </Link>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start">
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900">
-              <div className="aspect-[16/10] border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
-                {typedDeck.image_url ? (
-                  <img
-                    src={typedDeck.image_url}
-                    alt={typedDeck.name}
-                    className="h-full w-full object-cover object-top"
-                  />
-                ) : (
-                  <div className="flex h-full items-end p-6">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-                        Commander Deck
+              <div className="mx-auto w-full max-w-sm p-6 pb-0">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
+                  <div className="aspect-[5/7]">
+                    {typedDeck.image_url ? (
+                      <img
+                        src={typedDeck.image_url}
+                        alt={typedDeck.name}
+                        className="h-full w-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="flex h-full items-end p-6">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
+                            Commander Deck
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold">
+                            {typedDeck.commander || 'Unknown Commander'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 text-3xl font-semibold">
-                        {typedDeck.commander || 'Unknown Commander'}
-                      </div>
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="p-6">
