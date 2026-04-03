@@ -626,7 +626,7 @@ export default async function DeckDetailPage({
       <AppHeader current="decks" isSignedIn={!!user} isAdmin={isAdmin} />
       <GuestDraftCleanup shouldClear={showGuestSaved} />
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.18),_transparent_28%),linear-gradient(to_bottom,_rgb(24,24,27),_rgb(9,9,11))]">
-        <div className="mx-auto w-full max-w-[92rem] px-6 py-12 2xl:max-w-[104rem]">
+        <div className="mx-auto w-full max-w-[104rem] px-6 py-12 2xl:max-w-[116rem]">
           <div className="flex flex-wrap gap-3">
             <Link
               href="/decks"
@@ -743,7 +743,7 @@ export default async function DeckDetailPage({
               </details>
             )}
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr] lg:items-start">
+          <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:items-start 2xl:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] 2xl:gap-10">
             <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
               <div className="mx-auto w-full max-w-[13rem] p-5 pb-0">
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
@@ -782,7 +782,7 @@ export default async function DeckDetailPage({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               {!typedDeck.commander &&
                 isCommanderDeck &&
                 isOwner &&
@@ -815,8 +815,8 @@ export default async function DeckDetailPage({
                   </div>
                 )}
 
-              <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-                <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:gap-5">
+                <div className="min-w-0 space-y-4">
                   {isCommanderDeck ? (
                     <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                       <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -979,7 +979,7 @@ export default async function DeckDetailPage({
                   )}
                 </div>
 
-                <div className="space-y-4">
+                <div className="min-w-0 space-y-4">
                   <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
