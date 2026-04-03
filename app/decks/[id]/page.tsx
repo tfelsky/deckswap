@@ -152,9 +152,9 @@ export default async function DeckDetailPage({
             {'<-'} Back to marketplace
           </Link>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start">
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr] lg:items-start">
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900">
-              <div className="mx-auto w-full max-w-sm p-6 pb-0">
+              <div className="mx-auto w-full max-w-xs p-5 pb-0">
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
                   <div className="aspect-[5/7]">
                     {typedDeck.image_url ? (
