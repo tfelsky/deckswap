@@ -626,7 +626,7 @@ export default async function DeckDetailPage({
       <AppHeader current="decks" isSignedIn={!!user} isAdmin={isAdmin} />
       <GuestDraftCleanup shouldClear={showGuestSaved} />
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.18),_transparent_28%),linear-gradient(to_bottom,_rgb(24,24,27),_rgb(9,9,11))]">
-        <div className="mx-auto max-w-6xl px-6 py-12">
+        <div className="mx-auto w-full max-w-[92rem] px-6 py-12 2xl:max-w-[104rem]">
           <div className="flex flex-wrap gap-3">
             <Link
               href="/decks"
