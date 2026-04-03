@@ -6,6 +6,12 @@ import {
   type AuctionDuration,
   type AuctionFormat,
 } from '@/lib/auction/prototype'
+import {
+  auctionMinimumIncrement,
+  formatAuctionType,
+  getAuctionEligibility,
+  isAuctionSchemaMissing,
+} from '@/lib/auction/foundation'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,6 +54,21 @@ export default async function AuctionPrototypePage({
     redirect('/sign-in')
   }
 
+  const [summaryResult, deckResult] = await Promise.all([
+    supabase
+      .from('profile_reputation_summary')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    Number.isFinite(deckId)
+      ? supabase
+          .from('decks')
+          .select('id, user_id, name, commander, image_url, price_total_usd_foil')
+          .eq('id', deckId)
+          .single()
+      : Promise.resolve({ data: null, error: null }),
+  ])
+
   let deckName = 'Untitled deck'
   let deckCommander = 'Commander not set'
   let deckImageUrl: string | null = null
@@ -55,11 +76,7 @@ export default async function AuctionPrototypePage({
   let reservePrice = parseMoney(params.reservePrice, deckValue * 0.9)
 
   if (Number.isFinite(deckId)) {
-    const { data: deck } = await supabase
-      .from('decks')
-      .select('id, user_id, name, commander, image_url, price_total_usd_foil')
-      .eq('id', deckId)
-      .single()
+    const deck = deckResult.data
 
     if (!deck || deck.user_id !== user.id) {
       redirect('/my-decks')
@@ -78,6 +95,124 @@ export default async function AuctionPrototypePage({
     reservePrice,
     durationDays,
   })
+  const eligibility = getAuctionEligibility(summaryResult.data ?? null)
+
+  async function launchAuctionAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const deckId = Number(formData.get('deckId'))
+    const auctionType = String(formData.get('format') || 'reserve') === 'no_reserve' ? 'no_reserve' : 'reserve'
+    const durationDays = Number(formData.get('durationDays'))
+    const deckValue = Math.max(0, Number(formData.get('deckValue') || 0))
+    const reservePrice =
+      auctionType === 'reserve' ? Math.max(0, Number(formData.get('reservePrice') || 0)) : 0
+
+    if (!Number.isFinite(deckId) || (durationDays !== 3 && durationDays !== 5 && durationDays !== 7)) {
+      redirect('/auction-prototype?error=1')
+    }
+
+    const [summaryResult, deckResult, existingAuctionResult] = await Promise.all([
+      supabase
+        .from('profile_reputation_summary')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabase
+        .from('decks')
+        .select('id, user_id, name, price_total_usd_foil')
+        .eq('id', deckId)
+        .single(),
+      supabase
+        .from('auction_listings')
+        .select('id, status')
+        .eq('deck_id', deckId)
+        .in('status', ['active', 'pending_confirmation', 'awaiting_payment', 'paid', 'shipped', 'delivered'])
+        .maybeSingle(),
+    ])
+
+    if (deckResult.error || !deckResult.data || deckResult.data.user_id !== user.id) {
+      redirect('/my-decks')
+    }
+
+    if (existingAuctionResult.error && !isAuctionSchemaMissing(existingAuctionResult.error.message)) {
+      redirect(`/auction-prototype?deckId=${deckId}&error=1`)
+    }
+
+    if (existingAuctionResult.data) {
+      redirect(`/auctions/${existingAuctionResult.data.id}?existing=1`)
+    }
+
+    const eligibility = getAuctionEligibility(summaryResult.data ?? null)
+    if (!eligibility.eligible) {
+      redirect(`/auction-prototype?deckId=${deckId}&trust=1`)
+    }
+
+    const modeled = calculateAuctionPrototype({
+      deckValue: deckValue || Number(deckResult.data.price_total_usd_foil ?? 0) || 0,
+      format: auctionType,
+      reservePrice,
+      durationDays: durationDays as AuctionDuration,
+    })
+    const now = new Date()
+    const endsAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString()
+
+    const listingInsert = await supabase
+      .from('auction_listings')
+      .insert({
+        deck_id: deckId,
+        seller_user_id: user.id,
+        status: 'active',
+        auction_type: auctionType,
+        starting_bid_usd: modeled.suggestedStartingBid,
+        reserve_price_usd: auctionType === 'reserve' ? modeled.reservePrice : null,
+        current_bid_usd: 0,
+        reserve_met: auctionType === 'no_reserve',
+        min_increment_usd: auctionMinimumIncrement(modeled.suggestedStartingBid),
+        bid_count: 0,
+        extension_count: 0,
+        duration_days: durationDays,
+        starts_at: now.toISOString(),
+        ends_at: endsAt,
+      })
+      .select('id')
+      .single()
+
+    if (listingInsert.error || !listingInsert.data) {
+      if (isAuctionSchemaMissing(listingInsert.error?.message)) {
+        redirect(`/auction-prototype?deckId=${deckId}&schemaMissing=1`)
+      }
+
+      redirect(`/auction-prototype?deckId=${deckId}&error=1`)
+    }
+
+    await supabase.from('auction_events').insert({
+      auction_id: listingInsert.data.id,
+      actor_user_id: user.id,
+      event_type: 'auction_launched',
+      event_data: {
+        deckId,
+        auctionType,
+        durationDays,
+        startingBidUsd: modeled.suggestedStartingBid,
+        reservePriceUsd: auctionType === 'reserve' ? modeled.reservePrice : null,
+      },
+    })
+
+    redirect(`/auctions/${listingInsert.data.id}?launched=1`)
+  }
+
+  const trustBlocked = params.trust === '1'
+  const error = params.error === '1'
+  const schemaMissing = params.schemaMissing === '1'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -91,24 +226,42 @@ export default async function AuctionPrototypePage({
               {'<-'} Back
             </Link>
             <Link
-              href="/decks"
+              href="/auctions"
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
             >
-              Marketplace
+              Live Auctions
             </Link>
           </div>
 
           <div className="mt-8 max-w-4xl">
             <div className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-wide text-amber-300">
-              Auction Launch Prototype
+              Auction Launch
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
               Launch a deck into a faster sale flow
             </h1>
             <p className="mt-4 max-w-3xl text-lg text-zinc-400">
-              This prototype models no-reserve and reserve auctions for users who want a quicker
-              sale path than waiting for a value-for-value trade.
+              Auctions now launch into a real direct-sale workflow with late-bid time extensions,
+              manual winner confirmation, and payout only after delivery.
             </p>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {trustBlocked && (
+              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                {eligibility.reason}
+              </div>
+            )}
+            {schemaMissing && (
+              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                Run <code>docs/sql/auction-foundation.sql</code> in Supabase before launching auctions.
+              </div>
+            )}
+            {error && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+                We couldn&apos;t launch that auction right now.
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -154,7 +307,7 @@ export default async function AuctionPrototypePage({
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="text-sm text-zinc-400">Auction Type</div>
                       <div className="mt-2 text-2xl font-semibold text-white">
-                        {result.format === 'no_reserve' ? 'No reserve' : 'Reserve'}
+                        {formatAuctionType(result.format)}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -168,19 +321,20 @@ export default async function AuctionPrototypePage({
               </div>
             </div>
 
-            <form className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <form action={launchAuctionAction} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold">Auction Settings</h2>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Tune how aggressive or protected the sale should feel before live bidding exists.
+                    Choose the sale shape, then launch a real listing if your seller trust threshold is met.
                   </p>
                 </div>
                 <button
                   type="submit"
-                  className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
+                  disabled={!eligibility.eligible}
+                  className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Recalculate
+                  Launch Auction
                 </button>
               </div>
 
@@ -229,17 +383,16 @@ export default async function AuctionPrototypePage({
                     style={{ colorScheme: 'dark' }}
                     className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-amber-400/40"
                   >
-                    <option value="3" className="bg-zinc-900 text-white">
-                      3 days
-                    </option>
-                    <option value="5" className="bg-zinc-900 text-white">
-                      5 days
-                    </option>
-                    <option value="7" className="bg-zinc-900 text-white">
-                      7 days
-                    </option>
+                    <option value="3" className="bg-zinc-900 text-white">3 days</option>
+                    <option value="5" className="bg-zinc-900 text-white">5 days</option>
+                    <option value="7" className="bg-zinc-900 text-white">7 days</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                <div className="font-medium text-white">Seller trust gate</div>
+                <p className="mt-2">{eligibility.reason}</p>
               </div>
             </form>
           </div>
@@ -276,9 +429,24 @@ export default async function AuctionPrototypePage({
                     {formatUsd(result.payoutBeforeShipping)}
                   </div>
                   <div className="mt-1 text-xs text-zinc-500">
-                    Before outbound shipping and payment rails
+                    Before shipping and payment rails
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Live Auction Rules</h2>
+              <div className="mt-4 space-y-3 text-sm text-zinc-300">
+                <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  Late bids extend the timer by 5 minutes to reduce sniping.
+                </p>
+                <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  Auction winners do not pay instantly. The listing moves into manual confirmation first.
+                </p>
+                <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  Fulfillment follows a direct sale path, and seller payout only releases after delivery.
+                </p>
               </div>
             </div>
 
@@ -291,24 +459,6 @@ export default async function AuctionPrototypePage({
                   </p>
                 ))}
               </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-              <h2 className="text-2xl font-semibold">Launch Status</h2>
-              <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-zinc-950/70 p-4">
-                <div className="text-sm font-medium text-white">Live bidding is not wired yet</div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  This is the seller-side launch prototype. The next step would be persistent auction
-                  records, bid intake, timer states, and settlement after the auction closes.
-                </p>
-              </div>
-
-              <button className="mt-5 w-full rounded-2xl bg-amber-400 px-5 py-3 text-sm font-medium text-zinc-950 opacity-80">
-                Launch Auction Prototype
-              </button>
-              <p className="mt-3 text-center text-xs text-zinc-500">
-                Placeholder only for now. No live auction is created yet.
-              </p>
             </div>
           </div>
         </div>

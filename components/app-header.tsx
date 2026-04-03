@@ -33,10 +33,10 @@ export default function AppHeader({
         <div className="mb-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-              DS
+              ME
             </div>
             <div>
-              <div className="text-base font-semibold text-foreground">DeckSwap</div>
+              <div className="text-base font-semibold text-foreground">Mythiverse Exchange</div>
               <div className="text-xs text-muted-foreground">Marketplace App</div>
             </div>
           </Link>

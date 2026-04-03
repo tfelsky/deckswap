@@ -28,7 +28,7 @@ const ITEMS = [
   { key: 'import', href: '/import-deck', label: 'Import' },
   { key: 'create', href: '/create-deck', label: 'Create' },
   { key: 'my-decks', href: '/my-decks', label: 'My Decks' },
-  { key: 'trade-matches', href: '/trade-matches', label: 'Trade Matches' },
+  { key: 'trade-matches', href: '/trade-matches', label: 'Deck Swap' },
   { key: 'trade-offers', href: '/trade-offers', label: 'Trade Offers' },
   { key: 'notifications', href: '/notifications', label: 'Notifications' },
   { key: 'profile', href: '/settings/profile', label: 'Profile' },

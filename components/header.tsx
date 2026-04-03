@@ -38,9 +38,9 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-            <span className="text-sm font-bold text-primary-foreground">DS</span>
+            <span className="text-sm font-bold text-primary-foreground">ME</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">DeckSwap</span>
+          <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -48,7 +48,7 @@ export function Header() {
             Marketplace
           </Link>
           <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Trade Matches
+            Deck Swap
           </Link>
           <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Learn More
@@ -107,7 +107,7 @@ export function Header() {
               Marketplace
             </Link>
             <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Trade Matches
+              Deck Swap
             </Link>
             <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Learn More

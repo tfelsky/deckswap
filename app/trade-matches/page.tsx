@@ -234,16 +234,16 @@ export default async function TradeMatchesPage() {
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-              Trade Matches
-            </div>
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-              Best fits for the decks you already own
-            </h1>
-            <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-              DeckSwap compares your inventory against live listings using value proximity, color identity,
-              format fit, bracket closeness, and shipping context where available.
-            </p>
+              <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
+                Deck Swap
+              </div>
+              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
+                Best fits for the decks you already own
+              </h1>
+              <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
+                Mythiverse Exchange compares your inventory against live listings using value proximity, color identity,
+                format fit, bracket closeness, and shipping context where available.
+              </p>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">

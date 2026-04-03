@@ -8,7 +8,7 @@ const footerLinks = {
     { name: "My Decks", href: "/my-decks" },
   ],
   trading: [
-    { name: "Trade Matches", href: "/trade-matches" },
+    { name: "Deck Swap", href: "/trade-matches" },
     { name: "Trade Offers", href: "/trade-offers" },
     { name: "Info & FAQ", href: "/info" },
     { name: "Trades Workspace", href: "/trades" },
@@ -22,7 +22,7 @@ const footerLinks = {
     { name: "Paper Power 9", href: "/paper-power-9" },
   ],
   company: [
-    { name: "About DeckSwap", href: "/" },
+    { name: "About Mythiverse Exchange", href: "/" },
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms", href: "/terms" },
     { name: "Sign In", href: "/sign-in" },
@@ -39,9 +39,9 @@ export function Footer() {
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-                <span className="text-sm font-bold text-primary-foreground">DS</span>
+                <span className="text-sm font-bold text-primary-foreground">ME</span>
               </div>
-              <span className="text-lg font-semibold text-foreground">DeckSwap</span>
+              <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               A deck marketplace centered on value-for-value trading, cleaner imports, and better
@@ -116,7 +116,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            (c) {new Date().getFullYear()} DeckSwap. All rights reserved.
+            (c) {new Date().getFullYear()} Mythiverse Exchange. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="/decks" className="text-sm text-muted-foreground hover:text-foreground">
