@@ -418,12 +418,13 @@ export default function DeckCardViews({
             <div className="text-sm text-zinc-400">No commander cards saved.</div>
           ) : (
             commanders.map((card) => (
-              <CardTile
-                key={card.id}
-                card={card}
-                onOpen={() => openCard(card)}
-                label="Commander"
-              />
+              <div key={card.id} className="w-full max-w-[12rem]">
+                <CardTile
+                  card={card}
+                  onOpen={() => openCard(card)}
+                  label="Commander"
+                />
+              </div>
             ))
           )}
         </div>
