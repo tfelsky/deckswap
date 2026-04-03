@@ -33,6 +33,7 @@ async function fetchMoxfieldDeckTitle(sourceUrl: string) {
     const response = await fetch(sourceUrl, {
       headers: {
         Accept: 'text/html',
+        'User-Agent': 'Mozilla/5.0 (compatible; DeckSwap/1.0; +https://deckswap.app)',
       },
       cache: 'no-store',
     })
@@ -117,11 +118,20 @@ export async function fetchMoxfieldDeck(
   const response = await fetch(`https://api2.moxfield.com/v2/decks/all/${publicId}`, {
     headers: {
       Accept: 'application/json',
+      Origin: 'https://www.moxfield.com',
+      Referer: sourceUrl,
+      'User-Agent': 'Mozilla/5.0 (compatible; DeckSwap/1.0; +https://deckswap.app)',
     },
     cache: 'no-store',
   })
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error(
+        'Moxfield import was denied with status 403. The deck is likely private, unavailable, or blocking third-party fetches.'
+      )
+    }
+
     throw new Error(`Moxfield import failed with status ${response.status}.`)
   }
 
