@@ -18,11 +18,43 @@ type MoxfieldBoard = {
 
 type MoxfieldDeckResponse = {
   name?: string
+  deckName?: string
+  title?: string
   format?: string
   boards?: {
     commanders?: MoxfieldBoard
     mainboard?: MoxfieldBoard
     tokens?: MoxfieldBoard
+  }
+}
+
+async function fetchMoxfieldDeckTitle(sourceUrl: string) {
+  try {
+    const response = await fetch(sourceUrl, {
+      headers: {
+        Accept: 'text/html',
+      },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const html = await response.text()
+    const titleMatch = html.match(/<title>(.*?)<\/title>/i)
+    const rawTitle = titleMatch?.[1]?.trim()
+
+    if (!rawTitle) {
+      return null
+    }
+
+    return rawTitle
+      .replace(/\s*\|\s*Moxfield\s*$/i, '')
+      .replace(/\s*-\s*Moxfield\s*$/i, '')
+      .trim()
+  } catch {
+    return null
   }
 }
 
@@ -101,8 +133,14 @@ export async function fetchMoxfieldDeck(
     ...parseMoxfieldBoard(deck.boards?.tokens, 'token'),
   ]
 
+  const fallbackName =
+    deck.name?.trim() ||
+    deck.deckName?.trim() ||
+    deck.title?.trim() ||
+    (await fetchMoxfieldDeckTitle(sourceUrl))
+
   return {
-    deckName: deck.name?.trim() || null,
+    deckName: fallbackName || null,
     format: deck.format?.trim() || null,
     cards,
   }

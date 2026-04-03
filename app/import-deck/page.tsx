@@ -67,11 +67,12 @@ export default function ImportDeckPage() {
                 <select
                   name="source_type"
                   defaultValue={fields?.sourceType ?? 'text'}
+                  style={{ colorScheme: 'dark' }}
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
                 >
-                  <option value="text">Text</option>
-                  <option value="moxfield">Moxfield</option>
-                  <option value="archidekt">Archidekt</option>
+                  <option value="text" className="bg-zinc-900 text-white">Text</option>
+                  <option value="moxfield" className="bg-zinc-900 text-white">Moxfield</option>
+                  <option value="archidekt" className="bg-zinc-900 text-white">Archidekt</option>
                 </select>
               </div>
 
