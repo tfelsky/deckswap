@@ -4,7 +4,12 @@ import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { parseDeckText } from '@/lib/commander/parse'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { detectDeckFormat, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
-import { readGuestImportDraft, type GuestImportDraft } from '@/lib/guest-import'
+import {
+  fetchGuestImportDraftRemote,
+  readGuestImportDraft,
+  saveGuestImportDraft,
+  type GuestImportDraft,
+} from '@/lib/guest-import'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -28,7 +33,28 @@ export default function GuestPreviewPage() {
   const [draft, setDraft] = useState<GuestImportDraft | null>(null)
 
   useEffect(() => {
-    setDraft(readGuestImportDraft())
+    const existingDraft = readGuestImportDraft()
+    if (existingDraft) {
+      setDraft(existingDraft)
+      return
+    }
+
+    const token = new URLSearchParams(window.location.search).get('guestDraft')?.trim()
+    if (!token) return
+
+    let cancelled = false
+
+    fetchGuestImportDraftRemote(token)
+      .then((remoteDraft) => {
+        if (!remoteDraft || cancelled) return
+        saveGuestImportDraft(remoteDraft)
+        setDraft(remoteDraft)
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const parsed = useMemo(() => {
@@ -112,7 +138,11 @@ export default function GuestPreviewPage() {
               {'<-'} Edit preview
             </Link>
             <Link
-              href="/sign-in"
+              href={
+                draft?.draftToken
+                  ? `/sign-in?guestDraft=${encodeURIComponent(draft.draftToken)}`
+                  : '/sign-in'
+              }
               className="inline-block rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
             >
               Sign in to save this deck
@@ -247,7 +277,11 @@ export default function GuestPreviewPage() {
                 enrich it, and save it to your collection.
               </p>
               <Link
-                href="/sign-in"
+                href={
+                  draft?.draftToken
+                    ? `/sign-in?guestDraft=${encodeURIComponent(draft.draftToken)}`
+                    : '/sign-in'
+                }
                 className="mt-5 inline-block rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
               >
                 Sign in to save

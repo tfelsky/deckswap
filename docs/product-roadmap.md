@@ -13,6 +13,7 @@ DeckSwap already has:
 - authenticated deck creation and import
 - guest import preview
 - guest preview handoff into authenticated save flow
+- guest draft backup across browser storage plus server-side recovery token flow
 - Commander validation and bracket estimation
 - Commander color identity validation after enrichment
 - homepage marketplace filters by color identity
@@ -40,7 +41,6 @@ DeckSwap already has:
 
 ### Import and onboarding loose ends
 
-- Guest import preview is still browser-session only and does not persist draft decks server-side.
 - Guest preview still stops short of full pricing/enrichment before account creation.
 - Moxfield and file imports need continued hardening around edge-case deck metadata.
 - Commander inference for unlabeled imports still needs more real-world testing and fallback handling.
@@ -95,6 +95,7 @@ Why this is first:
 Scope:
 
 - make guest import drafts resumable and more durable
+- keep guest drafts recoverable from sign-in and import routes even if local browser state drops
 - harden Moxfield, Archidekt, file, and text import reliability
 - improve commander inference and post-import repair paths
 - keep deck color identity, counts, pricing snapshots, and validation fully in sync during import and re-enrichment
@@ -242,6 +243,7 @@ Those are all worthwhile, but they are less immediately valuable than fixing imp
 ## Recently Shipped Foundations
 
 - Guest import preview and save handoff
+- Guest draft token recovery with server-backed persistence
 - Moxfield URL import and file-based import
 - Commander repair flow for unlabeled imports
 - Blended foil-aware deck pricing and per-card pricing

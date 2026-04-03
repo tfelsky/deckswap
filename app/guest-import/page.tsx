@@ -1,8 +1,11 @@
 'use client'
 
 import {
+  ensureGuestImportDraftToken,
+  fetchGuestImportDraftRemote,
   readGuestImportDraft,
   saveGuestImportDraft,
+  syncGuestImportDraftRemote,
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import Link from 'next/link'
@@ -15,16 +18,44 @@ export default function GuestImportPage() {
   const [sourceType, setSourceType] = useState('text')
   const [sourceUrl, setSourceUrl] = useState('')
   const [rawList, setRawList] = useState('')
+  const [draftToken, setDraftToken] = useState('')
+  const [draftTokenFromUrl, setDraftTokenFromUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const tokenFromUrl = new URLSearchParams(window.location.search).get('guestDraft')?.trim() ?? ''
+    setDraftTokenFromUrl(tokenFromUrl)
     const existingDraft = readGuestImportDraft()
-    if (!existingDraft) return
 
-    setDeckName(existingDraft.deckName)
-    setSourceType(existingDraft.sourceType || 'text')
-    setSourceUrl(existingDraft.sourceUrl)
-    setRawList(existingDraft.rawList)
+    if (existingDraft) {
+      setDeckName(existingDraft.deckName)
+      setSourceType(existingDraft.sourceType || 'text')
+      setSourceUrl(existingDraft.sourceUrl)
+      setRawList(existingDraft.rawList)
+      setDraftToken(ensureGuestImportDraftToken(existingDraft))
+      return
+    }
+
+    if (!tokenFromUrl) return
+
+    let cancelled = false
+
+    fetchGuestImportDraftRemote(tokenFromUrl)
+      .then((remoteDraft) => {
+        if (!remoteDraft || cancelled) return
+
+        saveGuestImportDraft(remoteDraft)
+        setDeckName(remoteDraft.deckName)
+        setSourceType(remoteDraft.sourceType || 'text')
+        setSourceUrl(remoteDraft.sourceUrl)
+        setRawList(remoteDraft.rawList)
+        setDraftToken(ensureGuestImportDraftToken(remoteDraft))
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -33,13 +64,34 @@ export default function GuestImportPage() {
 
     if (!hasMeaningfulDraft) return
 
-    saveGuestImportDraft({
+    const nextDraft = {
+      draftToken: ensureGuestImportDraftToken({
+        draftToken,
+        deckName,
+        sourceType,
+        sourceUrl,
+        rawList,
+      }),
       deckName,
       sourceType,
       sourceUrl,
       rawList,
-    })
-  }, [deckName, sourceType, sourceUrl, rawList])
+    }
+
+    if (nextDraft.draftToken !== draftToken) {
+      setDraftToken(nextDraft.draftToken)
+    }
+
+    saveGuestImportDraft(nextDraft)
+
+    const timeout = window.setTimeout(() => {
+      syncGuestImportDraftRemote(nextDraft).catch(() => {})
+    }, 500)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [deckName, draftToken, rawList, sourceType, sourceUrl])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -58,6 +110,13 @@ export default function GuestImportPage() {
     setError(null)
 
     const draft: GuestImportDraft = {
+      draftToken: ensureGuestImportDraftToken({
+        draftToken,
+        deckName,
+        sourceType,
+        sourceUrl,
+        rawList,
+      }),
       deckName: deckName.trim(),
       sourceType: sourceType.trim(),
       sourceUrl: sourceUrl.trim(),
@@ -75,7 +134,8 @@ export default function GuestImportPage() {
     }
 
     saveGuestImportDraft(draft)
-    router.push('/guest-preview')
+    syncGuestImportDraftRemote(draft).catch(() => {})
+    router.push(`/guest-preview?guestDraft=${encodeURIComponent(draft.draftToken ?? '')}`)
   }
 
   return (
@@ -84,7 +144,11 @@ export default function GuestImportPage() {
         <div className="mx-auto max-w-4xl px-6 py-10">
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/sign-in"
+              href={
+                draftToken || draftTokenFromUrl
+                  ? `/sign-in?guestDraft=${encodeURIComponent(draftToken || draftTokenFromUrl)}`
+                  : '/sign-in'
+              }
               className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
             >
               {'<-'} Back to sign in

@@ -1,14 +1,21 @@
 export const GUEST_IMPORT_DRAFT_KEY = 'deckswap.guest-import-draft'
 export const GUEST_IMPORT_DRAFT_BACKUP_KEY = 'deckswap.guest-import-draft-backup'
 export const GUEST_IMPORT_SAVED_QUERY_KEY = 'guestSaved'
+export const GUEST_IMPORT_DRAFT_QUERY_KEY = 'guestDraft'
 const GUEST_IMPORT_DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 14
 
 export type GuestImportDraft = {
+  draftToken?: string
   deckName: string
   sourceType: string
   sourceUrl: string
   rawList: string
   updatedAt?: string
+}
+
+export type RemoteGuestImportDraft = GuestImportDraft & {
+  createdAt?: string | null
+  expiresAt?: string | null
 }
 
 function canUseBrowserStorage() {
@@ -17,6 +24,7 @@ function canUseBrowserStorage() {
 
 function sanitizeDraft(draft: GuestImportDraft): GuestImportDraft {
   return {
+    draftToken: draft.draftToken?.trim() || undefined,
     deckName: draft.deckName.trim(),
     sourceType: draft.sourceType.trim() || 'text',
     sourceUrl: draft.sourceUrl.trim(),
@@ -87,4 +95,83 @@ export function clearGuestImportDraft() {
 
   window.sessionStorage.removeItem(GUEST_IMPORT_DRAFT_KEY)
   window.localStorage.removeItem(GUEST_IMPORT_DRAFT_BACKUP_KEY)
+}
+
+export function isGuestImportSchemaMissing(message?: string | null) {
+  if (!message) return false
+
+  return (
+    message.includes("relation 'public.guest_import_drafts'") ||
+    message.includes('relation "public.guest_import_drafts"') ||
+    message.includes("Could not find the relation 'public.guest_import_drafts'") ||
+    message.includes("function public.upsert_guest_import_draft") ||
+    message.includes('function public.upsert_guest_import_draft') ||
+    message.includes("function public.get_guest_import_draft") ||
+    message.includes('function public.get_guest_import_draft') ||
+    message.includes("function public.claim_guest_import_draft") ||
+    message.includes('function public.claim_guest_import_draft')
+  )
+}
+
+export function createGuestImportDraftToken() {
+  if (
+    typeof globalThis !== 'undefined' &&
+    'crypto' in globalThis &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `guest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+export function ensureGuestImportDraftToken(draft: GuestImportDraft) {
+  return draft.draftToken?.trim() ? draft.draftToken : createGuestImportDraftToken()
+}
+
+export async function syncGuestImportDraftRemote(draft: GuestImportDraft) {
+  const payload = sanitizeDraft({
+    ...draft,
+    draftToken: ensureGuestImportDraftToken(draft),
+  })
+
+  const response = await fetch('/api/guest-import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to sync guest draft.')
+  }
+
+  return (await response.json()) as {
+    draft: RemoteGuestImportDraft
+  }
+}
+
+export async function fetchGuestImportDraftRemote(draftToken: string) {
+  const response = await fetch(
+    `/api/guest-import?token=${encodeURIComponent(draftToken)}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+    }
+  )
+
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error('Failed to load guest draft.')
+  }
+
+  const payload = (await response.json()) as {
+    draft: RemoteGuestImportDraft | null
+  }
+
+  return payload.draft
 }

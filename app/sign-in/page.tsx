@@ -1,7 +1,7 @@
 'use client'
 
 import { hasGuestImportDraft } from '@/lib/guest-import'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -16,10 +16,17 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [guestDraftToken, setGuestDraftToken] = useState('')
+
+  useEffect(() => {
+    setGuestDraftToken(new URLSearchParams(window.location.search).get('guestDraft')?.trim() ?? '')
+  }, [])
 
   function getPostAuthRoute() {
-    if (hasGuestImportDraft()) {
-      return '/import-deck?fromGuest=1'
+    if (hasGuestImportDraft() || guestDraftToken) {
+      return guestDraftToken
+        ? `/import-deck?fromGuest=1&guestDraft=${encodeURIComponent(guestDraftToken)}`
+        : '/import-deck?fromGuest=1'
     }
 
     return '/decks'
@@ -86,7 +93,11 @@ export default function SignInPage() {
             </Link>
 
             <Link
-              href="/guest-import"
+              href={
+                guestDraftToken
+                  ? `/guest-import?guestDraft=${encodeURIComponent(guestDraftToken)}`
+                  : '/guest-import'
+              }
               className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
             >
               Try guest import

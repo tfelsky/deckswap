@@ -4,7 +4,11 @@ import { parseDeckText } from '@/lib/commander/parse'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { extractMoxfieldPublicId, fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import { detectDeckFormat, normalizeDeckFormat } from '@/lib/decks/formats'
-import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
+import {
+  GUEST_IMPORT_DRAFT_QUERY_KEY,
+  GUEST_IMPORT_SAVED_QUERY_KEY,
+  isGuestImportSchemaMissing,
+} from '@/lib/guest-import'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichDeckWithScryfall } from './enrich'
@@ -32,6 +36,10 @@ function toFriendlyImportError(message?: string) {
 
   if (message.includes("Could not find the relation 'public.deck_price_history'")) {
     return 'Your database is missing the deck_price_history table. Run the latest Supabase migration for deck format and price history, then try again.'
+  }
+
+  if (isGuestImportSchemaMissing(message)) {
+    return 'Guest draft persistence is not set up in Supabase yet. Run the guest import draft migration, then try again.'
   }
 
   return message
@@ -70,6 +78,7 @@ export async function importDeckAction(
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
   const guestDraftPresent = String(formData.get('guest_draft_present') || '').trim() === '1'
+  const guestDraftToken = String(formData.get('guest_draft_token') || '').trim()
   const deckFile = formData.get('deck_file')
   const fields = buildActionFields(deckName, sourceType, sourceUrl, rawList)
 
@@ -247,12 +256,26 @@ export async function importDeckAction(
     console.error('Scryfall enrichment failed:', error)
   }
 
+  if (guestDraftToken) {
+    const claimResult = await supabase.rpc('claim_guest_import_draft', {
+      p_resume_token: guestDraftToken,
+      p_user_id: user.id,
+    })
+
+    if (claimResult.error && !isGuestImportSchemaMissing(claimResult.error.message)) {
+      console.error('Failed to claim guest import draft:', claimResult.error)
+    }
+  }
+
   const params = new URLSearchParams()
   if (!validation.isValid) {
     params.set('imported', '1')
   }
   if (guestDraftPresent) {
     params.set(GUEST_IMPORT_SAVED_QUERY_KEY, '1')
+  }
+  if (guestDraftToken) {
+    params.set(GUEST_IMPORT_DRAFT_QUERY_KEY, guestDraftToken)
   }
 
   redirect(`/decks/${deckId}${params.size > 0 ? `?${params.toString()}` : ''}`)

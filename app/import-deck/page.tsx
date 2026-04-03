@@ -1,9 +1,12 @@
 'use client'
 
 import {
+  fetchGuestImportDraftRemote,
+  GUEST_IMPORT_DRAFT_QUERY_KEY,
   GUEST_IMPORT_SAVED_QUERY_KEY,
   readGuestImportDraft,
   saveGuestImportDraft,
+  syncGuestImportDraftRemote,
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import AppHeader from '@/components/app-header'
@@ -28,7 +31,28 @@ function ImportDeckPageContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    setGuestDraft(readGuestImportDraft())
+    const existingDraft = readGuestImportDraft()
+    if (existingDraft) {
+      setGuestDraft(existingDraft)
+      return
+    }
+
+    const guestDraftToken = searchParams.get(GUEST_IMPORT_DRAFT_QUERY_KEY)?.trim()
+    if (!guestDraftToken) return
+
+    let cancelled = false
+
+    fetchGuestImportDraftRemote(guestDraftToken)
+      .then((remoteDraft) => {
+        if (!remoteDraft || cancelled) return
+        saveGuestImportDraft(remoteDraft)
+        setGuestDraft(remoteDraft)
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const fields = state?.fields ?? guestDraft ?? undefined
@@ -38,13 +62,18 @@ function ImportDeckPageContent() {
   useEffect(() => {
     if (!state?.fields || !showGuestBanner) return
 
-    saveGuestImportDraft({
+    const nextDraft = {
+      draftToken:
+        guestDraft?.draftToken ?? searchParams.get(GUEST_IMPORT_DRAFT_QUERY_KEY)?.trim() ?? undefined,
       deckName: state.fields.deckName,
       sourceType: state.fields.sourceType,
       sourceUrl: state.fields.sourceUrl,
       rawList: state.fields.rawList,
-    })
-  }, [showGuestBanner, state?.fields])
+    }
+
+    saveGuestImportDraft(nextDraft)
+    syncGuestImportDraftRemote(nextDraft).catch(() => {})
+  }, [guestDraft?.draftToken, searchParams, showGuestBanner, state?.fields])
 
   useEffect(() => {
     setSourceType(fields?.sourceType ?? 'text')
@@ -90,6 +119,15 @@ function ImportDeckPageContent() {
         >
           <div className="grid gap-5">
             <input type="hidden" name="guest_draft_present" value={guestDraftPresent ? '1' : '0'} />
+            <input
+              type="hidden"
+              name="guest_draft_token"
+              value={
+                guestDraft?.draftToken ??
+                searchParams.get(GUEST_IMPORT_DRAFT_QUERY_KEY)?.trim() ??
+                ''
+              }
+            />
             {showGuestBanner && (
               <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                 Guest preview data was carried into your account import flow. Submit this form to
