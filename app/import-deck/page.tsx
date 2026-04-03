@@ -8,6 +8,8 @@ const initialState = {}
 
 export default function ImportDeckPage() {
   const [state, formAction, pending] = useActionState(importDeckAction, initialState)
+  const fields = state?.fields
+  const needsCommanderSelection = !!state?.requiresCommanderSelection
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -49,6 +51,7 @@ export default function ImportDeckPage() {
               <input
                 name="deck_name"
                 required
+                defaultValue={fields?.deckName ?? ''}
                 placeholder="Alela Artifacts"
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
@@ -61,7 +64,7 @@ export default function ImportDeckPage() {
                 </label>
                 <select
                   name="source_type"
-                  defaultValue="text"
+                  defaultValue={fields?.sourceType ?? 'text'}
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
                 >
                   <option value="text">Text</option>
@@ -76,6 +79,7 @@ export default function ImportDeckPage() {
                 </label>
                 <input
                   name="source_url"
+                  defaultValue={fields?.sourceUrl ?? ''}
                   placeholder="https://www.moxfield.com/decks/..."
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
                 />
@@ -102,9 +106,34 @@ Mainboard
 
 Tokens
 1 Faerie Rogue`}
+                defaultValue={fields?.rawList ?? ''}
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
             </div>
+
+            {needsCommanderSelection && state?.commanderCandidates && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <label className="mb-2 block text-sm font-medium text-emerald-200">
+                  Choose commander
+                </label>
+                <p className="mb-3 text-sm text-emerald-100/80">
+                  This Archidekt import did not label a commander. Pick the commander
+                  from the imported card list and resubmit.
+                </p>
+                <select
+                  name="commander_name"
+                  defaultValue={fields?.commanderName ?? ''}
+                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
+                >
+                  <option value="">Select a commander</option>
+                  {state.commanderCandidates.map((cardName) => (
+                    <option key={cardName} value={cardName}>
+                      {cardName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {state?.error && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">

@@ -10,6 +10,88 @@ type ActionState = {
   error?: string
   success?: boolean
   validationErrors?: string[]
+  requiresCommanderSelection?: boolean
+  commanderCandidates?: string[]
+  fields?: {
+    deckName: string
+    sourceType: string
+    sourceUrl: string
+    rawList: string
+    commanderName: string
+  }
+}
+
+function buildActionFields(
+  deckName: string,
+  sourceType: string,
+  sourceUrl: string,
+  rawList: string,
+  commanderName: string
+) {
+  return {
+    deckName,
+    sourceType,
+    sourceUrl,
+    rawList,
+    commanderName,
+  }
+}
+
+function getCommanderCandidates(cards: ReturnType<typeof parseDeckText>) {
+  const seen = new Set<string>()
+  const candidates: string[] = []
+
+  for (const card of cards) {
+    if (card.section === 'token') continue
+
+    const normalized = card.cardName.trim()
+    const key = normalized.toLowerCase()
+
+    if (!normalized || seen.has(key)) continue
+
+    seen.add(key)
+    candidates.push(normalized)
+  }
+
+  return candidates
+}
+
+function assignSelectedCommander(
+  cards: ReturnType<typeof parseDeckText>,
+  commanderName: string
+) {
+  const normalizedCommander = commanderName.trim().toLowerCase()
+  const nextCards: ReturnType<typeof parseDeckText> = []
+  let assigned = false
+
+  for (const card of cards) {
+    if (
+      !assigned &&
+      card.section !== 'token' &&
+      card.cardName.trim().toLowerCase() === normalizedCommander
+    ) {
+      nextCards.push({
+        ...card,
+        section: 'commander',
+        quantity: 1,
+      })
+
+      if (card.quantity > 1) {
+        nextCards.push({
+          ...card,
+          section: 'mainboard',
+          quantity: card.quantity - 1,
+        })
+      }
+
+      assigned = true
+      continue
+    }
+
+    nextCards.push(card)
+  }
+
+  return assigned ? nextCards : null
 }
 
 export async function importDeckAction(
@@ -30,19 +112,61 @@ export async function importDeckAction(
   const sourceType = String(formData.get('source_type') || 'text').trim()
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
+  const commanderName = String(formData.get('commander_name') || '').trim()
+  const fields = buildActionFields(
+    deckName,
+    sourceType,
+    sourceUrl,
+    rawList,
+    commanderName
+  )
 
   if (!deckName) {
-    return { error: 'Deck name is required.' }
+    return { error: 'Deck name is required.', fields }
   }
 
   if (!rawList) {
-    return { error: 'Paste a deck list first.' }
+    return { error: 'Paste a deck list first.', fields }
   }
 
-  const parsedCards = parseDeckText(rawList)
+  let parsedCards = parseDeckText(rawList, sourceType)
 
   if (parsedCards.length === 0) {
-    return { error: 'No cards could be parsed from that input.' }
+    return { error: 'No cards could be parsed from that input.', fields }
+  }
+
+  const hasExplicitCommander = parsedCards.some((c) => c.section === 'commander')
+
+  if (sourceType.toLowerCase() === 'archidekt' && !hasExplicitCommander) {
+    const commanderCandidates = getCommanderCandidates(parsedCards)
+
+    if (commanderCandidates.length === 0) {
+      return {
+        error: 'No commander candidates were found in that Archidekt list.',
+        fields,
+      }
+    }
+
+    if (!commanderName) {
+      return {
+        requiresCommanderSelection: true,
+        commanderCandidates,
+        fields,
+      }
+    }
+
+    const selectedCards = assignSelectedCommander(parsedCards, commanderName)
+
+    if (!selectedCards) {
+      return {
+        error: 'Choose a commander from the imported card list.',
+        requiresCommanderSelection: true,
+        commanderCandidates,
+        fields,
+      }
+    }
+
+    parsedCards = selectedCards
   }
 
   const validation = validateCommanderDeck(parsedCards)
@@ -76,7 +200,7 @@ const primaryCommanderName = commanderNames[0] ?? null
   .single()
 
   if (deckError || !deckRow) {
-    return { error: deckError?.message || 'Failed to create deck.' }
+    return { error: deckError?.message || 'Failed to create deck.', fields }
   }
 
   const deckId = deckRow.id
@@ -111,7 +235,7 @@ const primaryCommanderName = commanderNames[0] ?? null
   if (deckCards.length > 0) {
     const { error: cardError } = await supabase.from('deck_cards').insert(deckCards)
     if (cardError) {
-      return { error: cardError.message }
+      return { error: cardError.message, fields }
     }
   }
 
@@ -119,7 +243,7 @@ const primaryCommanderName = commanderNames[0] ?? null
   if (deckTokens.length > 0) {
     const { error: tokenError } = await supabase.from('deck_tokens').insert(deckTokens)
     if (tokenError) {
-      return { error: tokenError.message }
+      return { error: tokenError.message, fields }
     }
   }
 try {
@@ -130,6 +254,7 @@ try {
     return {
       success: true,
       validationErrors: validation.errors,
+      fields,
     }
   }
 
