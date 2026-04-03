@@ -21,10 +21,15 @@ type MoxfieldDeckResponse = {
   deckName?: string
   title?: string
   format?: string
+  commanders?: Record<string, MoxfieldCardEntry>
+  mainboard?: Record<string, MoxfieldCardEntry>
+  tokens?: Record<string, MoxfieldCardEntry>
+  sideboard?: Record<string, MoxfieldCardEntry>
   boards?: {
     commanders?: MoxfieldBoard
     mainboard?: MoxfieldBoard
     tokens?: MoxfieldBoard
+    sideboard?: MoxfieldBoard
   }
 }
 
@@ -60,12 +65,14 @@ async function fetchMoxfieldDeckTitle(sourceUrl: string) {
 }
 
 function parseMoxfieldBoard(
-  board: MoxfieldBoard | undefined,
+  board: MoxfieldBoard | Record<string, MoxfieldCardEntry> | undefined,
   section: 'commander' | 'mainboard' | 'token'
 ): ImportedDeckCard[] {
-  if (!board?.cards) return []
+  const cardMap = board && 'cards' in board ? board.cards : board
 
-  return Object.values(board.cards)
+  if (!cardMap) return []
+
+  return Object.values(cardMap)
     .map((entry) => {
       const card = entry.card
       const name = card?.name?.trim()
@@ -138,9 +145,9 @@ export async function fetchMoxfieldDeck(
   const deck = (await response.json()) as MoxfieldDeckResponse
 
   const cards = [
-    ...parseMoxfieldBoard(deck.boards?.commanders, 'commander'),
-    ...parseMoxfieldBoard(deck.boards?.mainboard, 'mainboard'),
-    ...parseMoxfieldBoard(deck.boards?.tokens, 'token'),
+    ...parseMoxfieldBoard(deck.boards?.commanders ?? deck.commanders, 'commander'),
+    ...parseMoxfieldBoard(deck.boards?.mainboard ?? deck.mainboard, 'mainboard'),
+    ...parseMoxfieldBoard(deck.boards?.tokens ?? deck.tokens, 'token'),
   ]
 
   const fallbackName =
