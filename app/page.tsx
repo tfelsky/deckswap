@@ -65,6 +65,41 @@ const MANA_SWATCHES: Record<string, string> = {
   C: "bg-[linear-gradient(135deg,#d6d4ce,#8f8b84)] text-zinc-950",
 }
 
+const COLOR_FILTER_FLAVOR: Record<string, string> = {
+  W: 'Order, discipline, and table-wide structure.',
+  U: 'Cards, control, and patient precision.',
+  B: 'Ambition, sacrifice, and graveyard leverage.',
+  R: 'Speed, chaos, and explosive pressure.',
+  G: 'Ramp, creatures, and overwhelming board presence.',
+  C: 'Artifacts, utility, and identity outside the pie.',
+  WU: 'Azorius style: rules, tempo, and clean answers.',
+  UB: 'Dimir style: secrets, graveyards, and inevitability.',
+  BR: 'Rakdos style: aggression, spectacle, and damage.',
+  RG: 'Gruul style: pressure, power, and combat.',
+  GW: 'Selesnya style: go-wide boards and resilient growth.',
+  WB: 'Orzhov style: draining value and recursion.',
+  UR: 'Izzet style: spells, velocity, and clever lines.',
+  BG: 'Golgari style: attrition, counters, and the graveyard.',
+  RW: 'Boros style: attack steps, equipment, and tempo.',
+  GU: 'Simic style: counters, cards, and scaling engines.',
+  WUB: 'Esper style: precision, artifacts, and long-game control.',
+  UBR: 'Grixis style: ruthless value and spell-driven pressure.',
+  BRG: 'Jund style: removal, threats, and raw efficiency.',
+  RGW: 'Naya style: creature pressure with broad board presence.',
+  GWU: 'Bant style: clean value, protection, and balance.',
+  WBR: 'Mardu style: aggression, sacrifice, and decisive swings.',
+  URG: 'Temur style: velocity, ramp, and oversized threats.',
+  BGW: 'Abzan style: counters, recursion, and staying power.',
+  RWU: 'Jeskai style: tempo, prowess, and layered interaction.',
+  GUB: 'Sultai style: resources, recursion, and grind.',
+  WUBR: 'Everything but green: interaction, artifacts, and stack play.',
+  UBRG: 'Everything but white: velocity, greed, and pressure.',
+  BRGW: 'Everything but blue: combat, removal, and board force.',
+  RGWU: 'Everything but black: ramp, tempo, and layered value.',
+  GWUB: 'Everything but red: control, resilience, and inevitability.',
+  WUBRG: 'All five colors: access, ambition, and full-spectrum nonsense.',
+}
+
 function readColorFilter(
   value: string | string[] | undefined
 ) {
@@ -331,6 +366,12 @@ export default async function HomePage({
                             <div className="mt-3 text-xs text-muted-foreground transition group-hover:text-foreground/80">
                               Browse {item.label.toLowerCase()} decks now live on Mythiverse Exchange.
                             </div>
+
+                            {COLOR_FILTER_FLAVOR[item.code] && (
+                              <div className="mt-2 text-[11px] leading-5 text-foreground/65">
+                                {COLOR_FILTER_FLAVOR[item.code]}
+                              </div>
+                            )}
                           </Link>
                         )
                       })}
