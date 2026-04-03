@@ -3,10 +3,35 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
+import SignOutButton from "@/components/sign-out-button"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const supabase = createClient()
+
+  useEffect(() => {
+    let active = true
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) {
+        setIsSignedIn(!!data.user)
+      }
+    })
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) {
+        setIsSignedIn(!!session?.user)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription.subscription.unsubscribe()
+    }
+  }, [supabase])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
@@ -37,9 +62,26 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/sign-in">Sign In</Link>
-          </Button>
+          {isSignedIn ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="border border-emerald-400/20 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15 hover:text-emerald-100"
+                asChild
+              >
+                <Link href="/settings/profile">
+                  <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.75)]" />
+                  Signed In
+                </Link>
+              </Button>
+              <SignOutButton />
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/sign-in">Sign In</Link>
+            </Button>
+          )}
           <Button size="sm" asChild>
             <Link href="/import-deck">Import Deck</Link>
           </Button>
@@ -77,9 +119,26 @@ export function Header() {
               Profile
             </Link>
             <div className="flex flex-col gap-2 pt-4">
-              <Button variant="ghost" size="sm" className="w-full justify-center" asChild>
-                <Link href="/sign-in">Sign In</Link>
-              </Button>
+              {isSignedIn ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center border border-emerald-400/20 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15 hover:text-emerald-100"
+                    asChild
+                  >
+                    <Link href="/settings/profile">
+                      <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.75)]" />
+                      Signed In
+                    </Link>
+                  </Button>
+                  <SignOutButton />
+                </>
+              ) : (
+                <Button variant="ghost" size="sm" className="w-full justify-center" asChild>
+                  <Link href="/sign-in">Sign In</Link>
+                </Button>
+              )}
               <Button size="sm" className="w-full justify-center" asChild>
                 <Link href="/import-deck">Import Deck</Link>
               </Button>

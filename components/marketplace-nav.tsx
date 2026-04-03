@@ -110,7 +110,16 @@ export default function MarketplaceNav({
               Sign in
             </Link>
           ) : (
-            <SignOutButton />
+            <>
+              <Link
+                href="/settings/profile"
+                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-400/15"
+              >
+                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-300 align-middle shadow-[0_0_12px_rgba(110,231,183,0.75)]" />
+                Signed in
+              </Link>
+              <SignOutButton />
+            </>
           )}
         </div>
       </div>
