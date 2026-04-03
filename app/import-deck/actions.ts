@@ -2,7 +2,7 @@
 
 import { parseDeckText } from '@/lib/commander/parse'
 import { validateDeckForFormat } from '@/lib/commander/validate'
-import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
+import { extractMoxfieldPublicId, fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import { detectDeckFormat, normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -106,6 +106,13 @@ export async function importDeckAction(
 
       if (!resolvedDeckName) {
         resolvedDeckName = deck.deckName ?? ''
+      }
+
+      if (!resolvedDeckName) {
+        const publicId = extractMoxfieldPublicId(sourceUrl)
+        resolvedDeckName = publicId
+          ? `Moxfield Import ${publicId}`
+          : 'Imported Moxfield Deck'
       }
     } catch (error) {
       return {
