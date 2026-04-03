@@ -2,6 +2,8 @@ import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
+const ADMIN_EMAIL = 'tim.felsky@gmail.com'
+
 type Deck = {
   id: number
   name: string
@@ -105,6 +107,7 @@ export default async function MyDecksPage() {
           ) / ratedDecks.length
         ).toFixed(1)
       : '0.0'
+  const isAdmin = user.email === ADMIN_EMAIL
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -126,6 +129,15 @@ export default async function MyDecksPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
+
               <Link
                 href="/create-deck"
                 className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
