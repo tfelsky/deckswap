@@ -9,7 +9,6 @@ const initialState = {}
 export default function ImportDeckPage() {
   const [state, formAction, pending] = useActionState(importDeckAction, initialState)
   const fields = state?.fields
-  const needsCommanderSelection = !!state?.requiresCommanderSelection
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -111,44 +110,9 @@ Tokens
               />
             </div>
 
-            {needsCommanderSelection && state?.commanderCandidates && (
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                <label className="mb-2 block text-sm font-medium text-emerald-200">
-                  Choose commander
-                </label>
-                <p className="mb-3 text-sm text-emerald-100/80">
-                  This Archidekt import did not label a commander. Pick the commander
-                  from the imported card list and resubmit.
-                </p>
-                <select
-                  name="commander_name"
-                  defaultValue={fields?.commanderName ?? ''}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
-                >
-                  <option value="">Select a commander</option>
-                  {state.commanderCandidates.map((cardName) => (
-                    <option key={cardName} value={cardName}>
-                      {cardName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {state?.error && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                 {state.error}
-              </div>
-            )}
-
-            {state?.validationErrors && state.validationErrors.length > 0 && (
-              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
-                <div className="font-medium">Imported, but validation found issues:</div>
-                <ul className="mt-2 list-disc pl-5">
-                  {state.validationErrors.map((err, i) => (
-                    <li key={i}>{err}</li>
-                  ))}
-                </ul>
               </div>
             )}
 
