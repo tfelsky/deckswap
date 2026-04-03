@@ -188,6 +188,20 @@ function changeTone(value: number | null) {
   return 'text-zinc-300'
 }
 
+function rowMatchKey(input: {
+  name: string
+  setCode?: string | null
+  collectorNumber?: string | null
+  foil?: boolean | null
+}) {
+  return [
+    input.name.trim().toLowerCase(),
+    input.setCode?.trim().toLowerCase() ?? '',
+    input.collectorNumber?.trim().toLowerCase() ?? '',
+    input.foil ? 'foil' : 'nonfoil',
+  ].join('::')
+}
+
 export default async function DeckDetailPage({
   params,
   searchParams,
@@ -951,22 +965,95 @@ export default async function DeckDetailPage({
           0
         ) + 1
 
-      if (cardsToMoveToTokens.length > 0) {
-        const { error: insertTokensError } = await supabase.from('deck_tokens').insert(
-          cardsToMoveToTokens.map((card, index) => ({
-            deck_id: deckId,
-            quantity: card.quantity,
-            token_name: card.card_name,
-            set_code: card.set_code ?? null,
-            set_name: card.set_name ?? null,
-            collector_number: card.collector_number ?? null,
-            foil: card.foil ?? false,
-            sort_order: nextTokenSortBase + index,
-          }))
-        )
+      const movedCardIds = new Set(cardsToMoveToTokens.map((card) => card.id))
+      const movedTokenIds = new Set(tokensToMoveToCards.map((token) => token.id))
 
-        if (insertTokensError) {
-          throw new Error(insertTokensError.message)
+      const remainingCardRows = ((currentCards ?? []) as Array<{
+        id: number
+        quantity: number
+        card_name: string
+        set_code?: string | null
+        collector_number?: string | null
+        foil?: boolean | null
+        section: 'commander' | 'mainboard'
+      }>).filter((card) => !movedCardIds.has(card.id))
+
+      const remainingTokenRows = ((currentTokens ?? []) as Array<{
+        id: number
+        quantity: number
+        token_name: string
+        set_code?: string | null
+        collector_number?: string | null
+        foil?: boolean | null
+      }>).filter((token) => !movedTokenIds.has(token.id))
+
+      const existingMainboardByKey = new Map(
+        remainingCardRows
+          .filter((card) => card.section === 'mainboard')
+          .map((card) => [
+            rowMatchKey({
+              name: card.card_name,
+              setCode: card.set_code,
+              collectorNumber: card.collector_number,
+              foil: card.foil,
+            }),
+            card,
+          ])
+      )
+
+      const existingTokenByKey = new Map(
+        remainingTokenRows.map((token) => [
+          rowMatchKey({
+            name: token.token_name,
+            setCode: token.set_code,
+            collectorNumber: token.collector_number,
+            foil: token.foil,
+          }),
+          token,
+        ])
+      )
+
+      if (cardsToMoveToTokens.length > 0) {
+        let newTokenIndex = 0
+
+        for (const card of cardsToMoveToTokens) {
+          const key = rowMatchKey({
+            name: card.card_name,
+            setCode: card.set_code,
+            collectorNumber: card.collector_number,
+            foil: card.foil,
+          })
+          const existingToken = existingTokenByKey.get(key)
+
+          if (existingToken) {
+            const { error } = await supabase
+              .from('deck_tokens')
+              .update({ quantity: existingToken.quantity + card.quantity })
+              .eq('id', existingToken.id)
+
+            if (error) {
+              throw new Error(error.message)
+            }
+
+            existingToken.quantity += card.quantity
+          } else {
+            const { error } = await supabase.from('deck_tokens').insert({
+              deck_id: deckId,
+              quantity: card.quantity,
+              token_name: card.card_name,
+              set_code: card.set_code ?? null,
+              set_name: card.set_name ?? null,
+              collector_number: card.collector_number ?? null,
+              foil: card.foil ?? false,
+              sort_order: nextTokenSortBase + newTokenIndex,
+            })
+
+            if (error) {
+              throw new Error(error.message)
+            }
+
+            newTokenIndex += 1
+          }
         }
 
         const { error: deleteCardsError } = await supabase
@@ -983,24 +1070,49 @@ export default async function DeckDetailPage({
       }
 
       if (tokensToMoveToCards.length > 0) {
-        const { error: insertCardsError } = await supabase.from('deck_cards').insert(
-          tokensToMoveToCards.map((token, index) => ({
-            deck_id: deckId,
-            section: 'mainboard',
-            quantity: token.quantity,
-            card_name: token.token_name,
-            condition: 'near_mint',
-            condition_source: 'import_default',
-            set_code: token.set_code ?? null,
-            set_name: token.set_name ?? null,
-            collector_number: token.collector_number ?? null,
-            foil: token.foil ?? false,
-            sort_order: nextCardSortBase + index,
-          }))
-        )
+        let newCardIndex = 0
 
-        if (insertCardsError) {
-          throw new Error(insertCardsError.message)
+        for (const token of tokensToMoveToCards) {
+          const key = rowMatchKey({
+            name: token.token_name,
+            setCode: token.set_code,
+            collectorNumber: token.collector_number,
+            foil: token.foil,
+          })
+          const existingMainboard = existingMainboardByKey.get(key)
+
+          if (existingMainboard) {
+            const { error } = await supabase
+              .from('deck_cards')
+              .update({ quantity: existingMainboard.quantity + token.quantity })
+              .eq('id', existingMainboard.id)
+
+            if (error) {
+              throw new Error(error.message)
+            }
+
+            existingMainboard.quantity += token.quantity
+          } else {
+            const { error } = await supabase.from('deck_cards').insert({
+              deck_id: deckId,
+              section: 'mainboard',
+              quantity: token.quantity,
+              card_name: token.token_name,
+              condition: 'near_mint',
+              condition_source: 'import_default',
+              set_code: token.set_code ?? null,
+              set_name: token.set_name ?? null,
+              collector_number: token.collector_number ?? null,
+              foil: token.foil ?? false,
+              sort_order: nextCardSortBase + newCardIndex,
+            })
+
+            if (error) {
+              throw new Error(error.message)
+            }
+
+            newCardIndex += 1
+          }
         }
 
         const { error: deleteTokensError } = await supabase
@@ -1017,7 +1129,11 @@ export default async function DeckDetailPage({
       }
 
       await syncDeckDerivedState(deckId)
-      await enrichDeckWithScryfall(deckId, 'refresh')
+      try {
+        await enrichDeckWithScryfall(deckId, 'refresh')
+      } catch (error) {
+        console.error('Token reclassification enrichment refresh failed:', error)
+      }
 
       await logDeckImportEvent(supabase, {
         deckId,
