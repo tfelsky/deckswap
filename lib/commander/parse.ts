@@ -322,9 +322,10 @@ function parseCardLine(
   let rest = (qtyMatch ? qtyMatch[2] : trailingQtyMatch?.[1] ?? '').trim()
 
   let foil = false
-  if (/\*F\*$/i.test(rest)) {
+  const finishMatch = rest.match(/\*(F|E)\*$/i)
+  if (finishMatch) {
     foil = true
-    rest = rest.replace(/\*F\*$/i, '').trim()
+    rest = rest.replace(/\*(F|E)\*$/i, '').trim()
   }
 
   let setCode: string | undefined
@@ -333,7 +334,7 @@ function parseCardLine(
   // Match formats like:
   // Sol Ring (eoc) 57
   // Leonin Relic-Warder (plst) C17-65
-  const printMatch = rest.match(/^(.*?)\s+\(([a-z0-9]+)\)\s+([a-z0-9\-]+)$/i)
+  const printMatch = rest.match(/^(.*?)\s+\(([a-z0-9]+)\)\s+([\p{L}\p{N}\-★☆]+)$/iu)
   if (printMatch) {
     rest = printMatch[1].trim()
     setCode = printMatch[2].toLowerCase()
