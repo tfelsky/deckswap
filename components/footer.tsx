@@ -18,9 +18,13 @@ const footerLinks = {
     { name: "Power Bands", href: "#" },
     { name: "Partner Decks", href: "#" },
     { name: "Token Builds", href: "#" },
+    { name: "Holiday Giveback", href: "/holiday-giveback" },
+    { name: "Paper Power 9", href: "/paper-power-9" },
   ],
   company: [
     { name: "About DeckSwap", href: "/" },
+    { name: "Privacy Policy", href: "/privacy" },
+    { name: "Terms", href: "/terms" },
     { name: "Sign In", href: "/sign-in" },
     { name: "Admin Tools", href: "/admin/backfill-decks" },
     { name: "Home", href: "/" },
@@ -120,6 +124,12 @@ export function Footer() {
             </Link>
             <Link href="/info" className="text-sm text-muted-foreground hover:text-foreground">
               Info
+            </Link>
+            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+              Terms
             </Link>
             <Link href="/my-decks" className="text-sm text-muted-foreground hover:text-foreground">
               My Decks

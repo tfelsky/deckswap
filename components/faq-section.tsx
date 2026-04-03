@@ -12,7 +12,7 @@ const faqs = [
   {
     question: "How would DeckSwap escrow work for decks?",
     answer:
-      "The escrow model is that both sides agree on a matched deck value, DeckSwap collects the trade payment and fee, and the trade is only released once both decks are received and checked against the agreed inventory. In practice, escrow is the trust layer around the trade: it reduces the risk of one-sided shipment loss, gives the platform a clear hold-and-release moment, and works alongside shipping and insurance rather than replacing them.",
+      "The cleaner escrow model is that DeckSwap holds the decks, not the full cash value of both decks. Each user would pay the platform fee, shipping, insurance, and any value difference owed if one deck is worth more than the other. Once both decks are received and checked against the agreed inventory, DeckSwap forwards the decks and releases any equalization payment to the side that traded down in value.",
   },
   {
     question: "What is the best way to import a deck?",

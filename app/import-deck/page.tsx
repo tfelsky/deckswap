@@ -1,15 +1,32 @@
 'use client'
 
 import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
+import { GUEST_IMPORT_DRAFT_KEY, type GuestImportDraft } from '@/lib/guest-import'
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { importDeckAction } from './actions'
 
 const initialState = {}
 
 export default function ImportDeckPage() {
   const [state, formAction, pending] = useActionState(importDeckAction, initialState)
-  const fields = state?.fields
+  const [guestDraft, setGuestDraft] = useState<GuestImportDraft | null>(null)
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const raw = window.sessionStorage.getItem(GUEST_IMPORT_DRAFT_KEY)
+    if (!raw) return
+
+    try {
+      setGuestDraft(JSON.parse(raw) as GuestImportDraft)
+    } catch {
+      setGuestDraft(null)
+    }
+  }, [])
+
+  const fields = state?.fields ?? guestDraft ?? undefined
+  const showGuestBanner = !!guestDraft || searchParams.get('fromGuest') === '1'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -44,6 +61,13 @@ export default function ImportDeckPage() {
           className="rounded-3xl border border-white/10 bg-zinc-900 p-6 sm:p-8"
         >
           <div className="grid gap-5">
+            {showGuestBanner && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                Guest preview data was carried into your account import flow. Submit this form to
+                save the deck to your collection.
+              </div>
+            )}
+
             <div>
               <label className="mb-2 block text-sm font-medium text-zinc-300">
                 Deck name

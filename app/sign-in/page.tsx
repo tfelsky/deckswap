@@ -1,5 +1,6 @@
 'use client'
 
+import { GUEST_IMPORT_DRAFT_KEY } from '@/lib/guest-import'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -15,6 +16,14 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+
+  function getPostAuthRoute() {
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem(GUEST_IMPORT_DRAFT_KEY)) {
+      return '/import-deck?fromGuest=1'
+    }
+
+    return '/decks'
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -34,7 +43,7 @@ export default function SignInPage() {
         return
       }
 
-      router.push('/decks')
+      router.push(getPostAuthRoute())
       router.refresh()
       return
     }
@@ -69,10 +78,10 @@ export default function SignInPage() {
             </Link>
 
             <Link
-              href="/import-deck"
+              href="/guest-import"
               className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
             >
-              Import Deck
+              Try guest import
             </Link>
           </div>
 
@@ -86,7 +95,7 @@ export default function SignInPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Use email and password authentication through Supabase.
+              Use email and password authentication through Supabase. Want to see the product first? Try a guest import preview and save later.
             </p>
           </div>
         </div>
