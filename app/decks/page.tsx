@@ -8,6 +8,7 @@ type Deck = {
   commander?: string | null
   power_level?: number | null
   price_estimate?: number | null
+  price_total_usd_foil?: number | null
   image_url?: string | null
 }
 
@@ -28,7 +29,7 @@ export default async function DecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, power_level, price_estimate, image_url')
+    .select('id, name, commander, power_level, price_estimate, price_total_usd_foil, image_url')
     .order('id', { ascending: true })
 
   if (error) {
@@ -56,41 +57,41 @@ export default async function DecksPage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-                Discover Commander decks by power, style, and estimated value.
+                Discover Commander decks by power, style, and blended card value.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-  <Link
-    href="/create-deck"
-    className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
-  >
-    + Create Deck
-  </Link>
-<Link
-  href="/import-deck"
-  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
->
-  Import Deck
-</Link>
-  <Link
-    href="/my-decks"
-    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-  >
-    My Decks
-  </Link>
+              <Link
+                href="/create-deck"
+                className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
+              >
+                + Create Deck
+              </Link>
+              <Link
+                href="/import-deck"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Import Deck
+              </Link>
+              <Link
+                href="/my-decks"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                My Decks
+              </Link>
 
-  {!user ? (
-    <Link
-      href="/sign-in"
-      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-    >
-      Sign in
-    </Link>
-  ) : (
-    <SignOutButton />
-  )}
-</div>
+              {!user ? (
+                <Link
+                  href="/sign-in"
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                >
+                  Sign in
+                </Link>
+              ) : (
+                <SignOutButton />
+              )}
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -119,8 +120,8 @@ export default async function DecksPage() {
                 $
                 {Math.max(
                   0,
-                  ...decks.map((deck) => Number(deck.price_estimate ?? 0))
-                ).toFixed(0)}
+                  ...decks.map((deck) => Number(deck.price_total_usd_foil ?? 0))
+                ).toFixed(2)}
               </div>
             </div>
 
@@ -141,7 +142,7 @@ export default async function DecksPage() {
               Available Decks
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Marketplace-style grid with commander, power level, and value.
+              Marketplace-style grid with commander, power level, and blended value.
             </p>
           </div>
         </div>
@@ -150,8 +151,7 @@ export default async function DecksPage() {
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
             <h3 className="text-xl font-semibold">No decks yet</h3>
             <p className="mt-2 text-zinc-400">
-              Your connection works. Now seed the table with more decks and
-              metadata.
+              Your connection works. Now seed the table with more decks and metadata.
             </p>
           </div>
         ) : (
@@ -161,37 +161,37 @@ export default async function DecksPage() {
                 <article className="group cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
-  <>
-    <img
-      src={deck.image_url}
-      alt={deck.name}
-      className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]"
-    />
+                      <>
+                        <img
+                          src={deck.image_url}
+                          alt={deck.name}
+                          className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]"
+                        />
 
-    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
-      <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-        Commander Deck
-      </div>
-      <div className="mt-2 text-2xl font-semibold text-white">
-        {deck.commander || 'Unknown Commander'}
-      </div>
-    </div>
-  </>
-) : (
-  <div className="flex h-full w-full items-end p-5">
-    <div>
-      <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-        Commander Deck
-      </div>
-      <div className="mt-2 text-2xl font-semibold text-white">
-        {deck.commander || 'Unknown Commander'}
-      </div>
-    </div>
-  </div>
-)}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
+                          <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
+                            Commander Deck
+                          </div>
+                          <div className="mt-2 text-2xl font-semibold text-white">
+                            {deck.commander || 'Unknown Commander'}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex h-full w-full items-end p-5">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
+                            Commander Deck
+                          </div>
+                          <div className="mt-2 text-2xl font-semibold text-white">
+                            {deck.commander || 'Unknown Commander'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-                      Power {deck.power_level ?? '—'}
+                      Power {deck.power_level ?? 'N/A'}
                     </div>
                   </div>
 
@@ -208,13 +208,10 @@ export default async function DecksPage() {
 
                       <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
                         <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
-                          Est. Value
+                          Value
                         </div>
                         <div className="text-lg font-semibold text-emerald-300">
-                          $
-                          {deck.price_estimate != null
-                            ? Number(deck.price_estimate).toFixed(0)
-                            : '—'}
+                          ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
                         </div>
                       </div>
                     </div>
