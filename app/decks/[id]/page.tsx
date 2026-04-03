@@ -979,7 +979,8 @@ export default async function DeckDetailPage({
         }
       >()
 
-      const addMainboard = (row: {
+      const addMainboard = (
+        row: {
         quantity: number
         card_name: string
         set_code?: string | null
@@ -988,7 +989,9 @@ export default async function DeckDetailPage({
         foil?: boolean | null
         condition?: string | null
         condition_source?: string | null
-      }) => {
+      },
+        strategy: 'merge' | 'fill'
+      ) => {
         const key = rowMatchKey({
           name: row.card_name,
           setCode: row.set_code,
@@ -997,20 +1000,25 @@ export default async function DeckDetailPage({
         })
         const existing = normalizedMainboardMap.get(key)
         if (existing) {
-          existing.quantity += row.quantity
+          if (strategy === 'merge') {
+            existing.quantity += row.quantity
+          }
           return
         }
         normalizedMainboardMap.set(key, { ...row })
       }
 
-      const addToken = (row: {
+      const addToken = (
+        row: {
         quantity: number
         token_name: string
         set_code?: string | null
         set_name?: string | null
         collector_number?: string | null
         foil?: boolean | null
-      }) => {
+      },
+        strategy: 'merge' | 'fill'
+      ) => {
         const key = rowMatchKey({
           name: row.token_name,
           setCode: row.set_code,
@@ -1019,7 +1027,9 @@ export default async function DeckDetailPage({
         })
         const existing = normalizedTokenMap.get(key)
         if (existing) {
-          existing.quantity += row.quantity
+          if (strategy === 'merge') {
+            existing.quantity += row.quantity
+          }
           return
         }
         normalizedTokenMap.set(key, { ...row })
@@ -1038,7 +1048,7 @@ export default async function DeckDetailPage({
             set_name: card.set_name ?? null,
             collector_number: card.collector_number ?? null,
             foil: card.foil ?? false,
-          })
+          }, 'fill')
         } else {
           addMainboard({
             quantity: card.quantity,
@@ -1049,7 +1059,7 @@ export default async function DeckDetailPage({
             foil: card.foil ?? false,
             condition: card.condition ?? 'near_mint',
             condition_source: card.condition_source ?? 'import_default',
-          })
+          }, 'merge')
         }
       }
 
@@ -1062,7 +1072,7 @@ export default async function DeckDetailPage({
             set_name: token.set_name ?? null,
             collector_number: token.collector_number ?? null,
             foil: token.foil ?? false,
-          })
+          }, 'merge')
         } else {
           addMainboard({
             quantity: token.quantity,
@@ -1073,7 +1083,7 @@ export default async function DeckDetailPage({
             foil: token.foil ?? false,
             condition: 'near_mint',
             condition_source: 'import_default',
-          })
+          }, 'fill')
         }
       }
 
@@ -1147,11 +1157,6 @@ export default async function DeckDetailPage({
       }
 
       await syncDeckDerivedState(deckId)
-      try {
-        await enrichDeckWithScryfall(deckId, 'refresh')
-      } catch (error) {
-        console.error('Token reclassification enrichment refresh failed:', error)
-      }
 
       await logDeckImportEvent(supabase, {
         deckId,
