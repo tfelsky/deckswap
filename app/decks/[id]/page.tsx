@@ -630,6 +630,15 @@ export default async function DeckDetailPage({
               Import Deck
             </Link>
 
+            {user && !isOwner && (
+              <Link
+                href={`/trade-offers/propose?deckId=${deckId}`}
+                className="inline-block rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
+              >
+                Propose Trade
+              </Link>
+            )}
+
             {isOwner && (
               <Link
                 href={`/my-decks/${deckId}?tab=settings`}

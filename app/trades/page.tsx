@@ -49,6 +49,9 @@ export default async function TradesPage() {
             <Link href="/my-decks" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10">
               {'<-'} Back to My Decks
             </Link>
+            <Link href="/trade-offers" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+              Trade Offers
+            </Link>
             <Link href="/checkout-prototype" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
               New Trade Draft
             </Link>
@@ -61,6 +64,9 @@ export default async function TradesPage() {
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">Trades And Escrows</h1>
             <p className="mt-3 max-w-3xl text-zinc-400">
               These records are the first durable layer under checkout, payment obligations, and future inspection/release workflows.
+            </p>
+            <p className="mt-2 max-w-3xl text-sm text-zinc-500">
+              Negotiation starts in Trade Offers, then accepted offers hand off into this workspace.
             </p>
           </div>
         </div>

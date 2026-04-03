@@ -55,6 +55,13 @@ export type EscrowEventRow = {
   created_at?: string | null
 }
 
+export function normalizeSupportedCountry(value?: string | null): SupportedCountry {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === 'us' || normalized === 'united states' || normalized === 'usa'
+    ? 'us'
+    : 'ca'
+}
+
 export function isEscrowSchemaMissing(message?: string | null) {
   if (!message) return false
 

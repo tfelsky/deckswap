@@ -18,6 +18,7 @@ DeckSwap already has:
 - per-card and deck-level blended pricing
 - admin tools for maintenance, trends, and marketplace metrics
 - basic public profiles, private shipping profiles, and seller trust controls
+- trade offers with offer acceptance handing off into draft escrow transactions
 - legal placeholder pages
 - escrow transaction foundation with persisted draft trades
 - campaign and community concept pages
@@ -41,6 +42,7 @@ DeckSwap already has:
 ### Commerce and escrow loose ends
 
 - Draft trade records and event history now exist, but there are no real payment intents yet.
+- Trade offers now exist, but counteroffers, notifications, and richer negotiation threads are still missing.
 - Admin ecommerce counters still include placeholder values for sales, paid escrows, and completed settlements.
 - Shipping, insurance, intake, inspection, and release operations are modeled but not yet operationalized.
 
