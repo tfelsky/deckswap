@@ -1,6 +1,6 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
-import MarketplaceNav from '@/components/marketplace-nav'
+import AppHeader from '@/components/app-header'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/server'
@@ -130,7 +130,13 @@ export default async function MyDecksPage() {
   const isAdmin = access.isAdmin
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader
+        current="my-decks"
+        isSignedIn
+        isAdmin={isAdmin}
+        unreadTradeOffers={unreadTradeOffers}
+      />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -148,15 +154,6 @@ export default async function MyDecksPage() {
               </p>
             </div>
 
-          </div>
-
-          <div className="mt-8">
-            <MarketplaceNav
-              current="my-decks"
-              isSignedIn
-              isAdmin={isAdmin}
-              unreadTradeOffers={unreadTradeOffers}
-            />
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">

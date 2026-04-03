@@ -2,6 +2,7 @@
 
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateDeckForFormat } from '@/lib/commander/validate'
+import { deriveDeckColorIdentity } from '@/lib/decks/color-identity'
 import { normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -29,6 +30,16 @@ type DeckTokenRow = {
 
 type EnrichedDeckCardRow = DeckCardRow & {
   sort_order: number | null
+  image_url: string | null
+  is_legendary: boolean | null
+  is_background: boolean | null
+  can_be_commander: boolean | null
+  keywords: string[] | null
+  partner_with_name: string | null
+  color_identity: string[] | null
+}
+
+type DerivedStateCardRow = DeckCardRow & {
   image_url: string | null
   is_legendary: boolean | null
   is_background: boolean | null
@@ -203,7 +214,7 @@ async function captureDeckPriceSnapshot(
   })
 }
 
-function toImportedDeckCard(card: EnrichedDeckCardRow): ImportedDeckCard {
+function toImportedDeckCard(card: DerivedStateCardRow): ImportedDeckCard {
   return {
     section: card.section,
     quantity: card.quantity,
@@ -220,7 +231,7 @@ function toImportedDeckCard(card: EnrichedDeckCardRow): ImportedDeckCard {
   }
 }
 
-function hasSingletonCommanderShape(cards: EnrichedDeckCardRow[]) {
+function hasSingletonCommanderShape(cards: DerivedStateCardRow[]) {
   const totalNonTokenCards = cards.reduce((sum, card) => sum + card.quantity, 0)
 
   if (totalNonTokenCards !== 100) {
@@ -272,7 +283,7 @@ async function inferCommanderDeckState(deckId: number) {
     throw new Error(cardsError.message)
   }
 
-  const cards = (cardsData ?? []) as EnrichedDeckCardRow[]
+  const cards = (cardsData ?? []) as DerivedStateCardRow[]
   const explicitCommanders = cards.filter((card) => card.section === 'commander')
   const currentFormat = normalizeDeckFormat(deckData.format)
 
@@ -295,7 +306,7 @@ async function inferCommanderDeckState(deckId: number) {
     return
   }
 
-  const byId = new Map<number, EnrichedDeckCardRow>(cards.map((card) => [card.id, card]))
+  const byId = new Map<number, DerivedStateCardRow>(cards.map((card) => [card.id, card]))
   const selectedIds: number[] = []
 
   if (candidates.length === 1) {
@@ -370,6 +381,74 @@ async function inferCommanderDeckState(deckId: number) {
   const { error: updateError } = await supabase
     .from('decks')
     .update(deckUpdate)
+    .eq('id', deckId)
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+}
+
+async function syncDeckDerivedState(deckId: number) {
+  const supabase = await createClient()
+
+  const { data: deckData, error: deckError } = await supabase
+    .from('decks')
+    .select('id, format')
+    .eq('id', deckId)
+    .single()
+
+  if (deckError || !deckData) {
+    throw new Error(deckError?.message ?? 'Failed to load deck state.')
+  }
+
+  const { data: cardsData, error: cardsError } = await supabase
+    .from('deck_cards')
+    .select(
+      'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+    )
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+
+  if (cardsError) {
+    throw new Error(cardsError.message)
+  }
+
+  const { data: tokensData, error: tokensError } = await supabase
+    .from('deck_tokens')
+    .select('quantity')
+    .eq('deck_id', deckId)
+
+  if (tokensError) {
+    throw new Error(tokensError.message)
+  }
+
+  const cards = (cardsData ?? []) as DerivedStateCardRow[]
+  const importedCards = cards.map(toImportedDeckCard)
+  const validation = validateDeckForFormat(importedCards, deckData.format)
+  const commanderNames = importedCards
+    .filter((card) => card.section === 'commander')
+    .map((card) => card.cardName)
+  const leadCommander = cards.find((card) => card.section === 'commander')
+  const tokenCount = (tokensData ?? []).reduce(
+    (sum, token) => sum + Number(token.quantity ?? 0),
+    0
+  )
+  const deckColorIdentity = deriveDeckColorIdentity(cards)
+
+  const { error: updateError } = await supabase
+    .from('decks')
+    .update({
+      commander: commanderNames[0] ?? null,
+      commander_count: validation.commanderCount,
+      mainboard_count: validation.mainboardCount,
+      token_count: tokenCount,
+      commander_mode: validation.commanderMode,
+      commander_names: commanderNames,
+      is_valid: validation.isValid,
+      validation_errors: validation.errors,
+      color_identity: deckColorIdentity,
+      image_url: leadCommander?.image_url ?? undefined,
+    })
     .eq('id', deckId)
 
   if (updateError) {
@@ -483,5 +562,6 @@ export async function enrichDeckWithScryfall(
   if (deckUpdateError) throw new Error(deckUpdateError.message)
 
   await inferCommanderDeckState(deckId)
+  await syncDeckDerivedState(deckId)
   await captureDeckPriceSnapshot(deckId, Number(totalUsdFoil.toFixed(2)), snapshotType)
 }

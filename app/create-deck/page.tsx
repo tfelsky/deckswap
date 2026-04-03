@@ -1,7 +1,7 @@
 'use client'
 
 import { COMMANDER_BRACKETS } from '@/lib/commander/brackets'
-import MarketplaceNav from '@/components/marketplace-nav'
+import AppHeader from '@/components/app-header'
 import { normalizeBoxType } from '@/lib/decks/marketing'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -66,7 +66,8 @@ export default function CreateDeckPage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="create" />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-3xl px-6 py-10">
           <Link
@@ -88,9 +89,6 @@ export default function CreateDeckPage() {
             </p>
           </div>
 
-          <div className="mt-8">
-            <MarketplaceNav current="create" />
-          </div>
         </div>
       </section>
 

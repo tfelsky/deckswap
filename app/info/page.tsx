@@ -15,14 +15,19 @@ export default function InfoPage() {
                 DeckSwap Info
               </div>
               <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                Learn how DeckSwap works without crowding the homepage
+                Trade decks with clearer pricing, stronger trust, and better context
               </h1>
               <p className="mt-4 text-lg text-muted-foreground">
-                This page is the deeper guide for importing, pricing, matching, and safer deck
-                trades. The homepage can stay focused on the benefits while this page holds the
-                operational detail.
+                DeckSwap is built to help players import real inventory, compare value more honestly,
+                and move from discovery to trade, auction, or escrow with less guesswork.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/"
+                  className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
+                >
+                  Back to Home
+                </Link>
                 <Link
                   href="/decks"
                   className="rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
@@ -67,29 +72,66 @@ export default function InfoPage() {
         <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="text-sm font-medium text-foreground">Why use DeckSwap</div>
+              <div className="text-sm font-medium text-foreground">Keep more deck value in play</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Value-for-value trading keeps more of the deck&apos;s real inventory value in play.
+                Value-for-value trading can preserve more of a deck&apos;s real inventory value than
+                a traditional trade-in or buylist.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="text-sm font-medium text-foreground">How to get better results</div>
+              <div className="text-sm font-medium text-foreground">Import with useful detail</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Full imports, correct commanders, and token inventory produce cleaner pricing and
-                validation.
+                Full imports, correct commanders, packaging notes, and token inventory produce
+                cleaner pricing and better listing context.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="text-sm font-medium text-foreground">Where the platform is headed</div>
+              <div className="text-sm font-medium text-foreground">Add trust around the handoff</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Escrow, shipping, insurance, and reputation are designed as trust layers around the
-                trade.
+                Escrow, shipping, insurance, and reputation are there to make higher-value deck
+                trades feel safer and easier to review.
               </p>
             </div>
           </div>
         </section>
 
         <section className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
+          <div className="mb-12 rounded-3xl border border-border bg-card p-8">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                Product Paths
+              </div>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                Choose the path that fits what you want to do
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                DeckSwap already supports a few different ways to move inventory. This page is the
+                quick map for when to use each one.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Import and list</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Best when you want pricing, deck details, comments, and a clean marketplace page.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Trade through escrow</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Best when both sides want deck-for-deck value and a stronger handoff process.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Auction for a quicker sale</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Best when speed matters more than a precise value-for-value trade match.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-border bg-card p-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
@@ -99,9 +141,9 @@ export default function InfoPage() {
                 Useful marketplaces and accessories while DeckSwap grows
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                These are simple placeholder recommendations for now. In the future, some outbound
-                links on DeckSwap may become referral links, which means DeckSwap could earn a
-                commission from qualifying purchases.
+                These are practical marketplaces and accessory brands players already recognize.
+                Over time, some outbound links on DeckSwap may become referral links, which means
+                DeckSwap could earn a commission from qualifying purchases.
               </p>
             </div>
 

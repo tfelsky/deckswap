@@ -1,5 +1,6 @@
 import DeckCardViews from '@/components/deck-card-views'
 import GuestDraftCleanup from '@/components/guest-draft-cleanup'
+import AppHeader from '@/components/app-header'
 import { Button } from '@/components/ui/button'
 import {
   HoverCard,
@@ -621,7 +622,8 @@ export default async function DeckDetailPage({
   }))
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="decks" isSignedIn={!!user} isAdmin={isAdmin} />
       <GuestDraftCleanup shouldClear={showGuestSaved} />
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.18),_transparent_28%),linear-gradient(to_bottom,_rgb(24,24,27),_rgb(9,9,11))]">
         <div className="mx-auto max-w-6xl px-6 py-12">
@@ -813,158 +815,172 @@ export default async function DeckDetailPage({
                   </div>
                 )}
 
-              {isCommanderDeck ? (
-                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    Commander Bracket
-                    <HoverCard>
-                      <HoverCardTrigger asChild>
-                        <button type="button" className="text-zinc-500 hover:text-white">
-                          <Info className="h-4 w-4" />
-                        </button>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
-                        <div className="space-y-2 text-sm">
-                          <p className="font-medium text-white">{bracketSummary.label}</p>
-                          <p>{bracketSummary.description}</p>
-                          <p className="text-zinc-400">{bracketSummary.bracketRule}</p>
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                  </div>
-                  <div className="mt-2 text-3xl font-semibold">
-                    {bracketSummary.label}
-                  </div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    {bracketSummary.description}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                  <div className="text-sm text-zinc-400">Deck Format</div>
-                  <div className="mt-2 text-3xl font-semibold">
-                    {getDeckFormatLabel(deckFormat)}
-                  </div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    This deck is using the relaxed import flow for broader supported formats.
-                  </p>
-                </div>
-              )}
+              <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
+                <div className="space-y-4">
+                  {isCommanderDeck ? (
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="flex items-center gap-2 text-sm text-zinc-400">
+                        Commander Bracket
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <button type="button" className="text-zinc-500 hover:text-white">
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                            <div className="space-y-2 text-sm">
+                              <p className="font-medium text-white">{bracketSummary.label}</p>
+                              <p>{bracketSummary.description}</p>
+                              <p className="text-zinc-400">{bracketSummary.bracketRule}</p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold">
+                        {bracketSummary.label}
+                      </div>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        {bracketSummary.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Deck Format</div>
+                      <div className="mt-2 text-3xl font-semibold">
+                        {getDeckFormatLabel(deckFormat)}
+                      </div>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        This deck is using the relaxed import flow for broader supported formats.
+                      </p>
+                    </div>
+                  )}
 
-              {isCommanderDeck && (
-                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                  <div className="text-sm text-zinc-400">Bracket Signals</div>
-                  <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                    {bracketSummary.gameChangerCount}
+                  {isCommanderDeck && (
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Bracket Signals</div>
+                      <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                        {bracketSummary.gameChangerCount}
+                      </div>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
+                      </p>
+                      {bracketSummary.gameChangers.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
+                            <span
+                              key={cardName}
+                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
+                            >
+                              {cardName}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                      <div className="text-sm text-emerald-100/80">Estimated Card Pricing</div>
+                      <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                        ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
+                      </div>
+                      <p className="mt-2 text-sm text-emerald-50/70">
+                        Blended using each card&apos;s current foil or non-foil print setting.
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Price Trend</div>
+                      <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                        <div>
+                          Import snapshot:{' '}
+                          {importSnapshot?.price_total_usd_foil != null
+                            ? `$${Number(importSnapshot.price_total_usd_foil).toFixed(2)}`
+                            : 'Awaiting first snapshot'}
+                        </div>
+                        <div className={changeTone(change30)}>
+                          30d move: {formatPercentChange(change30) ?? 'Awaiting enough history'}
+                        </div>
+                        <div className={changeTone(change60)}>
+                          60d move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
-                  </p>
-                  {bracketSummary.gameChangers.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
-                        <span
-                          key={cardName}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
-                        >
-                          {cardName}
-                        </span>
-                      ))}
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Commanders</div>
+                      <div className="mt-2 text-3xl font-semibold text-white">
+                        {commanders.reduce((sum, card) => sum + card.quantity, 0)}
+                      </div>
+                    </div>
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Mainboard</div>
+                      <div className="mt-2 text-3xl font-semibold text-white">
+                        {mainboard.reduce((sum, card) => sum + card.quantity, 0)}
+                      </div>
+                    </div>
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Tokens</div>
+                      <div className="mt-2 text-3xl font-semibold text-white">
+                        {tokenCards.reduce((sum, card) => sum + card.quantity, 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                    <div className="text-sm text-zinc-400">Deck Snapshot</div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-xs uppercase tracking-wide text-zinc-500">Validation</div>
+                        <div className="mt-2 text-sm font-medium text-white">
+                          {typedDeck.is_valid ? 'Ready for listing' : 'Needs review'}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-xs uppercase tracking-wide text-zinc-500">Commander Mode</div>
+                        <div className="mt-2 text-sm font-medium capitalize text-white">
+                          {(typedDeck.commander_mode ?? 'unknown').replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                        <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Presentation</div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {marketingChips.length > 0 ? (
+                            marketingChips.map((chip) => (
+                              <span
+                                key={chip}
+                                className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
+                              >
+                                {chip}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-zinc-400">
+                              No packaging details added yet.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isCommanderDeck && (
+                    <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                      <div className="text-sm text-zinc-400">Bracket Notes</div>
+                      <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                        {bracketSummary.notes.map((note) => (
+                          <p key={note}>{note}</p>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                    <div className="text-sm text-emerald-100/80">Estimated Card Pricing</div>
-                    <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                      ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
-                    </div>
-                    <p className="mt-2 text-sm text-emerald-50/70">
-                      Blended using each card&apos;s current foil or non-foil print setting.
-                    </p>
-                  </div>
-
+                <div className="space-y-4">
                   <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                    <div className="text-sm text-zinc-400">Price Trend</div>
-                    <div className="mt-3 space-y-2 text-sm text-zinc-300">
-                      <div>
-                        Import snapshot:{' '}
-                        {importSnapshot?.price_total_usd_foil != null
-                          ? `$${Number(importSnapshot.price_total_usd_foil).toFixed(2)}`
-                          : 'Awaiting first snapshot'}
-                      </div>
-                      <div className={changeTone(change30)}>
-                        30d move: {formatPercentChange(change30) ?? 'Awaiting enough history'}
-                      </div>
-                      <div className={changeTone(change60)}>
-                        60d move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                    <div className="text-sm text-zinc-400">Commanders</div>
-                    <div className="mt-2 text-3xl font-semibold text-white">
-                      {commanders.reduce((sum, card) => sum + card.quantity, 0)}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                    <div className="text-sm text-zinc-400">Mainboard</div>
-                    <div className="mt-2 text-3xl font-semibold text-white">
-                      {mainboard.reduce((sum, card) => sum + card.quantity, 0)}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                    <div className="text-sm text-zinc-400">Tokens</div>
-                    <div className="mt-2 text-3xl font-semibold text-white">
-                      {tokenCards.reduce((sum, card) => sum + card.quantity, 0)}
-                    </div>
-                  </div>
-                </div>
-
-              <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                <div className="text-sm text-zinc-400">Deck Snapshot</div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Validation</div>
-                      <div className="mt-2 text-sm font-medium text-white">
-                        {typedDeck.is_valid ? 'Ready for listing' : 'Needs review'}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Commander Mode</div>
-                      <div className="mt-2 text-sm font-medium capitalize text-white">
-                        {(typedDeck.commander_mode ?? 'unknown').replace(/_/g, ' ')}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Presentation</div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {marketingChips.length > 0 ? (
-                          marketingChips.map((chip) => (
-                            <span
-                              key={chip}
-                              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
-                            >
-                              {chip}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-zinc-400">
-                            No packaging details added yet.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-sm text-zinc-400">Seller / Trader Trust</div>
@@ -1133,124 +1149,116 @@ export default async function DeckDetailPage({
                     )}
                   </>
                 )}
-              </div>
-
-              {showInternalAdminPanel && typedDeck.user_id && (
-                <form action={updateSellerTrustAction} className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                  <div className="text-sm font-medium text-emerald-200">
-                    {isSuperadmin ? 'Superadmin Trust Controls' : 'Admin Trust Controls'}
                   </div>
-                  <p className="mt-2 text-sm text-emerald-50/80">
-                    Manual trust overrides for known users, friends, and restricted accounts.
-                  </p>
-
-                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-emerald-50/80">
-                    Internal access: {isSuperadmin ? 'Superadmin' : 'Admin'}
                   </div>
 
-                  <div className="mt-4 space-y-3 text-sm text-zinc-100">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" name="is_manually_verified" defaultChecked={sellerSummary?.is_manually_verified ?? false} />
-                      Manually verified
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" name="is_known_user" defaultChecked={sellerSummary?.is_known_user ?? false} />
-                      Known user
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" name="is_friend_of_platform" defaultChecked={sellerSummary?.is_friend_of_platform ?? false} />
-                      Friend of DeckSwap
-                    </label>
-                  </div>
+                  {showInternalAdminPanel && typedDeck.user_id && (
+                    <form action={updateSellerTrustAction} className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                      <div className="text-sm font-medium text-emerald-200">
+                        {isSuperadmin ? 'Superadmin Trust Controls' : 'Admin Trust Controls'}
+                      </div>
+                      <p className="mt-2 text-sm text-emerald-50/80">
+                        Manual trust overrides for known users, friends, and restricted accounts.
+                      </p>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm text-emerald-50/80">Last seen at</label>
-                      <input
-                        type="datetime-local"
-                        name="last_seen_at"
-                        defaultValue={sellerSummary?.last_seen_at?.slice(0, 16) ?? ''}
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-emerald-50/80">Avg. trade reply hours</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        name="avg_trade_reply_hours"
-                        defaultValue={sellerSummary?.avg_trade_reply_hours ?? ''}
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-emerald-50/80">Last login IP country</label>
-                      <input
-                        name="last_login_ip_country"
-                        defaultValue={sellerSummary?.last_login_ip_country ?? ''}
-                        placeholder="Canada"
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-emerald-50/80">Internal user rating</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="5"
-                        name="internal_user_rating"
-                        defaultValue={sellerSummary?.internal_user_rating ?? ''}
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                      />
-                    </div>
-                  </div>
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-emerald-50/80">
+                        Internal access: {isSuperadmin ? 'Superadmin' : 'Admin'}
+                      </div>
 
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-emerald-50/80">
-                    Internal score inputs combine last login recency, trade reply speed, IP country consistency, past transaction history, and user rating. Manual verification and restricted statuses then nudge the score up or down.
-                  </div>
+                      <div className="mt-4 space-y-3 text-sm text-zinc-100">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" name="is_manually_verified" defaultChecked={sellerSummary?.is_manually_verified ?? false} />
+                          Manually verified
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" name="is_known_user" defaultChecked={sellerSummary?.is_known_user ?? false} />
+                          Known user
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" name="is_friend_of_platform" defaultChecked={sellerSummary?.is_friend_of_platform ?? false} />
+                          Friend of DeckSwap
+                        </label>
+                      </div>
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm text-emerald-50/80">Banned status</label>
-                    <select
-                      name="banned_status"
-                      defaultValue={sellerSummary?.banned_status ?? 'active'}
-                      className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                    >
-                      <option value="active">Active</option>
-                      <option value="watchlist">Watchlist</option>
-                      <option value="restricted">Restricted</option>
-                      <option value="banned">Banned</option>
-                    </select>
-                  </div>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-sm text-emerald-50/80">Last seen at</label>
+                          <input
+                            type="datetime-local"
+                            name="last_seen_at"
+                            defaultValue={sellerSummary?.last_seen_at?.slice(0, 16) ?? ''}
+                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm text-emerald-50/80">Avg. trade reply hours</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            name="avg_trade_reply_hours"
+                            defaultValue={sellerSummary?.avg_trade_reply_hours ?? ''}
+                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm text-emerald-50/80">Last login IP country</label>
+                          <input
+                            name="last_login_ip_country"
+                            defaultValue={sellerSummary?.last_login_ip_country ?? ''}
+                            placeholder="Canada"
+                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm text-emerald-50/80">Internal user rating</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="5"
+                            name="internal_user_rating"
+                            defaultValue={sellerSummary?.internal_user_rating ?? ''}
+                            className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm text-emerald-50/80">Banned / review reason</label>
-                    <textarea name="banned_reason" rows={3} defaultValue={sellerSummary?.banned_reason ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
-                  </div>
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-emerald-50/80">
+                        Internal score inputs combine last login recency, trade reply speed, IP country consistency, past transaction history, and user rating. Manual verification and restricted statuses then nudge the score up or down.
+                      </div>
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm text-emerald-50/80">Manual review notes</label>
-                    <textarea name="manual_review_notes" rows={3} defaultValue={sellerSummary?.manual_review_notes ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
-                  </div>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm text-emerald-50/80">Banned status</label>
+                        <select
+                          name="banned_status"
+                          defaultValue={sellerSummary?.banned_status ?? 'active'}
+                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                        >
+                          <option value="active">Active</option>
+                          <option value="watchlist">Watchlist</option>
+                          <option value="restricted">Restricted</option>
+                          <option value="banned">Banned</option>
+                        </select>
+                      </div>
 
-                  <button className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">
-                    Save Trust Controls
-                  </button>
-                </form>
-              )}
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm text-emerald-50/80">Banned / review reason</label>
+                        <textarea name="banned_reason" rows={3} defaultValue={sellerSummary?.banned_reason ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
+                      </div>
 
-              {isCommanderDeck && (
-                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
-                  <div className="text-sm text-zinc-400">Bracket Notes</div>
-                  <div className="mt-3 space-y-2 text-sm text-zinc-300">
-                    {bracketSummary.notes.map((note) => (
-                      <p key={note}>{note}</p>
-                    ))}
-                  </div>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm text-emerald-50/80">Manual review notes</label>
+                        <textarea name="manual_review_notes" rows={3} defaultValue={sellerSummary?.manual_review_notes ?? ''} className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white" />
+                      </div>
+
+                      <button className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">
+                        Save Trust Controls
+                      </button>
+                    </form>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

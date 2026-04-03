@@ -9,15 +9,15 @@ const footerLinks = {
   ],
   trading: [
     { name: "Marketplace Flow", href: "/decks" },
-    { name: "Trade Concepts", href: "#trade" },
+    { name: "Trade Offers", href: "/trade-offers" },
     { name: "Info & FAQ", href: "/info" },
-    { name: "Commander Profiles", href: "/decks" },
+    { name: "Trades Workspace", href: "/trades" },
   ],
   community: [
-    { name: "Commander Players", href: "#community" },
-    { name: "Power Bands", href: "#" },
-    { name: "Partner Decks", href: "#" },
-    { name: "Token Builds", href: "#" },
+    { name: "Deck Comments", href: "/decks" },
+    { name: "Guest Import Preview", href: "/guest-import" },
+    { name: "Checkout Prototype", href: "/checkout-prototype" },
+    { name: "Auction Prototype", href: "/auction-prototype" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },
     { name: "Paper Power 9", href: "/paper-power-9" },
   ],
@@ -33,12 +33,12 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background py-16">
+    <footer className="border-t border-border/80 bg-card/50 py-16 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                 <span className="text-sm font-bold text-primary-foreground">DS</span>
               </div>
               <span className="text-lg font-semibold text-foreground">DeckSwap</span>

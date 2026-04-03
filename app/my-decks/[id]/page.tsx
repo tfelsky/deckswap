@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import AppHeader from '@/components/app-header'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
@@ -303,7 +304,8 @@ export default async function ManageDeckPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-8">
+    <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-32 text-white">
+      <AppHeader current="my-decks" isSignedIn isAdmin={isAdmin} />
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap gap-3">
           <Link

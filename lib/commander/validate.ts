@@ -20,6 +20,39 @@ function isBasicLand(cardName: string) {
   return basics.has(cardName.toLowerCase())
 }
 
+function validateCommanderColorIdentity(cards: ImportedDeckCard[]) {
+  const commanders = cards.filter((card) => card.section === 'commander')
+  const allowedColors = new Set<string>()
+
+  for (const commander of commanders) {
+    for (const color of commander.colorIdentity ?? []) {
+      allowedColors.add(color.toUpperCase())
+    }
+  }
+
+  if (allowedColors.size === 0) {
+    return [] as string[]
+  }
+
+  const errors: string[] = []
+
+  for (const card of cards.filter((c) => c.section === 'mainboard')) {
+    const outsideIdentity = (card.colorIdentity ?? []).filter(
+      (color) => !allowedColors.has(color.toUpperCase())
+    )
+
+    if (outsideIdentity.length > 0) {
+      errors.push(
+        `Color identity mismatch: ${card.cardName} includes ${outsideIdentity.join(
+          ', '
+        )} outside the commander identity.`
+      )
+    }
+  }
+
+  return errors
+}
+
 function isLegalCommanderPair(a: ImportedDeckCard, b: ImportedDeckCard) {
   const aPartner =
     hasKeyword(a, 'Partner') ||
@@ -117,6 +150,8 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
       errors.push(`Duplicate card detected: ${name} x${qty}`)
     }
   }
+
+  errors.push(...validateCommanderColorIdentity(cards))
 
   return {
     isValid: errors.length === 0,

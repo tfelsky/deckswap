@@ -66,7 +66,7 @@ export default function MarketplaceNav({
   })
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-3">
+    <div className="deckswap-glass rounded-3xl p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
           {visibleItems.map((item) => {
@@ -82,8 +82,8 @@ export default function MarketplaceNav({
                 href={item.href}
                 className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                   active
-                    ? 'bg-emerald-400 text-zinc-950'
-                    : 'border border-white/10 bg-zinc-950/50 text-zinc-200 hover:bg-white/10'
+                    ? 'bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(0,0,0,0.16)]'
+                    : 'border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary/80'
                 }`}
               >
                 {label}
@@ -94,7 +94,7 @@ export default function MarketplaceNav({
           {isAdmin && (
             <Link
               href="/admin"
-              className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
+              className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/15"
             >
               Admin
             </Link>
@@ -105,7 +105,7 @@ export default function MarketplaceNav({
           {!detectedSignedIn ? (
             <Link
               href="/sign-in"
-              className="rounded-2xl border border-white/10 bg-zinc-950/50 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+              className="rounded-2xl border border-border/80 bg-secondary/50 px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary/80"
             >
               Sign in
             </Link>

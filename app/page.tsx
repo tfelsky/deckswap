@@ -4,6 +4,15 @@ import { FeaturedDecks } from "@/components/featured-decks"
 import { CTASection } from "@/components/cta-section"
 import { Footer } from "@/components/footer"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
+import {
+  colorIdentityCode,
+  FOUR_COLOR_FILTERS,
+  getColorIdentityLabel,
+  MONO_COLOR_FILTERS,
+  PAIR_COLOR_FILTERS,
+  TRI_COLOR_FILTERS,
+  FIVE_COLOR_FILTERS,
+} from "@/lib/decks/color-identity"
 import { getDeckMarketingChips } from "@/lib/decks/marketing"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
@@ -19,6 +28,7 @@ type LandingDeck = {
   commander_count?: number | null
   mainboard_count?: number | null
   token_count?: number | null
+  color_identity?: string[] | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
   box_type?: string | null
@@ -46,13 +56,39 @@ type DeckCommentRow = {
   deck_id: number
 }
 
-export default async function HomePage() {
+function readColorFilter(
+  value: string | string[] | undefined
+) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return candidate?.trim().toUpperCase() || null
+}
+
+function countByColorCode(
+  decks: Array<{ color_identity?: string[] | null }>
+) {
+  const counts = new Map<string, number>()
+
+  for (const deck of decks) {
+    const code = colorIdentityCode(deck.color_identity)
+    counts.set(code, (counts.get(code) ?? 0) + 1)
+  }
+
+  return counts
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
   const supabase = await createClient()
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const selectedColor = readColorFilter(resolvedSearchParams.color)
 
   const { data: decksData } = await supabase
     .from("decks")
     .select(
-      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, box_type"
+      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, color_identity, is_sleeved, is_boxed, box_type"
     )
     .order("id", { ascending: false })
 
@@ -94,10 +130,17 @@ export default async function HomePage() {
       ...deck,
       bracket,
       totalCards,
+      colorCode: colorIdentityCode(deck.color_identity),
+      colorLabel: getColorIdentityLabel(deck.color_identity),
     }
   })
 
-  const ratedDecks = deckViews.filter((deck) => deck.bracket.bracket != null)
+  const filteredDeckViews = selectedColor
+    ? deckViews.filter((deck) => deck.colorCode === selectedColor)
+    : deckViews
+  const colorCounts = countByColorCode(deckViews)
+
+  const ratedDecks = filteredDeckViews.filter((deck) => deck.bracket.bracket != null)
   const averageBracket =
     ratedDecks.length > 0
       ? Number(
@@ -106,7 +149,7 @@ export default async function HomePage() {
         ).toFixed(1)
       : "0.0"
 
-  const featuredDecks = [...deckViews]
+  const featuredDecks = [...filteredDeckViews]
     .sort(
       (a, b) =>
         Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
@@ -122,6 +165,8 @@ export default async function HomePage() {
       gameChangerCount: deck.bracket.gameChangerCount,
       totalCards: deck.totalCards,
       tokenCount: Number(deck.token_count ?? 0),
+      colorLabel: deck.colorLabel,
+      colorCode: deck.colorCode,
       marketingChips: getDeckMarketingChips(deck).slice(0, 3),
     }))
 
@@ -129,24 +174,24 @@ export default async function HomePage() {
   const deckComments = (deckCommentsData ?? []) as DeckCommentRow[]
   const activeTradeOffers = tradeOffers.filter((offer) => offer.status === "pending")
   const acceptedTradeOffers = tradeOffers.filter((offer) => offer.status === "accepted")
-  const auctionCandidates = [...deckViews]
+  const auctionCandidates = [...filteredDeckViews]
     .filter((deck) => Number(deck.price_total_usd_foil ?? 0) >= 150)
     .sort((a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0))
     .slice(0, 3)
   const recentCommentedDecks = [...new Set(deckComments.map((comment) => comment.deck_id))]
-    .map((deckId) => deckViews.find((deck) => deck.id === deckId))
+    .map((deckId) => filteredDeckViews.find((deck) => deck.id === deckId))
     .filter(Boolean)
     .slice(0, 3) as typeof deckViews
 
   const inventory = {
-    liveDecks: deckViews.length,
-    tokenReadyDecks: deckViews.filter((deck) => Number(deck.token_count ?? 0) > 0).length,
+    liveDecks: filteredDeckViews.length,
+    tokenReadyDecks: filteredDeckViews.filter((deck) => Number(deck.token_count ?? 0) > 0).length,
     topValue:
-      deckViews.length > 0
-        ? Math.max(...deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0)))
+      filteredDeckViews.length > 0
+        ? Math.max(...filteredDeckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0)))
         : 0,
     averageBracket,
-    totalTrackedCards: deckViews.reduce((sum, deck) => sum + deck.totalCards, 0),
+    totalTrackedCards: filteredDeckViews.reduce((sum, deck) => sum + deck.totalCards, 0),
     tradeOffers: tradeOffers.length,
     deckComments: deckComments.length,
   }
@@ -156,6 +201,69 @@ export default async function HomePage() {
       <Header />
       <main>
         <HeroSection inventory={inventory} />
+        <section className="pb-4">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="deckswap-glass rounded-3xl p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-3xl">
+                  <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                    Deck Marketplace Filters
+                  </div>
+                  <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
+                    Filter the live marketplace by color identity
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    Deck color identity is now stored on each deck and refreshed during import or enrichment.
+                    Commander decks also get post-enrichment color identity validation when card data is available.
+                  </p>
+                </div>
+
+                {selectedColor && (
+                  <Link
+                    href="/"
+                    className="rounded-2xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                  >
+                    Clear filter
+                  </Link>
+                )}
+              </div>
+
+              <div className="mt-6 space-y-5">
+                {[
+                  { title: "Mono / Colorless", items: MONO_COLOR_FILTERS },
+                  { title: "Color Pairs", items: PAIR_COLOR_FILTERS },
+                  { title: "Three-Color", items: TRI_COLOR_FILTERS },
+                  { title: "Four-Color", items: FOUR_COLOR_FILTERS },
+                  { title: "Five-Color", items: FIVE_COLOR_FILTERS },
+                ].map((group) => (
+                  <div key={group.title}>
+                    <div className="text-sm font-medium text-foreground">{group.title}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {group.items.map((item) => {
+                        const active = selectedColor === item.code
+                        const count = colorCounts.get(item.code) ?? 0
+
+                        return (
+                          <Link
+                            key={item.code}
+                            href={`/?color=${item.code}`}
+                            className={`rounded-full border px-3 py-2 text-sm transition ${
+                              active
+                                ? "border-primary/30 bg-primary text-primary-foreground"
+                                : "border-border bg-secondary/40 text-foreground hover:bg-secondary"
+                            }`}
+                          >
+                            {item.code} · {item.label} ({count})
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
         <FeaturedDecks decks={featuredDecks} />
 
         <section className="py-12 sm:py-20">
@@ -170,8 +278,7 @@ export default async function HomePage() {
                 </h2>
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
                   The strongest signals on DeckSwap now are live listings, open trade intent, deck discussion,
-                  and the faster-sale auction path. This front page now leans into those product loops instead of
-                  filler sections.
+                  color identity filtering, and the faster-sale auction path.
                 </p>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -221,7 +328,7 @@ export default async function HomePage() {
                       >
                         <div className="font-medium text-foreground">{deck.name}</div>
                         <div className="mt-1 text-muted-foreground">
-                          {deck.commander || "Commander not set"} | ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
+                          {deck.commander || "Commander not set"} | {deck.colorLabel} | ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
                         </div>
                       </Link>
                     ))
@@ -256,7 +363,7 @@ export default async function HomePage() {
                       >
                         <div className="font-medium text-foreground">{deck.name}</div>
                         <div className="mt-1 text-sm text-muted-foreground">
-                          {deck.commander || "Commander not set"} | {deck.bracket.label}
+                          {deck.commander || "Commander not set"} | {deck.colorLabel} | {deck.bracket.label}
                         </div>
                       </Link>
                     ))

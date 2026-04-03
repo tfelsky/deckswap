@@ -5,7 +5,7 @@ import {
   GUEST_IMPORT_SAVED_QUERY_KEY,
   type GuestImportDraft,
 } from '@/lib/guest-import'
-import MarketplaceNav from '@/components/marketplace-nav'
+import AppHeader from '@/components/app-header'
 import Link from 'next/link'
 import { Suspense, useActionState, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -49,7 +49,8 @@ function ImportDeckPageContent() {
   const guestDraftPresent = showGuestBanner || searchParams.get(GUEST_IMPORT_SAVED_QUERY_KEY) === '1'
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="import" />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-4xl px-6 py-10">
           <Link
@@ -74,9 +75,6 @@ function ImportDeckPageContent() {
             </p>
           </div>
 
-          <div className="mt-8">
-            <MarketplaceNav current="import" />
-          </div>
         </div>
       </section>
 
@@ -276,7 +274,8 @@ Tokens
 
 function ImportDeckPageFallback() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="import" />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-4xl px-6 py-10">
           <Link
@@ -300,9 +299,6 @@ function ImportDeckPageFallback() {
             </p>
           </div>
 
-          <div className="mt-8">
-            <MarketplaceNav current="import" />
-          </div>
         </div>
       </section>
     </main>

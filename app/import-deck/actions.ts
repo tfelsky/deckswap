@@ -172,6 +172,7 @@ export async function importDeckAction(
         validation_errors: validation.errors,
         source_type: sourceType || 'text',
         source_url: sourceUrl || null,
+        color_identity: [],
         is_sleeved: false,
         is_boxed: false,
         box_type: null,

@@ -15,6 +15,8 @@ type FeaturedDeck = {
   gameChangerCount: number
   totalCards: number
   tokenCount: number
+  colorLabel: string
+  colorCode: string
   marketingChips: string[]
 }
 
@@ -88,7 +90,7 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-300">
-                          Commander
+                          {deck.colorCode} · {deck.colorLabel}
                         </p>
                         <p className="mt-2 text-lg font-semibold text-white">
                           {deck.commander}
