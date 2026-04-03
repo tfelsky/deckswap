@@ -12,9 +12,9 @@ type Deck = {
   is_valid?: boolean | null
   validation_errors?: string[] | null
   commander_mode?: string | null
-price_total_usd?: number | null
-price_total_usd_foil?: number | null
-price_total_eur?: number | null
+  price_total_usd?: number | null
+  price_total_usd_foil?: number | null
+  price_total_eur?: number | null
 }
 
 type DeckCard = {
@@ -53,13 +53,13 @@ export default async function DeckDetailPage({
   const deckId = Number(id)
   const supabase = await createClient()
 
- const { data: deck, error: deckError } = await supabase
-  .from('decks')
-  .select(
-    'id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, price_total_usd, price_total_usd_foil, price_total_eur'
-  )
-  .eq('id', deckId)
-  .single()
+  const { data: deck, error: deckError } = await supabase
+    .from('decks')
+    .select(
+      'id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, price_total_usd, price_total_usd_foil, price_total_eur'
+    )
+    .eq('id', deckId)
+    .single()
 
   if (deckError || !deck) {
     return (
@@ -149,7 +149,7 @@ export default async function DeckDetailPage({
             href="/decks"
             className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
           >
-            ← Back to marketplace
+            {'<-'} Back to marketplace
           </Link>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start">
@@ -200,57 +200,43 @@ export default async function DeckDetailPage({
               </div>
             </div>
 
-       <div className="space-y-4">
-  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-    <div className="text-sm text-zinc-400">Power Level</div>
-    <div className="mt-2 text-3xl font-semibold">
-      {typedDeck.power_level ?? '—'}
-    </div>
-  </div>
+            <div className="space-y-4">
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Power Level</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {typedDeck.power_level ?? 'N/A'}
+                </div>
+              </div>
 
-  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-    <div className="text-sm text-zinc-400">Estimated Value</div>
-    <div className="mt-2 text-3xl font-semibold text-emerald-300">
-      $
-      {typedDeck.price_estimate != null
-        ? Number(typedDeck.price_estimate).toFixed(0)
-        : '—'}
-    </div>
-  </div>
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Value</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Based on blended card pricing using each card&apos;s foil setting.
+                </p>
+              </div>
 
-  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-    <div className="text-sm text-zinc-400">Imported Pricing</div>
-    <div className="mt-3 space-y-2 text-sm text-zinc-300">
-      <div>
-        USD:{' '}
-        <span className="font-semibold text-white">
-          ${typedDeck.price_total_usd?.toFixed(2) ?? '0.00'}
-        </span>
-      </div>
-      <div>
-        USD Foil Basis:{' '}
-        <span className="font-semibold text-white">
-          ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
-        </span>
-      </div>
-      <div>
-        EUR:{' '}
-        <span className="font-semibold text-white">
-          €{typedDeck.price_total_eur?.toFixed(2) ?? '0.00'}
-        </span>
-      </div>
-    </div>
-  </div>
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Estimated Card Pricing</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Blended estimate using each card&apos;s foil setting when available.
+                </p>
+              </div>
 
-  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-    <div className="text-sm text-zinc-400">Contents</div>
-    <div className="mt-3 space-y-2 text-sm text-zinc-300">
-      <div>Commanders: {commanders.reduce((s, c) => s + c.quantity, 0)}</div>
-      <div>Mainboard: {mainboard.reduce((s, c) => s + c.quantity, 0)}</div>
-      <div>Tokens: {tokenCards.reduce((s, c) => s + c.quantity, 0)}</div>
-    </div>
-  </div>
-</div>
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                <div className="text-sm text-zinc-400">Contents</div>
+                <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                  <div>Commanders: {commanders.reduce((s, c) => s + c.quantity, 0)}</div>
+                  <div>Mainboard: {mainboard.reduce((s, c) => s + c.quantity, 0)}</div>
+                  <div>Tokens: {tokenCards.reduce((s, c) => s + c.quantity, 0)}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
