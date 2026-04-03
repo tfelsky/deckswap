@@ -6,23 +6,23 @@ import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react"
 
 const workflowCards = [
   {
-    title: "Import from text",
-    subtitle: "Commander, mainboard, and token parsing",
+    title: "Bring any list in fast",
+    subtitle: "Paste text, upload a file, or start from a public deck link",
     accent: "from-emerald-500/20 to-emerald-500/5",
   },
   {
-    title: "Validate legality",
-    subtitle: "Single, partner, and background pair support",
+    title: "Know what you have",
+    subtitle: "See commander fit, color identity, and deck signals in one place",
     accent: "from-cyan-500/20 to-cyan-500/5",
   },
   {
-    title: "Enrich print data",
-    subtitle: "Images, finishes, and pricing from Scryfall",
+    title: "Price decks with confidence",
+    subtitle: "Track real card images, finishes, and blended deck value",
     accent: "from-amber-500/20 to-amber-500/5",
   },
   {
-    title: "List and trade",
-    subtitle: "Show bracket, inventory, and blended value publicly",
+    title: "Trade with real context",
+    subtitle: "List decks publicly with pricing, comments, and seller signals",
     accent: "from-rose-500/20 to-rose-500/5",
   },
 ]
@@ -52,7 +52,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Live decks, trade offers, comments, and auction-ready sale flow
+              Commander decks with pricing, trade intent, and cleaner trust signals
             </span>
           </div>
 
@@ -61,8 +61,8 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Import a list, price it, launch trade offers, open an auction path for faster sales,
-            and browse a marketplace that reflects what users are actually listing right now.
+            Swap full decks without losing the spread to a buylist. Import your list, see what it is
+            worth, and move into trades or a faster sale path with far more context than a plain card total.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -83,13 +83,13 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              Trade offers hand off into escrow drafts
+              Safer trade flow with escrow foundations
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Scryfall-enriched card images and pricing
+              Clear pricing tied to real deck inventory
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Comments, trust signals, and auction-ready sale mode
+              Seller signals, comments, and faster-sale options
             </div>
           </div>
 
@@ -140,7 +140,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.tokenReadyDecks}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                decks already include token inventory for cleaner sleeves-to-table prep.
+                listings already include token inventory for a fuller deck picture.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
@@ -149,7 +149,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.tradeOffers}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                trade offers have already been opened through the marketplace flow.
+                active offer opportunities already moving through the marketplace.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
@@ -158,7 +158,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.deckComments}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                public deck comments are already giving extra context around listed decks.
+                public comments adding context, questions, and buying confidence.
               </p>
             </div>
           </div>

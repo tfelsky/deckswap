@@ -47,8 +47,8 @@ export function Header() {
           <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Marketplace
           </Link>
-          <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Matchmaking
+          <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Trade Matches
           </Link>
           <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Learn More
@@ -106,8 +106,8 @@ export function Header() {
             <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Marketplace
             </Link>
-            <Link href="#trade" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Matchmaking
+            <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              Trade Matches
             </Link>
             <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Learn More

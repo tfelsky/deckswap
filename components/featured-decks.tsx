@@ -21,16 +21,36 @@ type FeaturedDeck = {
 }
 
 export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
+  return <FeaturedDeckShelf decks={decks} />
+}
+
+type FeaturedDeckShelfProps = {
+  decks: FeaturedDeck[]
+  id?: string
+  title?: string
+  subtitle?: string
+  emptyTitle?: string
+  emptyDescription?: string
+}
+
+export function FeaturedDeckShelf({
+  decks,
+  id = "decks",
+  title = "Marketplace Snapshot",
+  subtitle = "A quick read on live decks worth opening first",
+  emptyTitle = "No live inventory yet",
+  emptyDescription = "Import the first deck and start shaping the marketplace.",
+}: FeaturedDeckShelfProps) {
   return (
-    <section id="decks" className="py-20 sm:py-32">
+    <section id={id} className="py-20 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Marketplace Snapshot
+              {title}
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Real listings pulled from the marketplace, with pricing, bracket signal, and clear next actions
+              {subtitle}
             </p>
           </div>
           <Button variant="ghost" className="gap-2" asChild>
@@ -43,9 +63,9 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
 
         {decks.length === 0 ? (
           <div className="mt-12 rounded-3xl border border-dashed border-border bg-card/50 p-10 text-center">
-            <h3 className="text-xl font-semibold text-foreground">No live inventory yet</h3>
+            <h3 className="text-xl font-semibold text-foreground">{emptyTitle}</h3>
             <p className="mt-2 text-muted-foreground">
-              Import the first deck to turn the landing page into a real marketplace snapshot.
+              {emptyDescription}
             </p>
             <div className="mt-6 flex justify-center gap-3">
               <Button asChild>
@@ -90,7 +110,7 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-300">
-                          {deck.colorCode} · {deck.colorLabel}
+                          {[deck.colorCode, deck.colorLabel].join(" | ")}
                         </p>
                         <p className="mt-2 text-lg font-semibold text-white">
                           {deck.commander}
@@ -113,9 +133,6 @@ export function FeaturedDecks({ decks }: { decks: FeaturedDeck[] }) {
                   <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span className="rounded-full border border-border bg-secondary/50 px-3 py-1">
                       {deck.tokenCount} token{deck.tokenCount === 1 ? "" : "s"}
-                    </span>
-                    <span className="rounded-full border border-border bg-secondary/50 px-3 py-1">
-                      Featured listing
                     </span>
                     {deck.marketingChips.map((chip) => (
                       <span

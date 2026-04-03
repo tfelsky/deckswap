@@ -8,7 +8,7 @@ const footerLinks = {
     { name: "My Decks", href: "/my-decks" },
   ],
   trading: [
-    { name: "Marketplace Flow", href: "/decks" },
+    { name: "Trade Matches", href: "/trade-matches" },
     { name: "Trade Offers", href: "/trade-offers" },
     { name: "Info & FAQ", href: "/info" },
     { name: "Trades Workspace", href: "/trades" },

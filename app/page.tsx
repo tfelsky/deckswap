@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
 import { HeroSection } from "@/components/hero-section"
-import { FeaturedDecks } from "@/components/featured-decks"
+import { FeaturedDeckShelf, FeaturedDecks } from "@/components/featured-decks"
 import { CTASection } from "@/components/cta-section"
 import { Footer } from "@/components/footer"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
@@ -90,6 +90,42 @@ function getColorSwatches(code: string) {
   return code.split("").filter(Boolean)
 }
 
+function toDeckShelfCard(
+  deck: {
+    id: number
+    name: string
+    commander?: string | null
+    price_total_usd_foil?: number | null
+    image_url?: string | null
+    token_count?: number | null
+    totalCards: number
+    colorLabel: string
+    colorCode: string
+    bracket: {
+      label: string
+      gameChangerCount: number
+    }
+    is_sleeved?: boolean | null
+    is_boxed?: boolean | null
+    box_type?: string | null
+  }
+) {
+  return {
+    id: deck.id,
+    name: deck.name,
+    commander: deck.commander ?? "Commander not set",
+    value: Number(deck.price_total_usd_foil ?? 0),
+    imageUrl: deck.image_url ?? null,
+    bracketLabel: deck.bracket.label,
+    gameChangerCount: deck.bracket.gameChangerCount,
+    totalCards: deck.totalCards,
+    tokenCount: Number(deck.token_count ?? 0),
+    colorLabel: deck.colorLabel,
+    colorCode: deck.colorCode,
+    marketingChips: getDeckMarketingChips(deck).slice(0, 3),
+  }
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -169,20 +205,7 @@ export default async function HomePage({
         Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
     )
     .slice(0, 4)
-    .map((deck) => ({
-      id: deck.id,
-      name: deck.name,
-      commander: deck.commander ?? "Commander not set",
-      value: Number(deck.price_total_usd_foil ?? 0),
-      imageUrl: deck.image_url ?? null,
-      bracketLabel: deck.bracket.label,
-      gameChangerCount: deck.bracket.gameChangerCount,
-      totalCards: deck.totalCards,
-      tokenCount: Number(deck.token_count ?? 0),
-      colorLabel: deck.colorLabel,
-      colorCode: deck.colorCode,
-      marketingChips: getDeckMarketingChips(deck).slice(0, 3),
-    }))
+    .map(toDeckShelfCard)
 
   const tradeOffers = (tradeOffersData ?? []) as TradeOfferRow[]
   const deckComments = (deckCommentsData ?? []) as DeckCommentRow[]
@@ -192,6 +215,8 @@ export default async function HomePage({
     .filter((deck) => Number(deck.price_total_usd_foil ?? 0) >= 150)
     .sort((a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0))
     .slice(0, 3)
+  const highestValueDecks = [...featuredDecks].slice(0, 4)
+  const auctionWatchDecks = auctionCandidates.map(toDeckShelfCard)
   const recentCommentedDecks = [...new Set(deckComments.map((comment) => comment.deck_id))]
     .map((deckId) => filteredDeckViews.find((deck) => deck.id === deckId))
     .filter(Boolean)
@@ -224,11 +249,11 @@ export default async function HomePage({
                     Deck Marketplace Filters
                   </div>
                   <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
-                    Filter the live marketplace by color identity
+                    Find decks that match the colors you actually want to play
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    Deck color identity is now stored on each deck and refreshed during import or enrichment.
-                    Commander decks also get post-enrichment color identity validation when card data is available.
+                    Browse mono-color staples, guild decks, shard and wedge builds, four-color piles,
+                    and five-color lists without digging through everything at once.
                   </p>
                 </div>
 
@@ -264,14 +289,14 @@ export default async function HomePage({
                 ].map((group) => (
                   <div key={group.title}>
                     <div className="flex items-center justify-between gap-4">
-                      <div className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                         {group.title}
                       </div>
                       <div className="hidden text-xs text-muted-foreground sm:block">
                         {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {group.items.map((item) => {
                         const active = selectedColor === item.code
                         const count = colorCounts.get(item.code) ?? 0
@@ -280,39 +305,39 @@ export default async function HomePage({
                           <Link
                             key={item.code}
                             href={`/?color=${item.code}`}
-                            className={`group rounded-[1.4rem] border p-4 transition ${
+                            className={`group rounded-2xl border px-3 py-3 transition ${
                               active
-                                ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.24),rgba(234,190,94,0.14))] shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                                ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
                                 : "border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                                   {item.code}
                                 </div>
-                                <div className="mt-2 text-lg font-semibold text-foreground">
+                                <div className="mt-1.5 text-sm font-semibold text-foreground sm:text-base">
                                   {item.label}
                                 </div>
                               </div>
-                              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs text-foreground/80">
+                              <div className="rounded-full border border-white/10 bg-black/15 px-2.5 py-0.5 text-[11px] text-foreground/80">
                                 {count}
                               </div>
                             </div>
 
-                            <div className="mt-4 flex items-center gap-2">
+                            <div className="mt-3 flex items-center gap-1.5">
                               {getColorSwatches(item.code).map((symbol) => (
                                 <span
                                   key={`${item.code}-${symbol}`}
-                                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
+                                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/15 text-[10px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
                                 >
                                   {symbol}
                                 </span>
                               ))}
                             </div>
 
-                            <div className="mt-4 text-sm text-muted-foreground transition group-hover:text-foreground/80">
-                              Browse {item.label.toLowerCase()} decks in the live marketplace.
+                            <div className="mt-3 text-xs text-muted-foreground transition group-hover:text-foreground/80">
+                              Browse {item.label.toLowerCase()} decks now live on DeckSwap.
                             </div>
                           </Link>
                         )
@@ -325,6 +350,22 @@ export default async function HomePage({
           </div>
         </section>
         <FeaturedDecks decks={featuredDecks} />
+        <FeaturedDeckShelf
+          id="highest-value"
+          decks={highestValueDecks}
+          title="Highest Value Decks"
+          subtitle="Premium inventory with the biggest totals in the marketplace right now"
+          emptyTitle="No premium decks yet"
+          emptyDescription="As higher-value decks are listed, this shelf will highlight the top end of the market."
+        />
+        <FeaturedDeckShelf
+          id="auctions"
+          decks={auctionWatchDecks}
+          title="Auction Watch"
+          subtitle="Decks that look like strong candidates for a faster sale path"
+          emptyTitle="No auction-ready decks yet"
+          emptyDescription="When more decks cross the higher-value threshold, auction candidates will show up here."
+        />
 
         <section className="py-12 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -334,11 +375,11 @@ export default async function HomePage({
                   Live Market Activity
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  The homepage should feel like a marketplace, not a brochure
+                  See where the market is moving
                 </h2>
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
-                  The strongest signals on DeckSwap now are live listings, open trade intent, deck discussion,
-                  color identity filtering, and the faster-sale auction path.
+                  Live listings matter most when you can also see open trade intent, active discussion,
+                  and which decks may be ready to move faster.
                 </p>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -346,21 +387,21 @@ export default async function HomePage({
                     <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Pending offers</div>
                     <div className="mt-3 text-3xl font-semibold text-foreground">{activeTradeOffers.length}</div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Deck-for-deck negotiations currently waiting on a response.
+                      Open opportunities waiting on the next yes, no, or counter.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border bg-secondary/30 p-5">
                     <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Accepted offers</div>
                     <div className="mt-3 text-3xl font-semibold text-foreground">{acceptedTradeOffers.length}</div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Offers that have already handed off into the escrow draft workflow.
+                      Trades already moving past the offer stage.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border bg-secondary/30 p-5">
                     <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Deck comments</div>
                     <div className="mt-3 text-3xl font-semibold text-foreground">{deckComments.length}</div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Public comments giving context, deck notes, and trade questions.
+                      Extra context helping buyers and traders move with confidence.
                     </p>
                   </div>
                 </div>
@@ -371,11 +412,11 @@ export default async function HomePage({
                   Auction Path
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  Faster sale mode is ready for testing
+                  Need to move a deck faster?
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                  You don&apos;t have live bidding yet, but you do have a working auction launch prototype
-                  for reserve and no-reserve sale math. High-value decks can already move into that path.
+                  Some decks are better suited to a quicker sale than a long trade conversation.
+                  Start with reserve or no-reserve auction planning and compare the likely outcome.
                 </p>
 
                 <div className="mt-6 space-y-3">
@@ -394,7 +435,7 @@ export default async function HomePage({
                     ))
                   ) : (
                     <div className="rounded-2xl border border-border bg-background/80 px-4 py-4 text-sm text-muted-foreground">
-                      Import a few more decks to surface auction-ready candidates here.
+                      As more higher-value decks are listed, strong auction candidates will surface here.
                     </div>
                   )}
                 </div>
@@ -411,7 +452,7 @@ export default async function HomePage({
                   Recent Discussion
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  Decks getting actual conversation
+                  Decks getting attention
                 </h2>
                 <div className="mt-6 space-y-3">
                   {recentCommentedDecks.length > 0 ? (
@@ -429,7 +470,7 @@ export default async function HomePage({
                     ))
                   ) : (
                     <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-4 text-sm text-muted-foreground">
-                      Deck comments will start surfacing here once users add context and questions on listings.
+                      As comments come in, this section will highlight decks drawing real interest.
                     </div>
                   )}
                 </div>
@@ -437,10 +478,10 @@ export default async function HomePage({
 
               <div className="rounded-3xl border border-border bg-card p-8">
                 <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                  Best Next Actions
+                  Start Here
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  Do something meaningful from the first screen
+                  Choose the path that fits what you want to do
                 </h2>
                 <div className="mt-6 grid gap-3">
                   <Link
@@ -449,7 +490,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Import a deck</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Paste text, upload a file, or use a public Moxfield list.
+                      Turn a list into a priced, shareable deck page in minutes.
                     </div>
                   </Link>
                   <Link
@@ -458,7 +499,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Browse featured decks</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Open live listings with pricing, comments, and trade intent.
+                      Explore live listings with pricing, seller context, and trade potential.
                     </div>
                   </Link>
                   <Link
@@ -467,7 +508,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Review trade offers</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Negotiate, counter, accept, and hand off into escrow drafts.
+                      Negotiate, counter, and move strong matches toward a safer close.
                     </div>
                   </Link>
                   <Link
@@ -476,7 +517,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Test the auction sale path</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Compare reserve and no-reserve outcomes for a quicker sale.
+                      Compare reserve and no-reserve outcomes for a quicker exit.
                     </div>
                   </Link>
                 </div>
