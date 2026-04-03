@@ -765,6 +765,9 @@ export default async function DeckDetailPage({
   }))
   const importEventsSchemaMissing = isDeckImportEventsSchemaMissing(importEventsError?.message)
   const importEvents = (importEventsData ?? []) as DeckImportEventRow[]
+  const latestImportIssue = importEvents.find(
+    (event) => event.severity === 'error' || event.severity === 'warning'
+  )
   const unreadNotifications = user ? await getUnreadNotificationsCount(supabase, user.id) : 0
 
   return (
@@ -892,14 +895,22 @@ export default async function DeckDetailPage({
           )}
 
           {showEnrichRetryFailed && (
-            <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-              Re-running enrichment failed. Check source coverage, pricing migrations, or try again from admin maintenance.
+            <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
+              <div className="font-medium text-red-200">Enrichment retry failed</div>
+              <p className="mt-3 text-red-100/90">
+                {latestImportIssue?.message ||
+                  'Re-running enrichment failed. Check source coverage, pricing migrations, or try again from admin maintenance.'}
+              </p>
             </div>
           )}
 
           {showReprocessFailed && (
-            <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-              Reprocessing deck state failed. The deck data may still be missing supporting metadata.
+            <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
+              <div className="font-medium text-red-200">Deck reprocess failed</div>
+              <p className="mt-3 text-red-100/90">
+                {latestImportIssue?.message ||
+                  'Reprocessing deck state failed. The deck data may still be missing supporting metadata.'}
+              </p>
             </div>
           )}
 
@@ -1020,40 +1031,41 @@ export default async function DeckDetailPage({
               </div>
             </div>
 
-            <div className="min-w-0 space-y-4">
-              {!typedDeck.commander &&
-                isCommanderDeck &&
-                isOwner &&
-                commanderCandidates.length > 0 && (
-                  <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5">
-                    <div className="text-sm font-medium text-yellow-200">
-                      Set Commander
+            <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.95fr)]">
+              <div className="min-w-0 space-y-4">
+                {!typedDeck.commander &&
+                  isCommanderDeck &&
+                  isOwner &&
+                  commanderCandidates.length > 0 && (
+                    <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5">
+                      <div className="text-sm font-medium text-yellow-200">
+                        Set Commander
+                      </div>
+                      <p className="mt-2 text-sm text-yellow-100/80">
+                        This import did not mark a commander. Choose one from the
+                        imported cards and we&apos;ll revalidate the deck here.
+                      </p>
+                      <form action={setCommanderAction} className="mt-4 space-y-3">
+                        <select
+                          name="commander_card_id"
+                          defaultValue=""
+                          className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
+                        >
+                          <option value="">Select a commander</option>
+                          {commanderCandidates.map((card) => (
+                            <option key={card.id} value={card.id}>
+                              {card.card_name}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
+                          Save Commander
+                        </button>
+                      </form>
                     </div>
-                    <p className="mt-2 text-sm text-yellow-100/80">
-                      This import did not mark a commander. Choose one from the
-                      imported cards and we&apos;ll revalidate the deck here.
-                    </p>
-                    <form action={setCommanderAction} className="mt-4 space-y-3">
-                      <select
-                        name="commander_card_id"
-                        defaultValue=""
-                        className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-emerald-400/40"
-                      >
-                        <option value="">Select a commander</option>
-                        {commanderCandidates.map((card) => (
-                          <option key={card.id} value={card.id}>
-                            {card.card_name}
-                          </option>
-                        ))}
-                      </select>
-                      <button className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
-                        Save Commander
-                      </button>
-                    </form>
-                  </div>
-                )}
+                  )}
 
-              <div className="grid gap-4 xl:grid-cols-3">
+                <div className="grid gap-4 xl:grid-cols-3">
                 {isCommanderDeck ? (
                   <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                     <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -1209,14 +1221,16 @@ export default async function DeckDetailPage({
                     </div>
                   </div>
                 )}
+                </div>
+              </div>
 
-                <div className="min-w-0 space-y-4 lg:contents">
-                  <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+              <div className="space-y-5">
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-sm text-zinc-400">Seller / Trader Trust</div>
                     <div className="mt-2 text-xl font-semibold text-white">
-                      {sellerProfile?.display_name || sellerProfile?.username || 'DeckSwap seller'}
+                      {sellerProfile?.display_name || sellerProfile?.username || 'Mythiverse seller'}
                     </div>
                     <p className="mt-1 text-sm text-zinc-400">
                       {sellerProfile?.marketplace_tagline || 'Profile trust, shipping readiness, and marketplace references live here.'}
@@ -1380,11 +1394,10 @@ export default async function DeckDetailPage({
                     )}
                   </>
                 )}
-                  </div>
-                  </div>
+                </div>
 
-                  {showInternalAdminPanel && typedDeck.user_id && (
-                    <div className="space-y-5">
+                {showInternalAdminPanel && typedDeck.user_id && (
+                  <div className="space-y-5">
                       <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
                         <div className="text-sm font-medium text-emerald-200">
                           Import Event Log
@@ -1548,12 +1561,12 @@ export default async function DeckDetailPage({
                           Save Trust Controls
                         </button>
                       </form>
-                    </div>
-                  )}
+                  </div>
+                )}
+              </div>
                 </div>
               </div>
             </div>
-          </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10">

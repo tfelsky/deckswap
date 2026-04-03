@@ -1,6 +1,7 @@
 'use server'
 
 import { parseDeckText } from '@/lib/commander/parse'
+import { normalizeImportedCommanderOverlap } from '@/lib/commander/normalize'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { extractMoxfieldPublicId, fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import { detectDeckFormat, normalizeDeckFormat } from '@/lib/decks/formats'
@@ -189,6 +190,8 @@ export async function importDeckAction(
         fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
       }
     }
+
+  parsedCards = normalizeImportedCommanderOverlap(parsedCards)
 
   const detectedFormat = normalizeDeckFormat(
     detectDeckFormat(parsedCards, sourceFormatHint)

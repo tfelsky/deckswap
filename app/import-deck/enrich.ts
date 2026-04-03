@@ -1,6 +1,7 @@
 'use server'
 
 import type { ImportedDeckCard } from '@/lib/commander/types'
+import { planCommanderOverlapRowFixes } from '@/lib/commander/normalize'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { deriveDeckColorIdentity } from '@/lib/decks/color-identity'
 import { normalizeDeckFormat } from '@/lib/decks/formats'
@@ -413,6 +414,50 @@ export async function syncDeckDerivedState(deckId: number) {
     throw new Error(cardsError.message)
   }
 
+  let cards = (cardsData ?? []) as DerivedStateCardRow[]
+
+  if (normalizeDeckFormat(deckData.format) === 'commander') {
+    const overlapFixes = planCommanderOverlapRowFixes(cards)
+
+    for (const update of overlapFixes.updates) {
+      const { error } = await supabase
+        .from('deck_cards')
+        .update({ quantity: update.quantity })
+        .eq('id', update.id)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+    }
+
+    if (overlapFixes.deletes.length > 0) {
+      const { error } = await supabase
+        .from('deck_cards')
+        .delete()
+        .in('id', overlapFixes.deletes)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+    }
+
+    if (overlapFixes.hasFixes) {
+      const { data: refreshedCardsData, error: refreshedCardsError } = await supabase
+        .from('deck_cards')
+        .select(
+          'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+        )
+        .eq('deck_id', deckId)
+        .order('sort_order', { ascending: true })
+
+      if (refreshedCardsError) {
+        throw new Error(refreshedCardsError.message)
+      }
+
+      cards = (refreshedCardsData ?? []) as DerivedStateCardRow[]
+    }
+  }
+
   const { data: tokensData, error: tokensError } = await supabase
     .from('deck_tokens')
     .select('quantity')
@@ -422,7 +467,6 @@ export async function syncDeckDerivedState(deckId: number) {
     throw new Error(tokensError.message)
   }
 
-  const cards = (cardsData ?? []) as DerivedStateCardRow[]
   const importedCards = cards.map(toImportedDeckCard)
   const validation = validateDeckForFormat(importedCards, deckData.format)
   const commanderNames = importedCards
