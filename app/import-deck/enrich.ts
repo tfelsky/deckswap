@@ -143,7 +143,50 @@ async function resolveDeckTokenMatches(tokenRows: DeckTokenRow[]) {
   })
 }
 
-export async function enrichDeckWithScryfall(deckId: number) {
+async function captureDeckPriceSnapshot(
+  deckId: number,
+  priceTotalUsdFoil: number,
+  snapshotType: 'import' | 'refresh'
+) {
+  const supabase = await createClient()
+
+  if (snapshotType === 'import') {
+    await supabase.from('deck_price_history').insert({
+      deck_id: deckId,
+      snapshot_type: 'import',
+      price_total_usd_foil: priceTotalUsdFoil,
+      captured_at: new Date().toISOString(),
+    })
+    return
+  }
+
+  const { data: latestSnapshot } = await supabase
+    .from('deck_price_history')
+    .select('captured_at')
+    .eq('deck_id', deckId)
+    .order('captured_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const today = new Date().toISOString().slice(0, 10)
+  const latestDay = latestSnapshot?.captured_at?.slice(0, 10)
+
+  if (latestDay === today) {
+    return
+  }
+
+  await supabase.from('deck_price_history').insert({
+    deck_id: deckId,
+    snapshot_type: 'refresh',
+    price_total_usd_foil: priceTotalUsdFoil,
+    captured_at: new Date().toISOString(),
+  })
+}
+
+export async function enrichDeckWithScryfall(
+  deckId: number,
+  snapshotType: 'import' | 'refresh' = 'refresh'
+) {
   const supabase = await createClient()
 
   const { data: cards, error: cardsError } = await supabase
@@ -210,19 +253,19 @@ export async function enrichDeckWithScryfall(deckId: number) {
     if (error) throw new Error(error.message)
   }
 
-  const { data: commanderCard, error: commanderError } = await supabase
+  const { data: leadCard, error: leadCardError } = await supabase
     .from('deck_cards')
-    .select('card_name, image_url')
+    .select('card_name, image_url, section, sort_order')
     .eq('deck_id', deckId)
-    .eq('section', 'commander')
+    .order('section', { ascending: true })
     .order('sort_order', { ascending: true })
     .limit(1)
     .maybeSingle()
 
-  if (commanderError) throw new Error(commanderError.message)
+  if (leadCardError) throw new Error(leadCardError.message)
 
   const deckUpdate: {
-    commander?: string
+    commander?: string | null
     image_url?: string | null
     price_total_usd: number
     price_total_usd_foil: number
@@ -233,8 +276,10 @@ export async function enrichDeckWithScryfall(deckId: number) {
     price_total_eur: Number(totalEur.toFixed(2)),
   }
 
-  if (commanderCard?.card_name) deckUpdate.commander = commanderCard.card_name
-  if (commanderCard?.image_url) deckUpdate.image_url = commanderCard.image_url
+  if (leadCard?.section === 'commander' && leadCard.card_name) {
+    deckUpdate.commander = leadCard.card_name
+  }
+  if (leadCard?.image_url) deckUpdate.image_url = leadCard.image_url
 
   const { error: deckUpdateError } = await supabase
     .from('decks')
@@ -242,4 +287,6 @@ export async function enrichDeckWithScryfall(deckId: number) {
     .eq('id', deckId)
 
   if (deckUpdateError) throw new Error(deckUpdateError.message)
+
+  await captureDeckPriceSnapshot(deckId, Number(totalUsdFoil.toFixed(2)), snapshotType)
 }

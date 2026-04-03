@@ -18,6 +18,7 @@ const tradeMatches = [
     matchScore: 98,
     verified: true,
     trades: 23,
+    note: "Posted a binder update after finishing a token backfill.",
   },
   {
     id: 2,
@@ -29,6 +30,7 @@ const tradeMatches = [
     matchScore: 85,
     verified: true,
     trades: 11,
+    note: "Prefers domestic tracked shipping and high-value deck trades.",
   },
   {
     id: 3,
@@ -40,6 +42,7 @@ const tradeMatches = [
     matchScore: 72,
     verified: false,
     trades: 7,
+    note: "Looking for a cleaner bracket match before locking a deal.",
   },
 ]
 
@@ -107,6 +110,10 @@ export function TradeMatching() {
                       <p className="text-muted-foreground">Seeking</p>
                       <p className="font-medium text-foreground">{match.seeking}</p>
                     </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-border bg-secondary/40 px-3 py-3 text-sm text-muted-foreground">
+                    {match.note}
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">

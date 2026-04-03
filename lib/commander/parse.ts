@@ -64,6 +64,79 @@ function parseFoilValue(value: string) {
   )
 }
 
+const COMMON_TOKEN_NAMES = new Set([
+  'angel',
+  'ape',
+  'assassin',
+  'beast',
+  'bird',
+  'blood',
+  'boar',
+  'cat',
+  'citizen',
+  'clue',
+  'construct',
+  'copy',
+  'demon',
+  'devil',
+  'dinosaur',
+  'dragon',
+  'drake',
+  'dryad',
+  'elephant',
+  'elf warrior',
+  'faerie',
+  'faerie rogue',
+  'fish',
+  'food',
+  'frog',
+  'germ',
+  'ghoul',
+  'goblin',
+  'gold',
+  'human',
+  'insect',
+  'junk',
+  'knight',
+  'map',
+  'merfolk',
+  'monk',
+  'ooze',
+  'orc',
+  'pilot',
+  'phyrexian germ',
+  'plant',
+  'powerstone',
+  'rebel',
+  'reflection',
+  'samurai',
+  'saproling',
+  'serf',
+  'servo',
+  'shapeshifter',
+  'shark',
+  'skeleton',
+  'soldier',
+  'spirit',
+  'squid',
+  'thopter',
+  'treasure',
+  'treefolk',
+  'vampire',
+  'warrior',
+  'wizard',
+  'wolf',
+  'zombie',
+])
+
+const TOKEN_NAME_PATTERNS = [
+  / emblem$/i,
+  / role$/i,
+  /^the monarch$/i,
+  /^the initiative$/i,
+  /^the ring$/i,
+]
+
 function isLikelyArchidektToken(card: ImportedDeckCard) {
   const normalizedName = card.cardName.trim().toLowerCase()
   const normalizedSet = card.setCode?.trim().toLowerCase() ?? ''
@@ -72,20 +145,11 @@ function isLikelyArchidektToken(card: ImportedDeckCard) {
     return true
   }
 
-  const obviousTokenNames = new Set([
-    'treasure',
-    'clue',
-    'food',
-    'blood',
-    'gold',
-    'map',
-    'copy',
-    'elephant',
-    'rebel',
-    'phyrexian germ',
-  ])
+  if (COMMON_TOKEN_NAMES.has(normalizedName)) {
+    return true
+  }
 
-  return obviousTokenNames.has(normalizedName)
+  return TOKEN_NAME_PATTERNS.some((pattern) => pattern.test(card.cardName.trim()))
 }
 
 function inferSectionFromArchidektRow(

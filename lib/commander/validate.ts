@@ -1,3 +1,4 @@
+import { normalizeDeckFormat } from '@/lib/decks/formats'
 import type { ImportedDeckCard } from './types'
 
 function hasKeyword(card: ImportedDeckCard, keyword: string) {
@@ -123,6 +124,56 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
     mainboardCount,
     tokenCount,
     commanderMode,
+    errors,
+  }
+}
+
+export function validateDeckForFormat(
+  cards: ImportedDeckCard[],
+  format: string | null | undefined
+) {
+  const normalizedFormat = normalizeDeckFormat(format)
+
+  if (normalizedFormat === 'commander') {
+    return validateCommanderDeck(cards)
+  }
+
+  const commanders = cards.filter((c) => c.section === 'commander')
+  const mainboardCards = cards.filter((c) => c.section !== 'token')
+  const mainboardCount = mainboardCards.reduce((sum, c) => sum + c.quantity, 0)
+  const tokenCount = cards
+    .filter((c) => c.section === 'token')
+    .reduce((sum, c) => sum + c.quantity, 0)
+
+  const errors: string[] = []
+
+  if (mainboardCount === 0) {
+    errors.push('Deck must include at least one non-token card.')
+  }
+
+  if (
+    ['standard', 'modern', 'legacy', 'premodern', 'pauper'].includes(
+      normalizedFormat
+    ) &&
+    mainboardCount < 60
+  ) {
+    errors.push(
+      `${normalizedFormat[0].toUpperCase()}${normalizedFormat.slice(
+        1
+      )} decks usually need at least 60 cards, found ${mainboardCount}.`
+    )
+  }
+
+  if (normalizedFormat === 'canlander' && mainboardCount !== 100) {
+    errors.push(`Canadian Highlander decks usually contain 100 cards, found ${mainboardCount}.`)
+  }
+
+  return {
+    isValid: errors.length === 0,
+    commanderCount: commanders.length,
+    mainboardCount,
+    tokenCount,
+    commanderMode: commanders.length > 0 ? 'single' : 'invalid',
     errors,
   }
 }

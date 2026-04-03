@@ -1,4 +1,5 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { getTrendWatcherReport } from '@/lib/admin/trend-watcher'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -32,6 +33,7 @@ function formatUsd(value: number) {
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
+  const trendReport = await getTrendWatcherReport()
 
   const { data: decksData, error: decksError } = await supabase
     .from('decks')
@@ -86,6 +88,31 @@ export default async function AdminDashboardPage() {
   )
   const avgDeckValue =
     decks.length > 0 ? totalMarketplaceValue / decks.length : 0
+  const tradeReadyDecks = decks.filter(
+    (deck) =>
+      deck.is_valid === true &&
+      Number(deck.price_total_usd_foil ?? 0) > 0 &&
+      !!deck.image_url?.trim()
+  )
+  const tradeReadyCount = tradeReadyDecks.length
+  const tradeReadyValue = tradeReadyDecks.reduce(
+    (sum, deck) => sum + Number(deck.price_total_usd_foil ?? 0),
+    0
+  )
+  const escrowEligibleDecks = tradeReadyDecks.filter(
+    (deck) => Number(deck.price_total_usd_foil ?? 0) >= 250
+  )
+  const escrowCandidateCount = escrowEligibleDecks.length
+  const escrowCandidateValue = escrowEligibleDecks.reduce(
+    (sum, deck) => sum + Number(deck.price_total_usd_foil ?? 0),
+    0
+  )
+  const estimatedAverageTicket =
+    tradeReadyCount > 0 ? tradeReadyValue / tradeReadyCount : 0
+  const trackedSales = 0
+  const completedTrades = 0
+  const openEscrows = 0
+  const escrowBalance = 0
 
   const bracketCounts = new Map<number, number>()
 
@@ -192,6 +219,116 @@ export default async function AdminDashboardPage() {
               </div>
             </div>
           </div>
+
+          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Ecommerce Operations</h2>
+                <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+                  A commerce-style view of live marketplace inventory, trade-ready supply, and the
+                  escrow pipeline we can support once transactional ledger tables land.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                Sales, trade, and escrow counters are reserved now and switch to live values when
+                the order ledger ships.
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Tracked Sales</div>
+                <div className="mt-2 text-3xl font-semibold">{trackedSales}</div>
+                <div className="mt-1 text-sm text-zinc-500">Pending sales model</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Completed Trades</div>
+                <div className="mt-2 text-3xl font-semibold">{completedTrades}</div>
+                <div className="mt-1 text-sm text-zinc-500">Pending trade ledger</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Open Escrows</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">{openEscrows}</div>
+                <div className="mt-1 text-sm text-zinc-500">Pending escrow ledger</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Escrow Balance</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {formatUsd(escrowBalance)}
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">Funds currently held</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Trade-Ready Listings</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {tradeReadyCount}
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Valid, priced, and imaged decks ready for matching
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Trade-Ready Value</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {formatUsd(tradeReadyValue)}
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Live inventory value available for commerce
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Escrow Candidates</div>
+                <div className="mt-2 text-3xl font-semibold text-white">
+                  {escrowCandidateCount}
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Trade-ready decks above the high-value threshold
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Avg. Ticket</div>
+                <div className="mt-2 text-3xl font-semibold text-white">
+                  {formatUsd(estimatedAverageTicket)}
+                </div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Based on current trade-ready deck inventory
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Escrow Pipeline Capacity</div>
+                <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                  {formatUsd(escrowCandidateValue)}
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  This is the current value of trade-ready decks at or above the high-value escrow
+                  threshold. It is a useful operating proxy until live escrow balances exist.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="text-sm text-zinc-400">Ops Readiness</div>
+                <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                  <p>
+                    {tradeReadyCount > 0
+                      ? `${tradeReadyCount} listings are already in a shape that can support matching conversations.`
+                      : 'No listings are fully trade-ready yet.'}
+                  </p>
+                  <p>
+                    {escrowCandidateCount > 0
+                      ? `${escrowCandidateCount} higher-value decks would benefit first from escrow, insurance, and shipping workflows.`
+                      : 'Higher-value escrow candidates will show up here once more premium inventory is live.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -208,6 +345,62 @@ export default async function AdminDashboardPage() {
               >
                 Open re-enrich and commander backfill tools
               </Link>
+              <Link
+                href="/admin/trends"
+                className="block rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-white hover:bg-white/10"
+              >
+                Open MTG trend watcher and content prompt builder
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <h2 className="text-2xl font-semibold">Trend Watcher</h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              Current Magic news signals from Wizards and marketplace-adjacent sources.
+            </p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Official Headlines</div>
+                <div className="mt-2 text-3xl font-semibold">{trendReport.official.length}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Marketplace Headlines</div>
+                <div className="mt-2 text-3xl font-semibold">{trendReport.marketplace.length}</div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {trendReport.official[0] && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-wide text-emerald-300/80">
+                    Latest Official
+                  </div>
+                  <div className="mt-2 text-sm text-white">{trendReport.official[0].title}</div>
+                </div>
+              )}
+              {trendReport.marketplace[0] && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-wide text-emerald-300/80">
+                    Latest Marketplace
+                  </div>
+                  <div className="mt-2 text-sm text-white">
+                    {trendReport.marketplace[0].title}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {trendReport.themes.slice(0, 4).map((theme) => (
+                <span
+                  key={theme}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
+                >
+                  {theme}
+                </span>
+              ))}
             </div>
           </div>
 

@@ -28,11 +28,11 @@ export default function ImportDeckPage() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Import a Commander deck
+              Import deck inventory across formats
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link.
+              Paste a deck list, upload a `.txt` export, or import directly from a public Moxfield link for Commander, Standard, Pauper, Canadian Highlander, Legacy, Modern, and Premodern decks.
             </p>
           </div>
         </div>
@@ -126,7 +126,7 @@ Tokens
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
               <p className="mt-2 text-xs text-zinc-500">
-                For `Moxfield`, the link is enough. For `Text` or `Archidekt`, you can paste here or upload a file above.
+                For `Moxfield`, the link is enough. For `Text` or `Archidekt`, you can paste here or upload a file above. The importer will try to auto-detect format, and you can override it later in Deck Settings.
               </p>
             </div>
 
@@ -137,26 +137,42 @@ Tokens
             )}
 
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-              <h2 className="text-lg font-semibold text-white">Commander Bracket Guide</h2>
+              <h2 className="text-lg font-semibold text-white">Supported Formats</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Imported decks are automatically estimated against the official Commander bracket beta system using Game Changers and other visible deck signals.
+                Commander still gets the richest validation and bracket logic, but the ingest flow now safely accepts broader deck inventory too.
               </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {(Object.entries(COMMANDER_BRACKETS) as Array<
-                  [string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]
-                >).map(([key, bracket]) => (
-                  <div
-                    key={key}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+              <div className="mt-4 flex flex-wrap gap-2">
+                {['Commander', 'Standard', 'Pauper', 'Canadian Highlander', 'Legacy', 'Modern', 'Premodern'].map((format) => (
+                  <span
+                    key={format}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300"
                   >
-                    <div className="text-sm font-medium text-white">
-                      Bracket {key}: {bracket.label}
-                    </div>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {bracket.shortDescription}
-                    </p>
-                  </div>
+                    {format}
+                  </span>
                 ))}
+              </div>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-medium text-white">Commander Bracket Guide</div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Commander imports are still automatically estimated against the official Commander bracket beta system using Game Changers and other visible deck signals.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {(Object.entries(COMMANDER_BRACKETS) as Array<
+                    [string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]
+                  >).map(([key, bracket]) => (
+                    <div
+                      key={key}
+                      className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
+                    >
+                      <div className="text-sm font-medium text-white">
+                        Bracket {key}: {bracket.label}
+                      </div>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {bracket.shortDescription}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

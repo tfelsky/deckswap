@@ -4,40 +4,55 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ChevronRight } from "lucide-react"
 
-const categories = [
-  {
-    name: "Battlecruiser",
-    count: 3,
-    description: "Lower-power pods and big-mana finishers",
-  },
-  {
-    name: "Casual",
-    count: 6,
-    description: "Table-friendly lists with upgrade headroom",
-  },
-  {
-    name: "High Power",
-    count: 8,
-    description: "Tuned lists with faster lines and dense interaction",
-  },
-  {
-    name: "cEDH",
-    count: 10,
-    description: "Competitive pods, compact wins, and premium staples",
-  },
-  {
-    name: "Partner Pair",
-    count: 2,
-    description: "Two-commander builds that validate as legal pairs",
-  },
-  {
-    name: "Token Package",
-    count: 14,
-    description: "Decks that also track their attached token suite",
-  },
-]
+type CategoryCounts = {
+  bracketTwoOrLower: number
+  upgraded: number
+  optimizedPlus: number
+  tokenReady: number
+  highValue: number
+  fullInventory: number
+}
 
-export function Categories() {
+export function Categories({ counts }: { counts: CategoryCounts }) {
+  const categories = [
+    {
+      name: "Bracket 1-2",
+      count: counts.bracketTwoOrLower,
+      description: "Lower-pressure pods and straightforward Commander shells",
+      chips: ["Casual", "Table-ready"],
+    },
+    {
+      name: "Bracket 3",
+      count: counts.upgraded,
+      description: "Upgraded lists with sharper lines and a few premium swings",
+      chips: ["Upgraded", "Popular"],
+    },
+    {
+      name: "Bracket 4-5",
+      count: counts.optimizedPlus,
+      description: "Optimized and competitive decks for stronger pods",
+      chips: ["Optimized", "Fast starts"],
+    },
+    {
+      name: "Token Ready",
+      count: counts.tokenReady,
+      description: "Decks that also bring along their token inventory",
+      chips: ["Token suite", "Sleeve friendly"],
+    },
+    {
+      name: "$300+ Value",
+      count: counts.highValue,
+      description: "Higher-end listings where pricing matters more before a trade",
+      chips: ["Premium", "High value"],
+    },
+    {
+      name: "Full Inventory",
+      count: counts.fullInventory,
+      description: "Decks with enough tracked cards and tokens to feel complete on entry",
+      chips: ["100+ cards", "Detailed"],
+    },
+  ]
+
   return (
     <section className="bg-secondary/30 py-20 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -47,7 +62,7 @@ export function Categories() {
               Browse by Deck Profile
             </h2>
             <p className="mt-2 text-muted-foreground">
-              These categories map to the data the app already stores and displays
+              Inventory categories that reflect the actual marketplace instead of placeholder archetypes
             </p>
           </div>
         </div>
@@ -64,6 +79,16 @@ export function Categories() {
                   {category.description}
                 </p>
                 <p className="mt-2 text-xs text-primary">{category.count.toLocaleString()} decks</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {category.chips.map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-xs text-muted-foreground"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
             </button>

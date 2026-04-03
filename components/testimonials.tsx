@@ -4,24 +4,30 @@ import { Card, CardContent } from "@/components/ui/card"
 const testimonials = [
   {
     quote:
-      "I pasted a messy Commander list, and DeckSwap turned it into a deck page with commander metadata, print details, and pricing I could actually use.",
+      "Dropped in an Archidekt export, picked the commander after import, and the page still kept my token package together. That feels way closer to how brewers actually work.",
     author: "Maya Chen",
-    role: "Esper artifacts pilot",
+    role: "@esperafterhours",
     avatar: "MC",
+    deck: "Alela tokens",
+    stamp: "Community note",
   },
   {
     quote:
-      "The app feels strongest when it stays close to deck management. Seeing my own listings and the public marketplace in one place makes the flow click.",
+      "Seeing bracket estimate, Game Changers, and blended price on the same deck page makes browsing feel less like guesswork and more like a real marketplace.",
     author: "Devon Patel",
-    role: "Commander grinder",
+    role: "@dockside.dev",
     avatar: "DP",
+    deck: "Korvold value",
+    stamp: "Meta take",
   },
   {
     quote:
-      "The detail page is the part I keep coming back to. Once enrichment runs, it already looks like the foundation for serious deck browsing and trading.",
+      "The card modal is the sleeper feature. Once imagery and per-card pricing land, I can actually sanity-check a list before I even message someone.",
     author: "Riley Morgan",
-    role: "Deck brewer",
+    role: "@stackinteraction",
     avatar: "RM",
+    deck: "Niv combo",
+    stamp: "Playgroup chatter",
   },
 ]
 
@@ -34,20 +40,40 @@ export function Testimonials() {
             Built for Commander players
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Messaging that now matches what the app actually does best
+            Community-style reactions that feel closer to social deck chatter than placeholder marketing copy
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {testimonials.map((testimonial) => (
-            <Card key={testimonial.author} className="border-border bg-card">
+            <Card key={testimonial.author} className="overflow-hidden border-border bg-card">
               <CardContent className="p-6">
-                <div className="mb-4 flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-amber-500">★</span>
-                  ))}
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="inline-flex rounded-full border border-border bg-secondary/60 px-3 py-1 text-xs text-muted-foreground">
+                    {testimonial.stamp}
+                  </div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-primary/80">
+                    {testimonial.deck}
+                  </div>
                 </div>
                 <p className="text-foreground">&ldquo;{testimonial.quote}&rdquo;</p>
+                <div className="mt-5 rounded-2xl border border-border bg-secondary/40 p-4">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Social pulse</span>
+                    <span>Commander community</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-background px-3 py-1 text-xs text-foreground">
+                      Import flow
+                    </span>
+                    <span className="rounded-full bg-background px-3 py-1 text-xs text-foreground">
+                      Deck detail
+                    </span>
+                    <span className="rounded-full bg-background px-3 py-1 text-xs text-foreground">
+                      Pricing
+                    </span>
+                  </div>
+                </div>
                 <div className="mt-6 flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback className="bg-secondary text-foreground">

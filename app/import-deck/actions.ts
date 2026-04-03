@@ -1,8 +1,9 @@
 'use server'
 
 import { parseDeckText } from '@/lib/commander/parse'
-import { validateCommanderDeck } from '@/lib/commander/validate'
+import { validateDeckForFormat } from '@/lib/commander/validate'
 import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
+import { detectDeckFormat, normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichDeckWithScryfall } from './enrich'
@@ -54,6 +55,7 @@ export async function importDeckAction(
 
   let resolvedDeckName = deckName
   let resolvedRawList = rawList
+  let sourceFormatHint: string | null = null
   let parsedCards =
     sourceType.toLowerCase() === 'moxfield' ? [] : parseDeckText(resolvedRawList, sourceType)
 
@@ -82,6 +84,7 @@ export async function importDeckAction(
     try {
       const deck = await fetchMoxfieldDeck(sourceUrl)
       parsedCards = deck.cards
+      sourceFormatHint = deck.format
 
       if (!resolvedDeckName) {
         resolvedDeckName = deck.deckName ?? ''
@@ -114,7 +117,10 @@ export async function importDeckAction(
     }
   }
 
-  const validation = validateCommanderDeck(parsedCards)
+  const detectedFormat = normalizeDeckFormat(
+    detectDeckFormat(parsedCards, sourceFormatHint)
+  )
+  const validation = validateDeckForFormat(parsedCards, detectedFormat)
   const commanderNames = parsedCards
     .filter((card) => card.section === 'commander')
     .map((card) => card.cardName)
@@ -128,7 +134,8 @@ export async function importDeckAction(
         user_id: user.id,
         name: resolvedDeckName,
         commander: primaryCommanderName,
-        format: 'commander',
+        format: detectedFormat,
+        imported_at: new Date().toISOString(),
         commander_count: validation.commanderCount,
         mainboard_count: validation.mainboardCount,
         token_count: validation.tokenCount,
@@ -202,7 +209,7 @@ export async function importDeckAction(
   }
 
   try {
-    await enrichDeckWithScryfall(deckId)
+    await enrichDeckWithScryfall(deckId, 'import')
   } catch (error) {
     console.error('Scryfall enrichment failed:', error)
   }

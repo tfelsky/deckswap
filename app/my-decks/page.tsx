@@ -1,4 +1,5 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -8,6 +9,7 @@ type Deck = {
   id: number
   name: string
   commander?: string | null
+  format?: string | null
   price_total_usd_foil?: number | null
   image_url?: string | null
 }
@@ -59,7 +61,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, price_total_usd_foil, image_url')
+    .select('id, name, commander, format, price_total_usd_foil, image_url')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -94,10 +96,12 @@ export default async function MyDecksPage() {
 
   const deckViews = decks.map((deck) => {
     const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
-    return { ...deck, bracket }
+    return { ...deck, bracket, format: normalizeDeckFormat(deck.format) }
   })
 
-  const ratedDecks = deckViews.filter((deck) => deck.bracket.bracket != null)
+  const ratedDecks = deckViews.filter(
+    (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
+  )
   const averageBracket =
     ratedDecks.length > 0
       ? (
@@ -124,7 +128,7 @@ export default async function MyDecksPage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-                View and manage the Commander decks you have listed in the marketplace.
+                View and manage the deck inventory you have listed in the marketplace across supported formats.
               </p>
             </div>
 
@@ -143,6 +147,13 @@ export default async function MyDecksPage() {
                 className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
               >
                 + Create Deck
+              </Link>
+
+              <Link
+                href="/import-deck"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Import Deck
               </Link>
 
               <Link
@@ -210,10 +221,10 @@ export default async function MyDecksPage() {
 
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
                           <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-                            Commander Deck
+                            {getDeckFormatLabel(deck.format)}
                           </div>
                           <div className="mt-2 text-2xl font-semibold text-white">
-                            {deck.commander || 'Unknown Commander'}
+                            {deck.commander || deck.name}
                           </div>
                         </div>
                       </>
@@ -221,17 +232,19 @@ export default async function MyDecksPage() {
                       <div className="flex h-full w-full items-end p-5">
                         <div>
                           <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-                            Commander Deck
+                            {getDeckFormatLabel(deck.format)}
                           </div>
                           <div className="mt-2 text-2xl font-semibold text-white">
-                            {deck.commander || 'Unknown Commander'}
+                            {deck.commander || deck.name}
                           </div>
                         </div>
                       </div>
                     )}
 
                     <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-                      {deck.bracket.label}
+                      {formatSupportsCommanderRules(deck.format)
+                        ? deck.bracket.label
+                        : getDeckFormatLabel(deck.format)}
                     </div>
                   </div>
                 </Link>
@@ -239,10 +252,12 @@ export default async function MyDecksPage() {
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-xl font-semibold tracking-tight">{deck.name}</h3>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        Commander: {deck.commander || 'Not set'}
-                      </p>
+                        <h3 className="text-xl font-semibold tracking-tight">{deck.name}</h3>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          {formatSupportsCommanderRules(deck.format)
+                            ? `Commander: ${deck.commander || 'Not set'}`
+                            : `Format: ${getDeckFormatLabel(deck.format)}`}
+                        </p>
                     </div>
 
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
@@ -256,13 +271,17 @@ export default async function MyDecksPage() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                      {deck.bracket.label}
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                      {formatSupportsCommanderRules(deck.format)
+                        ? deck.bracket.label
+                        : getDeckFormatLabel(deck.format)}
                     </span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                      {deck.bracket.gameChangerCount} Game Changer
-                      {deck.bracket.gameChangerCount === 1 ? '' : 's'}
-                    </span>
+                    {formatSupportsCommanderRules(deck.format) && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                        {deck.bracket.gameChangerCount} Game Changer
+                        {deck.bracket.gameChangerCount === 1 ? '' : 's'}
+                      </span>
+                    )}
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                       Owned by You
                     </span>

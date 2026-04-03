@@ -1,10 +1,24 @@
 import DeckCardViews from '@/components/deck-card-views'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import type { ImportedDeckCard } from '@/lib/commander/types'
-import { validateCommanderDeck } from '@/lib/commander/validate'
+import { validateDeckForFormat } from '@/lib/commander/validate'
+import {
+  calculatePercentChange,
+  findImportSnapshot,
+  findNearestSnapshotBeforeDays,
+  formatPercentChange,
+  type DeckPriceSnapshot,
+} from '@/lib/decks/price-history'
+import {
+  formatSupportsCommanderRules,
+  getDeckFormatLabel,
+  normalizeDeckFormat,
+} from '@/lib/decks/formats'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+
+const ADMIN_EMAIL = 'tim.felsky@gmail.com'
 
 type Deck = {
   id: number
@@ -17,6 +31,8 @@ type Deck = {
   is_valid?: boolean | null
   validation_errors?: string[] | null
   commander_mode?: string | null
+  format?: string | null
+  imported_at?: string | null
   price_total_usd?: number | null
   price_total_usd_foil?: number | null
   price_total_eur?: number | null
@@ -100,6 +116,24 @@ function getCommanderCandidates(cards: DeckCard[]) {
     : cards.filter((card) => card.section === 'mainboard')
 }
 
+function formatImportedAt(value?: string | null) {
+  if (!value) return 'Unknown'
+  return new Date(value).toLocaleString('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function changeTone(value: number | null) {
+  if (value == null) return 'text-zinc-400'
+  if (value > 0) return 'text-emerald-300'
+  if (value < 0) return 'text-red-300'
+  return 'text-zinc-300'
+}
+
 export default async function DeckDetailPage({
   params,
   searchParams,
@@ -119,7 +153,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, price_total_usd, price_total_usd_foil, price_total_eur'
+      'id, user_id, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur'
     )
     .eq('id', deckId)
     .single()
@@ -163,6 +197,12 @@ export default async function DeckDetailPage({
     .eq('deck_id', deckId)
     .order('sort_order', { ascending: true })
 
+  const { data: priceHistory } = await supabase
+    .from('deck_price_history')
+    .select('captured_at, price_total_usd_foil, snapshot_type')
+    .eq('deck_id', deckId)
+    .order('captured_at', { ascending: false })
+
   if (cardsError || tokensError) {
     return (
       <main className="min-h-screen bg-zinc-950 p-8 text-white">
@@ -188,7 +228,21 @@ export default async function DeckDetailPage({
   const typedDeck = deck as Deck
   const typedCards = (cards ?? []) as DeckCard[]
   const typedTokens = (tokens ?? []) as DeckToken[]
+  const snapshots = (priceHistory ?? []) as DeckPriceSnapshot[]
   const isOwner = !!user && typedDeck.user_id === user.id
+  const isAdmin = user?.email === ADMIN_EMAIL
+  const deckFormat = normalizeDeckFormat(typedDeck.format)
+  const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
+  const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
+  const importSnapshot = findImportSnapshot(snapshots)
+  const change30 = calculatePercentChange(
+    currentPrice,
+    findNearestSnapshotBeforeDays(snapshots, 30)?.price_total_usd_foil ?? null
+  )
+  const change60 = calculatePercentChange(
+    currentPrice,
+    findNearestSnapshotBeforeDays(snapshots, 60)?.price_total_usd_foil ?? null
+  )
 
   async function setCommanderAction(formData: FormData) {
     'use server'
@@ -209,7 +263,7 @@ export default async function DeckDetailPage({
 
     const { data: ownedDeck, error: ownedDeckError } = await supabase
       .from('decks')
-      .select('id, user_id')
+      .select('id, user_id, format')
       .eq('id', deckId)
       .single()
 
@@ -255,10 +309,7 @@ export default async function DeckDetailPage({
         redirect(`/decks/${deckId}?imported=1`)
       }
 
-      const {
-        id: _omitId,
-        ...commanderInsert
-      } = selectedCard
+      const { id: _omitId, ...commanderInsert } = selectedCard
 
       const { error: insertError } = await supabase.from('deck_cards').insert({
         ...commanderInsert,
@@ -298,8 +349,9 @@ export default async function DeckDetailPage({
       redirect(`/decks/${deckId}?imported=1`)
     }
 
-    const validation = validateCommanderDeck(
-      (refreshedCards as DeckCard[]).map(toImportedDeckCard)
+    const validation = validateDeckForFormat(
+      (refreshedCards as DeckCard[]).map(toImportedDeckCard),
+      ownedDeck.format
     )
     const commanderNames = (refreshedCards as DeckCard[])
       .filter((card) => card.section === 'commander')
@@ -355,12 +407,39 @@ export default async function DeckDetailPage({
     <main className="min-h-screen bg-zinc-950 text-white">
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
-          <Link
-            href="/decks"
-            className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
-          >
-            {'<-'} Back to marketplace
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/decks"
+              className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
+            >
+              {'<-'} Back to marketplace
+            </Link>
+
+            <Link
+              href="/import-deck"
+              className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+            >
+              Import Deck
+            </Link>
+
+            {isOwner && (
+              <Link
+                href={`/my-decks/${deckId}?tab=settings`}
+                className="inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Deck Settings
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="inline-block rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
+              >
+                Admin Dashboard
+              </Link>
+            )}
+          </div>
 
           {showCommanderUpdated && (
             <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
@@ -398,10 +477,10 @@ export default async function DeckDetailPage({
                       <div className="flex h-full items-end p-6">
                         <div>
                           <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-                            Commander Deck
+                            {getDeckFormatLabel(deckFormat)}
                           </div>
                           <div className="mt-2 text-3xl font-semibold">
-                            {typedDeck.commander || 'Unknown Commander'}
+                            {typedDeck.commander || typedDeck.name}
                           </div>
                         </div>
                       </div>
@@ -411,15 +490,19 @@ export default async function DeckDetailPage({
               </div>
 
               <div className="p-6">
-                <h1 className="text-3xl font-semibold">{typedDeck.name}</h1>
+                <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-300">
+                  {getDeckFormatLabel(deckFormat)}
+                </div>
+                <h1 className="mt-4 text-3xl font-semibold">{typedDeck.name}</h1>
                 <p className="mt-2 text-zinc-400">
-                  Commander mode: {typedDeck.commander_mode || 'unknown'}
+                  Imported {formatImportedAt(typedDeck.imported_at)}
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               {!typedDeck.commander &&
+                isCommanderDeck &&
                 isOwner &&
                 commanderCandidates.length > 0 && (
                   <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5">
@@ -450,41 +533,55 @@ export default async function DeckDetailPage({
                   </div>
                 )}
 
-              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Commander Bracket</div>
-                <div className="mt-2 text-3xl font-semibold">
-                  {bracketSummary.label}
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {bracketSummary.description}
-                </p>
-                <p className="mt-2 text-xs text-zinc-500">{bracketSummary.bracketRule}</p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Bracket Signals</div>
-                <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                  {bracketSummary.gameChangerCount}
-                </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
-                </p>
-                {bracketSummary.gameChangers.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
-                      <span
-                        key={cardName}
-                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
-                      >
-                        {cardName}
-                      </span>
-                    ))}
+              {isCommanderDeck ? (
+                <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                  <div className="text-sm text-zinc-400">Commander Bracket</div>
+                  <div className="mt-2 text-3xl font-semibold">
+                    {bracketSummary.label}
                   </div>
-                )}
-              </div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    {bracketSummary.description}
+                  </p>
+                  <p className="mt-2 text-xs text-zinc-500">{bracketSummary.bracketRule}</p>
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                  <div className="text-sm text-zinc-400">Deck Format</div>
+                  <div className="mt-2 text-3xl font-semibold">
+                    {getDeckFormatLabel(deckFormat)}
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    This deck is using the relaxed import flow for broader supported formats.
+                  </p>
+                </div>
+              )}
+
+              {isCommanderDeck && (
+                <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                  <div className="text-sm text-zinc-400">Bracket Signals</div>
+                  <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                    {bracketSummary.gameChangerCount}
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'} detected.
+                  </p>
+                  {bracketSummary.gameChangers.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {bracketSummary.gameChangers.slice(0, 6).map((cardName) => (
+                        <span
+                          key={cardName}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300"
+                        >
+                          {cardName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Value</div>
+                <div className="text-sm text-zinc-400">Current Value</div>
                 <div className="mt-2 text-3xl font-semibold text-emerald-300">
                   ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
                 </div>
@@ -494,13 +591,21 @@ export default async function DeckDetailPage({
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Estimated Card Pricing</div>
-                <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                  ${typedDeck.price_total_usd_foil?.toFixed(2) ?? '0.00'}
+                <div className="text-sm text-zinc-400">Price Trend</div>
+                <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                  <div>
+                    Import snapshot:{' '}
+                    {importSnapshot?.price_total_usd_foil != null
+                      ? `$${Number(importSnapshot.price_total_usd_foil).toFixed(2)}`
+                      : 'Awaiting first snapshot'}
+                  </div>
+                  <div className={changeTone(change30)}>
+                    30d move: {formatPercentChange(change30) ?? 'Awaiting enough history'}
+                  </div>
+                  <div className={changeTone(change60)}>
+                    60d move: {formatPercentChange(change60) ?? 'Awaiting enough history'}
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Blended estimate using each card&apos;s foil setting when available.
-                </p>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
@@ -512,14 +617,16 @@ export default async function DeckDetailPage({
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-                <div className="text-sm text-zinc-400">Bracket Notes</div>
-                <div className="mt-3 space-y-2 text-sm text-zinc-300">
-                  {bracketSummary.notes.map((note) => (
-                    <p key={note}>{note}</p>
-                  ))}
+              {isCommanderDeck && (
+                <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+                  <div className="text-sm text-zinc-400">Bracket Notes</div>
+                  <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                    {bracketSummary.notes.map((note) => (
+                      <p key={note}>{note}</p>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

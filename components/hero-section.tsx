@@ -22,12 +22,22 @@ const workflowCards = [
   },
   {
     title: "List and trade",
-    subtitle: "Show power level and estimated value publicly",
+    subtitle: "Show bracket, inventory, and blended value publicly",
     accent: "from-rose-500/20 to-rose-500/5",
   },
 ]
 
-export function HeroSection() {
+type HeroSectionProps = {
+  inventory: {
+    liveDecks: number
+    tokenReadyDecks: number
+    topValue: number
+    averageBracket: string
+    totalTrackedCards: number
+  }
+}
+
+export function HeroSection({ inventory }: HeroSectionProps) {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-32">
       <div className="absolute inset-0 -z-10">
@@ -40,7 +50,7 @@ export function HeroSection() {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Import lists, enrich with Scryfall data, and surface real trade value
+              Live inventory, Scryfall enrichment, and Commander-ready importing
             </span>
           </div>
 
@@ -80,18 +90,22 @@ export function HeroSection() {
 
           <div className="mt-16 flex items-center justify-center gap-8 sm:gap-16">
             <div className="text-center">
-              <p className="text-3xl font-bold text-foreground sm:text-4xl">99</p>
-              <p className="mt-1 text-sm text-muted-foreground">Card Validation Aware</p>
+              <p className="text-3xl font-bold text-foreground sm:text-4xl">{inventory.liveDecks}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Live deck listings</p>
             </div>
             <div className="h-12 w-px bg-border" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-foreground sm:text-4xl">3</p>
-              <p className="mt-1 text-sm text-muted-foreground">Core Tables Powering the App</p>
+              <p className="text-3xl font-bold text-foreground sm:text-4xl">
+                {inventory.totalTrackedCards}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Tracked cards and tokens</p>
             </div>
             <div className="h-12 w-px bg-border" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-foreground sm:text-4xl">1</p>
-              <p className="mt-1 text-sm text-muted-foreground">Flow from import to listing</p>
+              <p className="text-3xl font-bold text-foreground sm:text-4xl">
+                Bracket {inventory.averageBracket}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Average marketplace bracket</p>
             </div>
           </div>
         </div>
@@ -112,6 +126,34 @@ export function HeroSection() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mx-auto mt-6 grid max-w-5xl gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Inventory</div>
+              <div className="mt-3 text-2xl font-semibold text-foreground">
+                {inventory.tokenReadyDecks}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                decks already include token inventory for cleaner sleeves-to-table prep.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Pricing</div>
+              <div className="mt-3 text-2xl font-semibold text-foreground">
+                ${inventory.topValue.toFixed(0)}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                current top-end blended value among live marketplace decks.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Workflow</div>
+              <div className="mt-3 text-2xl font-semibold text-foreground">Text, file, link</div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                import supports pasted lists, uploads, and public Moxfield deck URLs.
+              </p>
+            </div>
           </div>
         </div>
       </div>

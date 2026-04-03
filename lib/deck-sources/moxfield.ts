@@ -18,6 +18,7 @@ type MoxfieldBoard = {
 
 type MoxfieldDeckResponse = {
   name?: string
+  format?: string
   boards?: {
     commanders?: MoxfieldBoard
     mainboard?: MoxfieldBoard
@@ -74,7 +75,7 @@ export function extractMoxfieldPublicId(url: string) {
 
 export async function fetchMoxfieldDeck(
   sourceUrl: string
-): Promise<{ deckName: string | null; cards: ImportedDeckCard[] }> {
+): Promise<{ deckName: string | null; format: string | null; cards: ImportedDeckCard[] }> {
   const publicId = extractMoxfieldPublicId(sourceUrl)
 
   if (!publicId) {
@@ -102,6 +103,7 @@ export async function fetchMoxfieldDeck(
 
   return {
     deckName: deck.name?.trim() || null,
+    format: deck.format?.trim() || null,
     cards,
   }
 }
