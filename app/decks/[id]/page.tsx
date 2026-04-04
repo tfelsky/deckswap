@@ -1000,7 +1000,8 @@ export default async function DeckDetailPage({
 
       const rebuiltDeck = rebuildDeckStructureFromSavedRows(
         (currentCards ?? []) as Parameters<typeof rebuildDeckStructureFromSavedRows>[0],
-        (currentTokens ?? []) as Parameters<typeof rebuildDeckStructureFromSavedRows>[1]
+        (currentTokens ?? []) as Parameters<typeof rebuildDeckStructureFromSavedRows>[1],
+        typedDeck.format
       )
 
       const { error: deleteCardsError } = await supabase
@@ -1385,7 +1386,7 @@ export default async function DeckDetailPage({
                         pendingLabel="Reprocessing..."
                         className="rounded-xl border border-yellow-200/20 bg-yellow-100/10 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-yellow-100/15 disabled:cursor-wait disabled:opacity-70"
                       >
-                        Reprocess validation
+                        Rebuild deck state
                       </FormActionButton>
                     </form>
                     <form action={retryEnrichmentAction}>
@@ -1393,7 +1394,7 @@ export default async function DeckDetailPage({
                         pendingLabel="Retrying..."
                         className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                       >
-                        Retry enrichment
+                        Retry card data
                       </FormActionButton>
                     </form>
                     {canReimportFromSource && (
@@ -1411,7 +1412,7 @@ export default async function DeckDetailPage({
                         pendingLabel="Repairing..."
                         className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                       >
-                        Repair saved deck
+                        Repair saved rows
                       </FormActionButton>
                     </form>
                   </div>
@@ -1434,7 +1435,7 @@ export default async function DeckDetailPage({
                       pendingLabel="Retrying..."
                       className="rounded-xl border border-amber-200/20 bg-amber-100/10 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-amber-100/15 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Retry enrichment now
+                      Retry card data now
                     </FormActionButton>
                   </form>
                   <form action={reprocessDeckStateAction}>
@@ -1442,7 +1443,7 @@ export default async function DeckDetailPage({
                       pendingLabel="Reprocessing..."
                       className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Reprocess deck state
+                      Rebuild deck state
                     </FormActionButton>
                   </form>
                   {canReimportFromSource && (
@@ -1460,7 +1461,7 @@ export default async function DeckDetailPage({
                       pendingLabel="Repairing..."
                       className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Repair saved deck
+                      Repair saved rows
                     </FormActionButton>
                   </form>
                 </div>
@@ -1480,7 +1481,7 @@ export default async function DeckDetailPage({
                     pendingLabel="Retrying..."
                     className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 disabled:cursor-wait disabled:opacity-70"
                   >
-                    Retry enrichment
+                    Retry card data
                   </FormActionButton>
                 </form>
                 <form action={reprocessDeckStateAction}>
@@ -1488,7 +1489,7 @@ export default async function DeckDetailPage({
                     pendingLabel="Reprocessing..."
                     className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                   >
-                    Reprocess validation
+                    Rebuild deck state
                   </FormActionButton>
                 </form>
                 {canReimportFromSource && (
@@ -1506,7 +1507,7 @@ export default async function DeckDetailPage({
                     pendingLabel="Repairing..."
                     className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                   >
-                    Repair saved deck
+                    Repair saved rows
                   </FormActionButton>
                 </form>
               </div>

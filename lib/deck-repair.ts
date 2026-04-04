@@ -1,4 +1,5 @@
 import { isLikelyTokenCard } from '@/lib/commander/parse'
+import { normalizeDeckFormat } from '@/lib/decks/formats'
 
 export type RepairDeckCardRow = {
   section: 'commander' | 'mainboard'
@@ -95,7 +96,7 @@ function addCommanderRow(
 function addMainboardRow(
   map: Map<string, MainboardAccumulator>,
   row: RepairDeckCardRow,
-  mode: 'merge' | 'fill'
+  mode: 'merge' | 'fill' | 'singleton_repair'
 ) {
   const key = repairKey({
     name: row.card_name,
@@ -108,6 +109,8 @@ function addMainboardRow(
   if (existing) {
     if (mode === 'merge') {
       existing.quantity += row.quantity
+    } else if (mode === 'singleton_repair') {
+      existing.quantity = Math.max(existing.quantity, row.quantity)
     }
     return
   }
@@ -143,8 +146,12 @@ function addTokenRow(
 
 export function rebuildDeckStructureFromSavedRows(
   cards: RepairDeckCardRow[],
-  tokens: RepairDeckTokenRow[]
+  tokens: RepairDeckTokenRow[],
+  format?: string | null
 ) {
+  const normalizedFormat = normalizeDeckFormat(format)
+  const singletonRepairMode =
+    normalizedFormat === 'commander' || normalizedFormat === 'canlander'
   const commanderMap = new Map<string, CommanderAccumulator>()
   const mainboardMap = new Map<string, MainboardAccumulator>()
   const tokenMap = new Map<string, TokenAccumulator>()
@@ -193,7 +200,11 @@ export function rebuildDeckStructureFromSavedRows(
       continue
     }
 
-    addMainboardRow(mainboardMap, card, 'merge')
+    addMainboardRow(
+      mainboardMap,
+      card,
+      singletonRepairMode && !isBasicLikeCard(card.card_name) ? 'singleton_repair' : 'merge'
+    )
   }
 
   for (const token of tokens) {
@@ -247,4 +258,16 @@ export function rebuildDeckStructureFromSavedRows(
       (left, right) => Number(left.sort_order ?? 0) - Number(right.sort_order ?? 0)
     ),
   }
+}
+
+function isBasicLikeCard(cardName: string) {
+  const normalized = cardName.trim().toLowerCase()
+  return (
+    normalized === 'plains' ||
+    normalized === 'island' ||
+    normalized === 'swamp' ||
+    normalized === 'mountain' ||
+    normalized === 'forest' ||
+    normalized === 'wastes'
+  )
 }
