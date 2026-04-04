@@ -8,6 +8,7 @@ export type TradeStatus =
   | 'draft'
   | 'awaiting_payment'
   | 'awaiting_shipments'
+  | 'in_transit'
   | 'in_inspection'
   | 'ready_to_release'
   | 'completed'
@@ -15,6 +16,8 @@ export type TradeStatus =
   | 'cancelled'
 
 export type PaymentStatus = 'unpaid' | 'authorized' | 'paid' | 'refunded'
+export type ShipmentStatus = 'not_shipped' | 'shipped' | 'received'
+export type InspectionStatus = 'pending' | 'passed' | 'failed'
 
 export type TradeTransactionRow = {
   id: number
@@ -26,6 +29,10 @@ export type TradeTransactionRow = {
   equalization_amount_usd?: number | null
   platform_gross_usd?: number | null
   notes?: string[] | null
+  payment_requested_at?: string | null
+  release_ready_at?: string | null
+  completed_at?: string | null
+  dispute_reason?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -44,6 +51,13 @@ export type TradeParticipantRow = {
   equalization_owed_usd: number
   amount_due_usd: number
   payment_status?: PaymentStatus | null
+  payment_marked_at?: string | null
+  shipment_status?: ShipmentStatus | null
+  tracking_code?: string | null
+  shipped_at?: string | null
+  received_at?: string | null
+  inspection_status?: InspectionStatus | null
+  inspection_notes?: string | null
 }
 
 export type EscrowEventRow = {
@@ -111,6 +125,8 @@ export function buildTradeDraftRows(
         equalization_owed_usd: result.deckA.equalizationOwed,
         amount_due_usd: result.deckA.amountDue,
         payment_status: 'unpaid',
+        shipment_status: 'not_shipped',
+        inspection_status: 'pending',
       },
       {
         side: 'b',
@@ -123,6 +139,8 @@ export function buildTradeDraftRows(
         equalization_owed_usd: result.deckB.equalizationOwed,
         amount_due_usd: result.deckB.amountDue,
         payment_status: 'unpaid',
+        shipment_status: 'not_shipped',
+        inspection_status: 'pending',
       },
     ],
     initialEvent: {
@@ -144,4 +162,59 @@ export function formatTradeStatus(status: TradeStatus | string | null | undefine
 export function formatPaymentStatus(status: PaymentStatus | string | null | undefined) {
   const normalized = (status ?? 'unpaid').replace(/_/g, ' ')
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+export function formatShipmentStatus(status: ShipmentStatus | string | null | undefined) {
+  const normalized = (status ?? 'not_shipped').replace(/_/g, ' ')
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+export function formatInspectionStatus(status: InspectionStatus | string | null | undefined) {
+  const normalized = (status ?? 'pending').replace(/_/g, ' ')
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+export function deriveTradeStatus(
+  transaction: Pick<TradeTransactionRow, 'status'>,
+  participants: Array<
+    Pick<
+      TradeParticipantRow,
+      'payment_status' | 'shipment_status' | 'inspection_status'
+    >
+  >
+): TradeStatus {
+  if (transaction.status === 'cancelled' || transaction.status === 'disputed') {
+    return transaction.status
+  }
+
+  if (participants.length === 0) {
+    return transaction.status ?? 'draft'
+  }
+
+  const allPaid = participants.every((participant) => participant.payment_status === 'paid')
+  const allShipped = participants.every((participant) => participant.shipment_status === 'shipped')
+  const allReceived = participants.every((participant) => participant.shipment_status === 'received')
+  const anyInspectionFailed = participants.some((participant) => participant.inspection_status === 'failed')
+  const allInspectionPassed = participants.every((participant) => participant.inspection_status === 'passed')
+
+  if (anyInspectionFailed) {
+    return 'disputed'
+  }
+  if (allInspectionPassed) {
+    return 'ready_to_release'
+  }
+  if (allReceived) {
+    return 'in_inspection'
+  }
+  if (allShipped) {
+    return 'in_transit'
+  }
+  if (allPaid) {
+    return 'awaiting_shipments'
+  }
+  if (participants.some((participant) => participant.payment_status === 'paid')) {
+    return 'awaiting_payment'
+  }
+
+  return transaction.status === 'draft' ? 'draft' : 'awaiting_payment'
 }
