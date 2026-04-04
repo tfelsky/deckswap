@@ -3,33 +3,33 @@ function roundCurrency(value: number) {
 }
 
 export function buylistRateForValue(value: number) {
-  if (value < 150) return 0.58
-  if (value < 500) return 0.62
-  return 0.68
+  if (value < 150) return 0.35
+  if (value < 500) return 0.42
+  return 0.5
 }
 
 export function deckSwapFeeForValue(value: number) {
   if (value < 150) {
-    return roundCurrency(Math.max(4, value * 0.04))
+    return roundCurrency(Math.max(6, value * 0.06))
   }
 
   if (value < 500) {
-    return roundCurrency(Math.max(8, value * 0.05))
+    return roundCurrency(Math.max(12, value * 0.07))
   }
 
-  return roundCurrency(Math.max(20, value * 0.05))
+  return roundCurrency(Math.max(28, value * 0.08))
 }
 
 export function deckShippingForValue(value: number) {
-  if (value < 150) return 15
-  if (value < 500) return 20
-  return 25
+  if (value < 150) return 18
+  if (value < 500) return 24
+  return 30
 }
 
 export function deckInsuranceForValue(value: number) {
-  if (value < 150) return 3
-  if (value < 500) return 6
-  return 10
+  if (value < 150) return 4
+  if (value < 500) return 8
+  return 12
 }
 
 export function calculateDeckTradeValue(value: number) {
