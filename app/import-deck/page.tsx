@@ -436,8 +436,7 @@ Tokens
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-zinc-500">
-                Commander and Standard-style validation are live. Use the format setting above if a
-                historical 60-card deck should import under Standard rules.
+                Commander validation is the strongest path today, with 60-card support available for simpler imports. If a deck imports imperfectly, you can still fix the format and listing details afterward.
               </div>
               <button
                 type="submit"

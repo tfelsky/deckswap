@@ -141,10 +141,9 @@ export async function importDeckAction(
       }
     } catch (error) {
       return {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to import that Moxfield deck.',
+        error: toFriendlyImportError(
+          error instanceof Error ? error.message : 'Failed to import that Moxfield deck.'
+        ),
         fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
       }
     }

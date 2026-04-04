@@ -1,6 +1,6 @@
 'use server'
 
-import { importNormalizedDeckToCollection } from '@/lib/deck-imports'
+import { importNormalizedDeckToCollection, toFriendlyImportError } from '@/lib/deck-imports'
 import {
   fetchLibraryDeck,
   persistLibraryImportLinkage,
@@ -77,10 +77,9 @@ export async function importLibraryDeckAction(formData: FormData) {
     redirect(
       buildReturnUrl(provider, account, {
         importFailed: externalDeckId,
-        message:
-          error instanceof Error
-            ? error.message.slice(0, 180)
-            : 'Library deck import failed.',
+        message: toFriendlyImportError(
+          error instanceof Error ? error.message.slice(0, 180) : 'Library deck import failed.'
+        ),
       })
     )
   }

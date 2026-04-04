@@ -144,7 +144,11 @@ export async function syncGuestImportDraftRemote(draft: GuestImportDraft) {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to sync guest draft.')
+    if (response.status >= 500) {
+      throw new Error('Guest draft save is temporarily unavailable. Your local draft is still safe in this browser.')
+    }
+
+    throw new Error('Could not save the guest draft online right now. Your local draft is still safe in this browser.')
   }
 
   return (await response.json()) as {
@@ -166,7 +170,11 @@ export async function fetchGuestImportDraftRemote(draftToken: string) {
   }
 
   if (!response.ok) {
-    throw new Error('Failed to load guest draft.')
+    if (response.status >= 500) {
+      throw new Error('Saved guest draft is temporarily unavailable online. You can still continue with any local draft saved in this browser.')
+    }
+
+    throw new Error('Could not load that saved guest draft online. If you started this draft in another browser or device, reopen it there and try again.')
   }
 
   const payload = (await response.json()) as {

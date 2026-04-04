@@ -7,6 +7,10 @@ function hasKeyword(card: ImportedDeckCard, keyword: string) {
   )
 }
 
+function dedupeErrors(errors: string[]) {
+  return Array.from(new Set(errors.map((error) => error.trim()).filter(Boolean)))
+}
+
 function isBasicLand(cardName: string) {
   const basics = new Set([
     'plains',
@@ -82,7 +86,7 @@ function validateSixtyCardConstructedDeck(
     sideboardCount,
     tokenCount,
     commanderMode: commanders.length > 0 ? 'single' : 'invalid',
-    errors,
+    errors: dedupeErrors(errors),
   }
 }
 
@@ -223,7 +227,7 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
     sideboardCount,
     tokenCount,
     commanderMode,
-    errors,
+    errors: dedupeErrors(errors),
   }
 }
 
@@ -274,6 +278,6 @@ export function validateDeckForFormat(
     sideboardCount,
     tokenCount,
     commanderMode: commanders.length > 0 ? 'single' : 'invalid',
-    errors,
+    errors: dedupeErrors(errors),
   }
 }

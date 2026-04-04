@@ -27,6 +27,14 @@ type ImportNormalizedDeckArgs = {
 export function toFriendlyImportError(message?: string) {
   if (!message) return 'Failed to create deck.'
 
+  if (
+    message.includes('revalidate') ||
+    message.includes('REVALIDATE') ||
+    message.includes('ReadonlyRequestCookiesError')
+  ) {
+    return 'The import finished, but the page refresh got out of sync. Refresh once and try again if the deck does not appear in your inventory.'
+  }
+
   if (message.includes("Could not find the 'imported_at' column of 'decks'")) {
     return 'Your database is missing the new decks.imported_at column. Run the latest Supabase migration for deck format and price history, then try the import again.'
   }
@@ -45,6 +53,38 @@ export function toFriendlyImportError(message?: string) {
 
   if (isGuestImportSchemaMissing(message)) {
     return 'Guest draft persistence is not set up in Supabase yet. Run the guest import draft migration, then try again.'
+  }
+
+  if (message.includes('deck_tokens')) {
+    return 'The main deck imported, but token rows could not be saved cleanly. Check your token section formatting and try again.'
+  }
+
+  if (message.includes('deck_cards')) {
+    return 'The deck record was created, but card rows could not be saved. Double-check the list formatting and try again.'
+  }
+
+  if (message.includes('claim_guest_import_draft')) {
+    return 'The deck imported, but the saved guest draft could not be linked cleanly to your account. Your imported deck should still be available.'
+  }
+
+  if (message.includes('Moxfield import failed with status 404')) {
+    return 'That Moxfield deck could not be found. Check the URL and make sure the deck is still public.'
+  }
+
+  if (message.includes('Moxfield import failed with status 429')) {
+    return 'Moxfield is rate-limiting requests right now. Wait a moment and try the import again.'
+  }
+
+  if (message.includes('Moxfield import failed with status 5')) {
+    return 'Moxfield is having trouble responding right now. Try the import again in a moment.'
+  }
+
+  if (message.includes('Moxfield URL could not be understood')) {
+    return 'That Moxfield link does not look valid yet. Paste the full public deck URL and try again.'
+  }
+
+  if (message.includes('deck shell but no readable cards')) {
+    return 'The source deck loaded, but no readable cards came through. Make sure the list is public and fully populated, including commanders and tokens.'
   }
 
   return message

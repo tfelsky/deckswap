@@ -123,18 +123,18 @@ export default async function ImportLibraryPage({
             </Link>
           </div>
 
-          <div className="mt-8 max-w-3xl">
+            <div className="mt-8 max-w-3xl">
             <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
               Library Import
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
               Pull in a whole public deck library
             </h1>
-            <p className="mt-3 text-zinc-400">
-              Start with a public Moxfield or Archidekt profile, preview the decks we can see,
-              then import one or batch-import the whole visible library into Mythiverse Exchange.
-            </p>
-          </div>
+              <p className="mt-3 text-zinc-400">
+                Start with a public Moxfield or Archidekt profile, preview the decks we can see,
+                then import one or batch-import the whole visible library into Mythiverse Exchange. Imported decks land in staging first so you can review details before making them live.
+              </p>
+            </div>
         </div>
       </section>
 
@@ -143,7 +143,7 @@ export default async function ImportLibraryPage({
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
             <h2 className="text-xl font-semibold text-white">Preview a library</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Public decks only. Private lists and protected profiles will not show up here.
+              Public decks only. Private lists and protected profiles will not show up here, and imported decks start in staging until you choose how to market them.
             </p>
 
             <form method="get" className="mt-6 grid gap-5">
@@ -168,7 +168,7 @@ export default async function ImportLibraryPage({
                   defaultValue={account}
                   placeholder={
                     provider === 'archidekt'
-                      ? 'archidekt.com/u/yourname'
+                      ? 'archidekt.com/u/yourname or your Archidekt username'
                       : 'moxfield.com/users/yourname'
                   }
                   className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
@@ -187,7 +187,7 @@ export default async function ImportLibraryPage({
               <div className="font-medium text-white">Phase 1 coverage</div>
               <p className="mt-2">
                 This first pass imports public libraries from Moxfield and Archidekt. Deckstats
-                and TappedOut are next on the roadmap once this source-linking flow proves out.
+                and TappedOut are next on the roadmap once this source-linking flow proves out. Each imported deck stays private in staging until you review it.
               </p>
             </div>
           </div>
@@ -195,16 +195,16 @@ export default async function ImportLibraryPage({
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
             {importedDeckId ? (
               <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                Library deck imported successfully.{' '}
-                <Link href={`/decks/${importedDeckId}`} className="font-medium text-white underline">
-                  Open deck {importedDeckId}
+                Library deck imported to staging successfully.{' '}
+                <Link href={`/my-decks/${importedDeckId}?tab=settings`} className="font-medium text-white underline">
+                  Review deck {importedDeckId}
                 </Link>
               </div>
             ) : null}
 
             {importedCount ? (
               <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                Batch import finished with {importedCount} imported and {failedCount || '0'} failed.
+                Batch import finished with {importedCount} imported to staging and {failedCount || '0'} failed.
               </div>
             ) : null}
 
@@ -293,8 +293,9 @@ export default async function ImportLibraryPage({
                                 </div>
                               ) : null}
                             </div>
-                            <div className="mt-2 flex flex-wrap gap-3 text-sm text-zinc-400">
+                          <div className="mt-2 flex flex-wrap gap-3 text-sm text-zinc-400">
                               <span>{formatTimestamp(deck.updatedAt)}</span>
+                              <span>Imports to staging first</span>
                               <a
                                 href={deck.deckUrl}
                                 target="_blank"
@@ -326,7 +327,7 @@ export default async function ImportLibraryPage({
                                   type="submit"
                                   className="rounded-2xl bg-emerald-400 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90"
                                 >
-                                  Import deck
+                                  Import to staging
                                 </button>
                               </form>
                             )}
