@@ -73,6 +73,16 @@ type ApprovalCardRow = {
   activityRecommendation: string
 }
 
+function isMissingColumnError(message?: string | null, column?: string) {
+  if (!message || !column) return false
+
+  return (
+    message.includes(`Could not find the '${column}' column`) ||
+    message.includes(`column "${column}"`) ||
+    message.includes(`"${column}" of relation`)
+  )
+}
+
 function formatTimestamp(value?: string | null) {
   if (!value) return 'Not recorded'
   return new Date(value).toLocaleString('en-CA', {
@@ -161,7 +171,12 @@ function recommendationForUser(card: ApprovalCardRow) {
   return 'Needs more profile or activity signal first'
 }
 
-export default async function AdminApprovalsPage() {
+export default async function AdminApprovalsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
   const supabase = await createClient()
   const {
     data: { user },
@@ -172,6 +187,13 @@ export default async function AdminApprovalsPage() {
   if (!user || !access.isAdmin) {
     redirect('/decks')
   }
+
+  const saveState =
+    resolvedSearchParams?.saved === '1'
+      ? 'saved'
+      : resolvedSearchParams?.error === '1'
+      ? 'error'
+      : null
 
   async function reviewApprovalAction(formData: FormData) {
     'use server'
@@ -221,11 +243,39 @@ export default async function AdminApprovalsPage() {
       payload.is_known_user = false
     }
 
-    await supabase
+    let result = await supabase
       .from('profile_reputation_summary')
       .upsert(payload, { onConflict: 'user_id' })
 
-    redirect('/admin/approvals')
+    if (
+      result.error &&
+      (isMissingColumnError(result.error.message, 'approval_status') ||
+        isMissingColumnError(result.error.message, 'approval_notes') ||
+        isMissingColumnError(result.error.message, 'approved_at') ||
+        isMissingColumnError(result.error.message, 'approved_by'))
+    ) {
+      const fallbackPayload: Record<string, unknown> = {
+        user_id: targetUserId,
+        is_known_user: nextStatus === 'approved',
+        manual_review_notes: approvalNotes || null,
+        updated_at: now,
+      }
+
+      if (nextStatus === 'approved') {
+        fallbackPayload.banned_status = 'active'
+      }
+
+      result = await supabase
+        .from('profile_reputation_summary')
+        .upsert(fallbackPayload, { onConflict: 'user_id' })
+    }
+
+    if (result.error) {
+      console.error('Approval save failed:', result.error)
+      redirect('/admin/approvals?error=1')
+    }
+
+    redirect('/admin/approvals?saved=1')
   }
 
   const [profilesResult, privateProfilesResult, summariesResult, verificationsResult, decksResult, offersResult] =
@@ -298,7 +348,7 @@ export default async function AdminApprovalsPage() {
   for (const row of verifications) userIds.add(row.user_id)
   for (const row of decks) userIds.add(row.user_id)
 
-  const approvalCards = [...userIds]
+  const allCards = [...userIds]
     .map((userId) => {
       const profile = profileByUser.get(userId) ?? null
       const privateProfile = privateByUser.get(userId) ?? null
@@ -348,15 +398,23 @@ export default async function AdminApprovalsPage() {
       card.activityRecommendation = recommendationForUser(card)
       return card
     })
-    .filter((card) => {
-      const approvalStatus = card.summary?.approval_status ?? 'pending'
-      return approvalStatus !== 'approved'
-    })
     .sort((left, right) => {
       const leftTime = left.firstSeenAt ? new Date(left.firstSeenAt).getTime() : 0
       const rightTime = right.firstSeenAt ? new Date(right.firstSeenAt).getTime() : 0
       return rightTime - leftTime
     })
+
+  const approvalCards = allCards.filter((card) => {
+    const approvalStatus =
+      card.summary?.approval_status ?? (card.summary?.is_known_user ? 'approved' : 'pending')
+    return approvalStatus !== 'approved'
+  })
+
+  const approvedCards = allCards.filter((card) => {
+    const approvalStatus =
+      card.summary?.approval_status ?? (card.summary?.is_known_user ? 'approved' : 'pending')
+    return approvalStatus === 'approved'
+  })
 
   const pendingCount = approvalCards.filter(
     (card) => (card.summary?.approval_status ?? 'pending') === 'pending'
@@ -367,10 +425,11 @@ export default async function AdminApprovalsPage() {
   const deniedCount = approvalCards.filter(
     (card) => (card.summary?.approval_status ?? 'pending') === 'denied'
   ).length
+  const approvedCount = approvedCards.length
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-10">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="text-sm text-zinc-400">New User Cards</div>
           <div className="mt-2 text-3xl font-semibold text-white">{approvalCards.length}</div>
@@ -386,6 +445,10 @@ export default async function AdminApprovalsPage() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="text-sm text-zinc-400">Denied</div>
           <div className="mt-2 text-3xl font-semibold text-red-300">{deniedCount}</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <div className="text-sm text-zinc-400">Approved</div>
+          <div className="mt-2 text-3xl font-semibold text-emerald-300">{approvedCount}</div>
         </div>
       </div>
 
@@ -413,6 +476,18 @@ export default async function AdminApprovalsPage() {
           </div>
         </div>
 
+        {saveState === 'saved' && (
+          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            Approval decision saved.
+          </div>
+        )}
+
+        {saveState === 'error' && (
+          <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+            Approval could not be saved right now. This is usually a missing Supabase column or policy issue.
+          </div>
+        )}
+
         {schemaMissing ? (
           <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
             Run <code>docs/sql/user-profiles-and-trust.sql</code> and <code>docs/sql/profile-approval-workflow.sql</code> in Supabase to enable the approval queue.
@@ -430,7 +505,8 @@ export default async function AdminApprovalsPage() {
                 card.privateProfile
               )
               const externalLinks = marketplaceLinks(card.profile)
-              const approvalStatus = card.summary?.approval_status ?? 'pending'
+              const approvalStatus =
+                card.summary?.approval_status ?? (card.summary?.is_known_user ? 'approved' : 'pending')
 
               return (
                 <div key={card.userId} className="rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -610,6 +686,110 @@ export default async function AdminApprovalsPage() {
                       </FormActionButton>
                     </form>
                   </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-white/10 bg-zinc-900 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold">Approved Users</h2>
+            <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+              Approved early testers move here so the active queue stays clean while you still have a lightweight list to revisit later.
+            </p>
+          </div>
+          <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm text-emerald-100">
+            {approvedCount} approved
+          </div>
+        </div>
+
+        {approvedCards.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
+            No approved users yet.
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {approvedCards.slice(0, 50).map((card) => {
+              const approvalStatus =
+                card.summary?.approval_status ?? (card.summary?.is_known_user ? 'approved' : 'pending')
+              const externalLinks = marketplaceLinks(card.profile)
+
+              return (
+                <div
+                  id={`approved-${card.userId}`}
+                  key={`approved-${card.userId}`}
+                  className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-lg font-semibold text-white">{card.title}</div>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs ${approvalTone(approvalStatus)}`}
+                        >
+                          {formatApprovalStatus(approvalStatus)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm text-zinc-400">
+                        {card.subtitle} · Approved {formatTimestamp(card.summary?.approved_at ?? card.summary?.updated_at)}
+                      </div>
+                    </div>
+
+                    {card.profile?.username?.trim() ? (
+                      <Link
+                        href={`/u/${card.profile.username.trim()}`}
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                      >
+                        Open profile
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Decks</div>
+                      <div className="mt-2 text-lg font-semibold text-white">{card.decks.length}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">DeckSwap Live</div>
+                      <div className="mt-2 text-lg font-semibold text-white">{card.liveDeckSwapCount}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Buy It Now Live</div>
+                      <div className="mt-2 text-lg font-semibold text-white">{card.liveBuyNowCount}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Listed Value</div>
+                      <div className="mt-2 text-lg font-semibold text-emerald-300">{formatCurrency(card.listedValue)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm text-zinc-300">
+                    <p>Support email: {card.privateProfile?.support_email?.trim() || 'Not set'}</p>
+                    <p>Ship from: {formatShipFrom(card.profile)}</p>
+                    <p>Offer activity: {card.offerCount}</p>
+                    <p>Completed trades: {card.completedTrades}</p>
+                    <p>Approval note: {card.summary?.approval_notes || card.summary?.manual_review_notes || 'No note saved'}</p>
+                  </div>
+
+                  {externalLinks.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {externalLinks.map((link) => (
+                        <a
+                          key={`approved-${card.userId}-${link.label}`}
+                          href={link.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-zinc-200 hover:bg-black/30"
+                        >
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -29,6 +29,7 @@ import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import ConfirmFormActionButton from '@/components/confirm-form-action-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -200,15 +201,18 @@ export default async function ManageDeckPage({
   const gradingCards = ((deckCards ?? []) as Array<{
     id: number
     card_name: string
-    section: 'commander' | 'mainboard'
+    section: 'commander' | 'mainboard' | 'sideboard'
     quantity: number
     set_code?: string | null
+    collector_number?: string | null
     condition?: string | null
     condition_source?: string | null
     image_url?: string | null
     foil?: boolean | null
     price_usd?: number | string | null
     price_usd_foil?: number | string | null
+    price_eur?: number | string | null
+    price_eur_foil?: number | string | null
   }>)
     .map((card) => {
       const unitPrice = Number(
@@ -277,6 +281,116 @@ export default async function ManageDeckPage({
   const holidayDonationAgreedAt = (
     deck as typeof deck & { holiday_donation_agreed_at?: string | null }
   ).holiday_donation_agreed_at
+
+  async function syncDeckAfterCardMutation(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+    const { data: ownedDeck, error: ownedDeckError } = await supabase
+      .from('decks')
+      .select('id, user_id, format, image_url')
+      .eq('id', deckId)
+      .eq('user_id', userId)
+      .single()
+
+    if (ownedDeckError || !ownedDeck) {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    const { data: refreshedCards, error: refreshedCardsError } = await supabase
+      .from('deck_cards')
+      .select(
+        'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, price_usd, price_usd_foil, price_eur, price_eur_foil'
+      )
+      .eq('deck_id', deckId)
+
+    const { data: refreshedTokens, error: refreshedTokensError } = await supabase
+      .from('deck_tokens')
+      .select('quantity')
+      .eq('deck_id', deckId)
+
+    if (refreshedCardsError || !refreshedCards || refreshedTokensError) {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    const typedCards = refreshedCards as Array<{
+      section: 'commander' | 'mainboard' | 'sideboard'
+      quantity: number
+      card_name: string
+      set_code?: string | null
+      set_name?: string | null
+      collector_number?: string | null
+      foil?: boolean | null
+      image_url?: string | null
+      is_legendary?: boolean | null
+      is_background?: boolean | null
+      can_be_commander?: boolean | null
+      keywords?: string[] | null
+      partner_with_name?: string | null
+      color_identity?: string[] | null
+      price_usd?: number | null
+      price_usd_foil?: number | null
+      price_eur?: number | null
+      price_eur_foil?: number | null
+    }>
+
+    const validation = validateDeckForFormat(
+      typedCards.map((card) => ({
+        section: card.section,
+        quantity: card.quantity,
+        cardName: card.card_name,
+        setCode: card.set_code ?? undefined,
+        setName: card.set_name ?? undefined,
+        collectorNumber: card.collector_number ?? undefined,
+        foil: card.foil ?? false,
+        isLegendary: card.is_legendary ?? undefined,
+        isBackground: card.is_background ?? undefined,
+        canBeCommander: card.can_be_commander ?? undefined,
+        keywords: card.keywords ?? undefined,
+        partnerWithName: card.partner_with_name ?? undefined,
+        colorIdentity: card.color_identity ?? undefined,
+      })),
+      normalizeDeckFormat(ownedDeck.format)
+    )
+
+    const commanderNames = typedCards
+      .filter((card) => card.section === 'commander')
+      .map((card) => card.card_name)
+    const primaryCommander = typedCards.find((card) => card.section === 'commander')
+    const tokenCount = (refreshedTokens ?? []).reduce(
+      (sum, token) => sum + Number(token.quantity ?? 0),
+      0
+    )
+    const priceTotalUsd = typedCards.reduce(
+      (sum, card) => sum + Number(card.price_usd ?? 0) * Number(card.quantity ?? 0),
+      0
+    )
+    const priceTotalUsdFoil = typedCards.reduce((sum, card) => {
+      const unitPrice = Number((card.foil ? card.price_usd_foil : null) ?? card.price_usd ?? 0)
+      return sum + unitPrice * Number(card.quantity ?? 0)
+    }, 0)
+    const priceTotalEur = typedCards.reduce((sum, card) => {
+      const unitPrice = Number((card.foil ? card.price_eur_foil : null) ?? card.price_eur ?? 0)
+      return sum + unitPrice * Number(card.quantity ?? 0)
+    }, 0)
+
+    await supabase
+      .from('decks')
+      .update({
+        commander: commanderNames[0] ?? null,
+        commander_count: validation.commanderCount,
+        mainboard_count: validation.mainboardCount,
+        sideboard_count: validation.sideboardCount ?? 0,
+        token_count: tokenCount,
+        commander_mode: validation.commanderMode,
+        commander_names: commanderNames,
+        is_valid: validation.isValid,
+        validation_errors: validation.errors,
+        image_url: primaryCommander?.image_url ?? ownedDeck.image_url ?? null,
+        price_total_usd: Number(priceTotalUsd.toFixed(2)),
+        price_total_usd_foil: Number(priceTotalUsdFoil.toFixed(2)),
+        price_total_eur: Number(priceTotalEur.toFixed(2)),
+      })
+      .eq('id', deckId)
+      .eq('user_id', userId)
+  }
 
   async function updateOverview(formData: FormData) {
     'use server'
@@ -533,6 +647,85 @@ export default async function ManageDeckPage({
       .update({ condition: nextCondition, condition_source: 'manual' })
       .eq('id', cardId)
       .eq('deck_id', deckId)
+
+    redirect(`/my-decks/${deckId}?tab=settings`)
+  }
+
+  async function updateDeckCard(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const cardId = Number(formData.get('card_id'))
+    const nextQuantity = Number(formData.get('quantity'))
+    const nextSectionRaw = String(formData.get('section') || 'mainboard')
+    const nextCondition = normalizeCardCondition(String(formData.get('condition') || 'near_mint'))
+    const nextSetCode = String(formData.get('set_code') || '')
+      .trim()
+      .toLowerCase()
+      .slice(0, 12)
+    const nextCollectorNumber = String(formData.get('collector_number') || '')
+      .trim()
+      .slice(0, 32)
+    const nextFoil = formData.get('foil') === 'on'
+    const nextSection =
+      nextSectionRaw === 'commander' || nextSectionRaw === 'sideboard' ? nextSectionRaw : 'mainboard'
+
+    if (!Number.isFinite(cardId) || !Number.isFinite(nextQuantity) || nextQuantity < 1 || nextQuantity > 99) {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    await supabase
+      .from('deck_cards')
+      .update({
+        quantity: Math.trunc(nextQuantity),
+        section: nextSection,
+        condition: nextCondition,
+        condition_source: 'manual',
+        set_code: nextSetCode || null,
+        collector_number: nextCollectorNumber || null,
+        foil: nextFoil,
+      })
+      .eq('id', cardId)
+      .eq('deck_id', deckId)
+
+    await syncDeckAfterCardMutation(supabase, user.id)
+
+    redirect(`/my-decks/${deckId}?tab=settings`)
+  }
+
+  async function deleteDeckCard(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const cardId = Number(formData.get('card_id'))
+
+    if (!Number.isFinite(cardId)) {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    await supabase
+      .from('deck_cards')
+      .delete()
+      .eq('id', cardId)
+      .eq('deck_id', deckId)
+
+    await syncDeckAfterCardMutation(supabase, user.id)
 
     redirect(`/my-decks/${deckId}?tab=settings`)
   }
@@ -807,9 +1000,13 @@ export default async function ManageDeckPage({
               </div>
 
               <form action={deleteDeck}>
-                <button className="w-full rounded-xl bg-red-500 py-3">
+                <ConfirmFormActionButton
+                  confirmMessage="Delete this deck permanently? This cannot be undone."
+                  pendingLabel="Deleting..."
+                  className="w-full rounded-xl bg-red-500 py-3"
+                >
                   Delete Deck
-                </button>
+                </ConfirmFormActionButton>
               </form>
             </div>
           </div>
@@ -1286,9 +1483,13 @@ export default async function ManageDeckPage({
               </div>
 
               <form action={deleteDeck}>
-                <button className="w-full rounded-xl bg-red-500 py-3">
+                <ConfirmFormActionButton
+                  confirmMessage="Delete this deck permanently? This cannot be undone."
+                  pendingLabel="Deleting..."
+                  className="w-full rounded-xl bg-red-500 py-3"
+                >
                   Delete Deck
-                </button>
+                </ConfirmFormActionButton>
               </form>
             </div>
             </div>
@@ -1296,9 +1497,9 @@ export default async function ManageDeckPage({
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold">Card Conditions</h2>
+                  <h2 className="text-2xl font-semibold">Card Management</h2>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Imported cards start as accepted Near Mint placeholders so validation can proceed. Before listing or entering escrow, manually review the highest-value cards first and downgrade anything that does not meet that standard.
+                    Review imported rows, fix quantity and print details, move cards between sections, and remove anything that should not be there. We still recommend grading the highest-value cards before the deck goes live.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
@@ -1325,7 +1526,7 @@ export default async function ManageDeckPage({
                       Validation handling
                     </div>
                     <p className="mt-2 text-sm text-zinc-300">
-                      Condition data is accepted during import and does not block deck validation. Rules validation still focuses on legality, counts, and commander structure while grading remains editable here.
+                      Card edits immediately recalculate commander structure, deck counts, validity, and price totals so your saved deck stays internally consistent.
                     </p>
                   </div>
 
@@ -1351,8 +1552,8 @@ export default async function ManageDeckPage({
                     {gradingCards.map((card) => (
                       <form
                         key={card.id}
-                        action={updateCardCondition}
-                        className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 md:grid-cols-[88px_1fr_240px_120px]"
+                        action={updateDeckCard}
+                        className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 md:grid-cols-[88px_1fr_280px_160px]"
                       >
                         <input type="hidden" name="card_id" value={card.id} />
                         <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
@@ -1398,35 +1599,110 @@ export default async function ManageDeckPage({
                           </div>
                         </div>
 
-                        <div>
-                          <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
-                            Condition
-                          </label>
-                          <select
-                            name="condition"
-                            defaultValue={normalizeCardCondition(card.condition)}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
-                          >
-                            {CARD_CONDITIONS.map((condition) => (
-                              <option key={condition} value={condition}>
-                                {CARD_CONDITION_DETAILS[condition].label}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="mt-2 text-xs text-zinc-500">
-                            {getCardConditionMeta(card.condition).description}
-                          </p>
-                          {card.condition_source !== 'manual' && (
-                            <p className="mt-2 text-xs text-amber-300/80">
-                              This condition came from the import default and has not been manually confirmed yet.
+                        <div className="space-y-3">
+                          <div>
+                            <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                              Section
+                            </label>
+                            <select
+                              name="section"
+                              defaultValue={card.section}
+                              className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                            >
+                              <option value="commander">Commander</option>
+                              <option value="mainboard">Mainboard</option>
+                              <option value="sideboard">Sideboard</option>
+                            </select>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                                Quantity
+                              </label>
+                              <input
+                                name="quantity"
+                                type="number"
+                                min="1"
+                                max="99"
+                                step="1"
+                                defaultValue={card.quantity}
+                                className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                              />
+                            </div>
+                            <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-sm text-zinc-200">
+                              <input
+                                name="foil"
+                                type="checkbox"
+                                defaultChecked={!!card.foil}
+                                className="h-4 w-4 rounded border-white/20 bg-zinc-950 text-emerald-400"
+                              />
+                              Foil printing
+                            </label>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                                Set code
+                              </label>
+                              <input
+                                name="set_code"
+                                type="text"
+                                defaultValue={card.set_code ?? ''}
+                                placeholder="mh3"
+                                className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                                Collector number
+                              </label>
+                              <input
+                                name="collector_number"
+                                type="text"
+                                defaultValue={card.collector_number ?? ''}
+                                placeholder="247"
+                                className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-500">
+                              Condition
+                            </label>
+                            <select
+                              name="condition"
+                              defaultValue={normalizeCardCondition(card.condition)}
+                              className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                            >
+                              {CARD_CONDITIONS.map((condition) => (
+                                <option key={condition} value={condition}>
+                                  {CARD_CONDITION_DETAILS[condition].label}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-2 text-xs text-zinc-500">
+                              {getCardConditionMeta(card.condition).description}
                             </p>
-                          )}
+                            {card.condition_source !== 'manual' && (
+                              <p className="mt-2 text-xs text-amber-300/80">
+                                This condition came from the import default and has not been manually confirmed yet.
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-end">
+                        <div className="flex flex-col justify-end gap-3">
                           <button className="w-full rounded-xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950">
-                            Save
+                            Save Card
                           </button>
+                          <ConfirmFormActionButton
+                            formAction={deleteDeckCard}
+                            confirmMessage="Delete this card from the deck? This changes the saved list immediately."
+                            pendingLabel="Deleting..."
+                            className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-100"
+                          >
+                            Delete Card
+                          </ConfirmFormActionButton>
                         </div>
                       </form>
                     ))}
