@@ -61,6 +61,14 @@ function parseCurrencyInput(value: FormDataEntryValue | null) {
 const HOLIDAY_PROGRAM_ADDRESS =
   'Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario N7T 2X2'
 
+function formatAuctionLaneLabel(status?: string | null) {
+  if (!status) return 'Auction Inactive'
+
+  return status
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 export default async function ManageDeckPage({
   params,
   searchParams,
@@ -120,6 +128,15 @@ export default async function ManageDeckPage({
     .from('trade_offers')
     .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
     .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
+
+  const { data: auctionListing } = await supabase
+    .from('auction_listings')
+    .select('id, status, ends_at')
+    .eq('deck_id', deckId)
+    .in('status', ['active', 'pending_confirmation', 'awaiting_payment', 'paid', 'shipped', 'delivered'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
     card_name: string
@@ -249,6 +266,11 @@ export default async function ManageDeckPage({
     (deck as typeof deck & { inventory_status?: string | null }).inventory_status
   )
   const inventoryStatusLocked = isInventoryStatusLocked(inventoryStatus)
+  const deckSwapLaneLive = !!(deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade
+  const buyNowLaneLive =
+    Number((deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? 0) > 0
+  const auctionLaneStatus = String(auctionListing?.status ?? '').trim() || null
+  const auctionLaneLive = !!auctionLaneStatus
   const holidayDonationSubmittedAt = (
     deck as typeof deck & { holiday_donation_submitted_at?: string | null }
   ).holiday_donation_submitted_at
@@ -429,6 +451,42 @@ export default async function ManageDeckPage({
     redirect(`/my-decks/${deckId}?tab=settings&holiday=submitted`)
   }
 
+  async function undoHolidayDonation() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const { data: currentDeck } = await supabase
+      .from('decks')
+      .select('inventory_status')
+      .eq('id', deckId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!currentDeck || currentDeck.inventory_status !== 'holiday_pending_receipt') {
+      redirect(`/my-decks/${deckId}?tab=settings`)
+    }
+
+    await supabase
+      .from('decks')
+      .update({
+        inventory_status: 'staged',
+        holiday_donation_agreed_at: null,
+        holiday_donation_submitted_at: null,
+      })
+      .eq('id', deckId)
+      .eq('user_id', user.id)
+
+    redirect(`/my-decks/${deckId}?tab=settings&holiday=undone`)
+  }
+
   async function deleteDeck() {
     'use server'
 
@@ -588,6 +646,42 @@ export default async function ManageDeckPage({
             </span>
           </div>
 
+          <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Live lanes</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  deckSwapLaneLive
+                    ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                    : 'border-white/10 bg-white/5 text-zinc-500'
+                }`}
+              >
+                {deckSwapLaneLive ? 'DeckSwap Live' : 'DeckSwap Off'}
+              </span>
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  buyNowLaneLive
+                    ? 'border-amber-400/20 bg-amber-400/10 text-amber-200'
+                    : 'border-white/10 bg-white/5 text-zinc-500'
+                }`}
+              >
+                {buyNowLaneLive ? 'Buy It Now Live' : 'Buy It Now Off'}
+              </span>
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  auctionLaneLive
+                    ? 'border-orange-400/20 bg-orange-400/10 text-orange-200'
+                    : 'border-white/10 bg-white/5 text-zinc-500'
+                }`}
+              >
+                {auctionLaneLive ? formatAuctionLaneLabel(auctionLaneStatus) : 'Auction Off'}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-zinc-400">
+              DeckSwap, Buy It Now, and auction can run in parallel. Inventory status handles the broader operational state, while these markers show which selling lanes are currently underway.
+            </p>
+          </div>
+
           {inventoryStatus === 'holiday_pending_receipt' && (
             <div className="mt-6 rounded-3xl border border-zinc-500/30 bg-zinc-500/10 p-5 text-zinc-200">
               <div className="text-sm font-medium text-white">Holiday donation submitted</div>
@@ -602,6 +696,11 @@ export default async function ManageDeckPage({
                   Submitted {formatImportedAt(holidayDonationSubmittedAt)}.
                 </p>
               )}
+              <form action={undoHolidayDonation} className="mt-4">
+                <button className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10">
+                  Undo Holiday Donation
+                </button>
+              </form>
             </div>
           )}
 
@@ -730,7 +829,7 @@ export default async function ManageDeckPage({
                   <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
                     <div className="text-sm font-medium text-white">Inventory status</div>
                     <p className="mt-2 text-sm text-zinc-400">
-                      Status is automatic. This deck starts in staging after import, then changes when you activate DeckSwap, set a Buy It Now price, or move into auction and fulfillment flow.
+                      Status is automatic. This deck starts in staging after import, then shifts only when it moves through broader operational flow like auction handling, checkout, escrow, delivery, or donation. DeckSwap, Buy It Now, and auction lanes can all be active at the same time.
                     </p>
 
                     <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
@@ -750,6 +849,37 @@ export default async function ManageDeckPage({
                     <p className="mt-4 text-sm text-zinc-300">
                       {getInventoryStatusDescription(inventoryStatus)}
                     </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                          deckSwapLaneLive
+                            ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                            : 'border-white/10 bg-white/5 text-zinc-500'
+                        }`}
+                      >
+                        {deckSwapLaneLive ? 'DeckSwap is underway' : 'DeckSwap is off'}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                          buyNowLaneLive
+                            ? 'border-amber-400/20 bg-amber-400/10 text-amber-200'
+                            : 'border-white/10 bg-white/5 text-zinc-500'
+                        }`}
+                      >
+                        {buyNowLaneLive ? 'Buy It Now is underway' : 'Buy It Now is off'}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                          auctionLaneLive
+                            ? 'border-orange-400/20 bg-orange-400/10 text-orange-200'
+                            : 'border-white/10 bg-white/5 text-zinc-500'
+                        }`}
+                      >
+                        {auctionLaneLive
+                          ? `${formatAuctionLaneLabel(auctionLaneStatus)}`
+                          : 'Auction is off'}
+                      </span>
+                    </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                       <a
                         href="#deckswap-lane"
@@ -1092,20 +1222,34 @@ export default async function ManageDeckPage({
                     <div className="mt-1 text-sm text-zinc-400">{deck.commander || deck.name}</div>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-xs uppercase tracking-wide text-zinc-500">Best lane right now</div>
-                    <div className="mt-2 text-lg font-semibold text-white">
-                      {Number((deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? 0) > 0
-                        ? 'Buy It Now'
-                        : (deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade
-                          ? 'DeckSwap'
-                          : 'Staged'}
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">Lane activity</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className={`rounded-full border px-3 py-1 text-xs ${
+                        deckSwapLaneLive
+                          ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                          : 'border-white/10 bg-white/5 text-zinc-500'
+                      }`}>
+                        DeckSwap
+                      </span>
+                      <span className={`rounded-full border px-3 py-1 text-xs ${
+                        buyNowLaneLive
+                          ? 'border-amber-400/20 bg-amber-400/10 text-amber-200'
+                          : 'border-white/10 bg-white/5 text-zinc-500'
+                      }`}>
+                        Buy It Now
+                      </span>
+                      <span className={`rounded-full border px-3 py-1 text-xs ${
+                        auctionLaneLive
+                          ? 'border-orange-400/20 bg-orange-400/10 text-orange-200'
+                          : 'border-white/10 bg-white/5 text-zinc-500'
+                      }`}>
+                        {auctionLaneLive ? formatAuctionLaneLabel(auctionLaneStatus) : 'Auction'}
+                      </span>
                     </div>
-                    <div className="mt-1 text-sm text-zinc-400">
-                      {Number((deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? 0) > 0
-                        ? 'Direct-sale fallback is active.'
-                        : (deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade
-                          ? 'Trade lane is live to protect more value.'
-                          : 'This deck is private until you activate a lane.'}
+                    <div className="mt-2 text-sm text-zinc-400">
+                      {deckSwapLaneLive || buyNowLaneLive || auctionLaneLive
+                        ? 'Multiple lanes can stay active together so the deck can keep moving.'
+                        : 'This deck is still private until you activate at least one lane.'}
                     </div>
                   </div>
                 </div>
@@ -1299,9 +1443,6 @@ export default async function ManageDeckPage({
               <p className="mt-2 text-sm text-zinc-300">
                 Move this deck out of the marketplace and into the Mythiverse Exchange holiday program when you are ready to give it away.
               </p>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
-              </div>
               <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
                 <input
                   type="checkbox"
@@ -1309,7 +1450,7 @@ export default async function ManageDeckPage({
                   className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
                 />
                 <span>
-                  I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to {HOLIDAY_PROGRAM_ADDRESS}.
+                  I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and reveal the shipping instructions after I confirm.
                 </span>
               </label>
               {holidayDonationAgreedAt && (

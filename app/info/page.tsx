@@ -142,11 +142,11 @@ export default function InfoPage() {
                 What Mythiverse Exchange can grow into next
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                The long-term vision is bigger than single deck listings. Over time, the platform can expand into store inventory, full collection visibility, and premium tools for serious users.
+                The long-term vision is bigger than single deck listings. Over time, the platform can expand into store inventory, full collection visibility, premium tools for serious users, and smarter communication that keeps deals moving.
               </p>
             </div>
 
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
                 <div className="text-sm font-medium text-foreground">Local game store registration</div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -163,6 +163,12 @@ export default function InfoPage() {
                 <div className="text-sm font-medium text-foreground">Subscription support</div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Offer premium access to special features, deeper inventory tools, and advanced seller capabilities for power users and businesses.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Email notifications that matter</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Keep users in motion with meaningful email alerts for offers, counteroffers, approval events, and lane or status changes that need attention instead of relying on them to constantly check back.
                 </p>
               </div>
             </div>

@@ -94,7 +94,6 @@ const LOCKED_STATUSES = new Set<InventoryStatus>([
   'escrow_received',
   'escrow_review',
   'escrow_completed',
-  'holiday_pending_receipt',
   'holiday_received',
 ])
 
