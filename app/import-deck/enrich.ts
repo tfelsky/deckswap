@@ -19,6 +19,7 @@ type DeckCardRow = {
   card_name: string
   set_code: string | null
   collector_number: string | null
+  foil?: boolean | null
 }
 
 type DeckTokenRow = {
@@ -27,6 +28,7 @@ type DeckTokenRow = {
   token_name: string
   set_code: string | null
   collector_number: string | null
+  foil?: boolean | null
 }
 
 type EnrichedDeckCardRow = DeckCardRow & {
@@ -56,6 +58,11 @@ type ScryfallCard = {
   set: string
   set_name: string
   collector_number: string
+}
+
+type MatchedScryfallRow = {
+  match: ScryfallCard | null
+  exactPrintMatched: boolean
 }
 
 function getMissingSchemaColumn(message?: string | null, table?: string) {
@@ -177,15 +184,23 @@ async function resolveDeckCardMatches(cardRows: DeckCardRow[]) {
   )
   const fallbackMaps = buildCardMatchMap(fallbackCards)
 
-  return cardRows.map((row) => {
+  return cardRows.map((row): MatchedScryfallRow => {
     const pKey = printKey(row.set_code, row.collector_number)
 
     if (pKey) {
       const exactMatch = exactMaps.byPrint.get(pKey)
-      if (exactMatch) return exactMatch
+      if (exactMatch) {
+        return {
+          match: exactMatch,
+          exactPrintMatched: true,
+        }
+      }
     }
 
-    return fallbackMaps.byName.get(nameKey(row.card_name)) ?? null
+    return {
+      match: fallbackMaps.byName.get(nameKey(row.card_name)) ?? null,
+      exactPrintMatched: false,
+    }
   })
 }
 
@@ -211,16 +226,69 @@ async function resolveDeckTokenMatches(tokenRows: DeckTokenRow[]) {
   )
   const fallbackMaps = buildCardMatchMap(fallbackCards)
 
-  return tokenRows.map((row) => {
+  return tokenRows.map((row): MatchedScryfallRow => {
     const pKey = printKey(row.set_code, row.collector_number)
 
     if (pKey) {
       const exactMatch = exactMaps.byPrint.get(pKey)
-      if (exactMatch) return exactMatch
+      if (exactMatch) {
+        return {
+          match: exactMatch,
+          exactPrintMatched: true,
+        }
+      }
     }
 
-    return fallbackMaps.byName.get(nameKey(row.token_name)) ?? null
+    return {
+      match: fallbackMaps.byName.get(nameKey(row.token_name)) ?? null,
+      exactPrintMatched: false,
+    }
   })
+}
+
+function buildTrustedDeckCardUpdate(
+  row: DeckCardRow,
+  matchedRow: MatchedScryfallRow
+) {
+  if (!matchedRow.match) return null
+
+  const baseUpdate = scryfallToDeckCardUpdate(matchedRow.match)
+  const hasExplicitPrint = !!row.set_code && !!row.collector_number
+
+  return {
+    ...baseUpdate,
+    set_code: row.set_code ?? baseUpdate.set_code,
+    collector_number: row.collector_number ?? baseUpdate.collector_number,
+    foil: row.foil ?? null,
+    price_usd:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_usd : null,
+    price_usd_foil:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_usd_foil : null,
+    price_usd_etched:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_usd_etched : null,
+    price_eur:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_eur : null,
+    price_eur_foil:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_eur_foil : null,
+    price_tix:
+      matchedRow.exactPrintMatched || !hasExplicitPrint ? baseUpdate.price_tix : null,
+  }
+}
+
+function buildTrustedDeckTokenUpdate(
+  row: DeckTokenRow,
+  matchedRow: MatchedScryfallRow
+) {
+  if (!matchedRow.match) return null
+
+  const baseUpdate = scryfallToDeckTokenUpdate(matchedRow.match)
+
+  return {
+    ...baseUpdate,
+    set_code: row.set_code ?? baseUpdate.set_code,
+    collector_number: row.collector_number ?? baseUpdate.collector_number,
+    foil: row.foil ?? null,
+  }
 }
 
 async function captureDeckPriceSnapshot(
@@ -587,7 +655,7 @@ export async function enrichDeckWithScryfall(
 
   const { data: cards, error: cardsError } = await supabase
     .from('deck_cards')
-    .select('id, section, quantity, card_name, set_code, collector_number')
+    .select('id, section, quantity, card_name, set_code, collector_number, foil')
     .eq('deck_id', deckId)
     .order('sort_order', { ascending: true })
 
@@ -595,7 +663,7 @@ export async function enrichDeckWithScryfall(
 
   const { data: tokens, error: tokensError } = await supabase
     .from('deck_tokens')
-    .select('id, quantity, token_name, set_code, collector_number')
+    .select('id, quantity, token_name, set_code, collector_number, foil')
     .eq('deck_id', deckId)
     .order('sort_order', { ascending: true })
 
@@ -613,28 +681,28 @@ export async function enrichDeckWithScryfall(
 
   for (let i = 0; i < cardRows.length; i++) {
     const row = cardRows[i]
-    const match = scryfallCards[i]
-    if (!match) continue
-
-    const update = scryfallToDeckCardUpdate(match)
+    const matchedRow = scryfallCards[i]
+    const update = buildTrustedDeckCardUpdate(row, matchedRow)
+    if (!update) continue
 
     await updateRowWithSchemaFallback(supabase, 'deck_cards', row.id, update)
 
     const usd = update.price_usd ?? 0
-    const usdFoil = update.price_usd_foil ?? update.price_usd ?? 0
-    const eur = update.price_eur ?? 0
+    const usdActual =
+      row.foil ? (update.price_usd_foil ?? update.price_usd ?? 0) : update.price_usd ?? 0
+    const eurActual =
+      row.foil ? (update.price_eur_foil ?? update.price_eur ?? 0) : update.price_eur ?? 0
 
     totalUsd += usd * row.quantity
-    totalUsdFoil += usdFoil * row.quantity
-    totalEur += eur * row.quantity
+    totalUsdFoil += usdActual * row.quantity
+    totalEur += eurActual * row.quantity
   }
 
   for (let i = 0; i < tokenRows.length; i++) {
     const row = tokenRows[i]
-    const match = scryfallTokens[i]
-    if (!match) continue
-
-    const update = scryfallToDeckTokenUpdate(match)
+    const matchedRow = scryfallTokens[i]
+    const update = buildTrustedDeckTokenUpdate(row, matchedRow)
+    if (!update) continue
 
     await updateRowWithSchemaFallback(supabase, 'deck_tokens', row.id, update)
   }
