@@ -70,6 +70,10 @@ function repairKey(input: {
   ].join('::')
 }
 
+function repairNameKey(name: string) {
+  return name.trim().toLowerCase()
+}
+
 function addCommanderRow(
   map: Map<string, CommanderAccumulator>,
   row: RepairDeckCardRow
@@ -163,6 +167,7 @@ export function rebuildDeckStructureFromSavedRows(
   }
 
   const commanderKeys = new Set(commanderMap.keys())
+  const nonTokenNameKeys = new Set<string>()
 
   for (const card of cards) {
     if (card.section !== 'mainboard') continue
@@ -177,6 +182,8 @@ export function rebuildDeckStructureFromSavedRows(
     if (commanderKeys.has(key)) {
       continue
     }
+
+    nonTokenNameKeys.add(repairNameKey(card.card_name))
 
     if (isLikelyTokenCard(card.card_name, card.set_code)) {
       addTokenRow(
@@ -219,8 +226,17 @@ export function rebuildDeckStructureFromSavedRows(
       continue
     }
 
+    const tokenNameKey = repairNameKey(token.token_name)
+
     if (isLikelyTokenCard(token.token_name, token.set_code)) {
       addTokenRow(tokenMap, token, 'merge')
+      continue
+    }
+
+    // Some broken imports mirror real deck cards into deck_tokens as well.
+    // If the card already exists in commander/mainboard by name, do not
+    // re-promote that duplicate token row back into the maindeck.
+    if (nonTokenNameKeys.has(tokenNameKey)) {
       continue
     }
 
@@ -243,7 +259,7 @@ export function rebuildDeckStructureFromSavedRows(
         condition: 'near_mint',
         condition_source: 'import_default',
       },
-      'fill'
+      singletonRepairMode && !isBasicLikeCard(token.token_name) ? 'singleton_repair' : 'fill'
     )
   }
 

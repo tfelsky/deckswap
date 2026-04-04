@@ -74,6 +74,7 @@ import { enrichDeckWithScryfall, syncDeckDerivedState } from '@/app/import-deck/
 import { Info } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -1142,6 +1143,9 @@ export default async function DeckDetailPage({
 
       redirect(`/decks/${deckId}?deckRepaired=1`)
     } catch (error) {
+      if (isRedirectError(error)) {
+        throw error
+      }
       console.error('Deck structure repair failed:', error)
       const message =
         error instanceof Error && error.message.trim()
