@@ -1,7 +1,11 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { isAuctionSchemaMissing } from '@/lib/auction/foundation'
 import { getTrendWatcherReport } from '@/lib/admin/trend-watcher'
 import { isGuestImportSchemaMissing } from '@/lib/guest-import'
+import { isProfileSchemaMissing } from '@/lib/profiles'
+import { isEscrowSchemaMissing } from '@/lib/escrow/foundation'
 import { createClient } from '@/lib/supabase/server'
+import { isTradeOffersSchemaMissing } from '@/lib/trade-offers'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -33,6 +37,58 @@ type ReputationSummaryRow = {
   banned_status?: string | null
 }
 
+type PublicProfileRow = {
+  user_id: string
+  display_name?: string | null
+  username?: string | null
+}
+
+type TradeOfferMetricsRow = {
+  id: number
+  offered_by_user_id: string
+  requested_user_id: string
+  status: string
+  accepted_trade_transaction_id?: number | null
+}
+
+type TradeTransactionMetricsRow = {
+  id: number
+  status: string
+  platform_gross_usd?: number | null
+}
+
+type TradeParticipantMetricsRow = {
+  transaction_id: number
+  user_id?: string | null
+}
+
+type AuctionListingMetricsRow = {
+  seller_user_id: string
+  winner_user_id?: string | null
+  status: string
+  final_bid_usd?: number | null
+}
+
+type AdminUserLeaderboardRow = {
+  userId: string
+  displayName: string
+  username: string | null
+  deckCount: number
+  deckValue: number
+  offersSent: number
+  offersReceived: number
+  acceptedOffers: number
+  tradeCount: number
+  completedTradeCount: number
+  openTradeCount: number
+  salesCount: number | null
+  salesVolume: number | null
+  internalValidationScore: number | null
+  internalValidationTier: string | null
+  bannedStatus: string | null
+  activityScore: number
+}
+
 function formatPct(value: number, total: number) {
   if (total === 0) return '0%'
   return `${((value / total) * 100).toFixed(0)}%`
@@ -40,6 +96,23 @@ function formatPct(value: number, total: number) {
 
 function formatUsd(value: number) {
   return `$${value.toFixed(2)}`
+}
+
+function formatWholeNumber(value: number) {
+  return new Intl.NumberFormat('en-CA').format(value)
+}
+
+function formatUserLabel(profile: PublicProfileRow | undefined, userId: string) {
+  if (profile?.display_name?.trim()) return profile.display_name.trim()
+  if (profile?.username?.trim()) return `@${profile.username.trim()}`
+  return `${userId.slice(0, 8)}…`
+}
+
+function formatStatusLabel(value?: string | null) {
+  if (!value) return 'Active'
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function isDeckPriceHistorySchemaMissing(message?: string | null) {
@@ -72,6 +145,28 @@ export default async function AdminDashboardPage() {
     supabase
       .from('deck_price_history')
       .select('deck_id', { count: 'exact', head: true }),
+  ])
+
+  const [
+    tradeOffersResult,
+    tradeTransactionsResult,
+    tradeParticipantsResult,
+    auctionListingsResult,
+    profilesResult,
+  ] = await Promise.all([
+    supabase
+      .from('trade_offers')
+      .select(
+        'id, offered_by_user_id, requested_user_id, status, accepted_trade_transaction_id'
+      ),
+    supabase.from('trade_transactions').select('id, status, platform_gross_usd'),
+    supabase
+      .from('trade_transaction_participants')
+      .select('transaction_id, user_id'),
+    supabase
+      .from('auction_listings')
+      .select('seller_user_id, winner_user_id, status, final_bid_usd'),
+    supabase.from('profiles').select('user_id, display_name, username'),
   ])
 
   if (decksError) {
@@ -181,6 +276,12 @@ export default async function AdminDashboardPage() {
   const deckPriceHistoryCount = deckPriceHistoryReady
     ? Number(priceHistoryResult.count ?? 0)
     : null
+  const tradeOffersSchemaReady = !isTradeOffersSchemaMissing(tradeOffersResult.error?.message)
+  const escrowSchemaReady =
+    !isEscrowSchemaMissing(tradeTransactionsResult.error?.message) &&
+    !isEscrowSchemaMissing(tradeParticipantsResult.error?.message)
+  const auctionSchemaReady = !isAuctionSchemaMissing(auctionListingsResult.error?.message)
+  const profileSchemaReady = !isProfileSchemaMissing(profilesResult.error?.message)
 
   const bracketCounts = new Map<number, number>()
 
@@ -189,6 +290,157 @@ export default async function AdminDashboardPage() {
     if (bracket == null) continue
     bracketCounts.set(bracket, (bracketCounts.get(bracket) ?? 0) + 1)
   }
+
+  const profiles = new Map<string, PublicProfileRow>(
+    profileSchemaReady
+      ? ((profilesResult.data ?? []) as PublicProfileRow[]).map((profile) => [
+          profile.user_id,
+          profile,
+        ])
+      : []
+  )
+  const reputationByUser = new Map<string, ReputationSummaryRow>(
+    reputationSummaries.map((summary) => [summary.user_id, summary])
+  )
+  const leaderboardByUser = new Map<
+    string,
+    Omit<AdminUserLeaderboardRow, 'activityScore'>
+  >()
+
+  function ensureLeaderboardRow(userId: string) {
+    let row = leaderboardByUser.get(userId)
+    if (row) return row
+
+    const profile = profiles.get(userId)
+    const reputation = reputationByUser.get(userId)
+
+    row = {
+      userId,
+      displayName: formatUserLabel(profile, userId),
+      username: profile?.username?.trim() || null,
+      deckCount: 0,
+      deckValue: 0,
+      offersSent: 0,
+      offersReceived: 0,
+      acceptedOffers: 0,
+      tradeCount: 0,
+      completedTradeCount: 0,
+      openTradeCount: 0,
+      salesCount: auctionSchemaReady ? 0 : null,
+      salesVolume: auctionSchemaReady ? 0 : null,
+      internalValidationScore:
+        typeof reputation?.internal_validation_score === 'number'
+          ? Number(reputation.internal_validation_score)
+          : null,
+      internalValidationTier: reputation?.internal_validation_tier ?? null,
+      bannedStatus: reputation?.banned_status ?? null,
+    }
+
+    leaderboardByUser.set(userId, row)
+    return row
+  }
+
+  for (const deck of decks) {
+    if (!deck.user_id) continue
+    const row = ensureLeaderboardRow(deck.user_id)
+    row.deckCount += 1
+    row.deckValue += Number(deck.price_total_usd_foil ?? 0)
+  }
+
+  if (tradeOffersSchemaReady) {
+    const tradeOffers = (tradeOffersResult.data ?? []) as TradeOfferMetricsRow[]
+
+    for (const offer of tradeOffers) {
+      const sender = ensureLeaderboardRow(offer.offered_by_user_id)
+      sender.offersSent += 1
+      if (offer.status === 'accepted') {
+        sender.acceptedOffers += 1
+      }
+
+      const receiver = ensureLeaderboardRow(offer.requested_user_id)
+      receiver.offersReceived += 1
+    }
+  }
+
+  if (escrowSchemaReady) {
+    const transactions = new Map<number, TradeTransactionMetricsRow>(
+      ((tradeTransactionsResult.data ?? []) as TradeTransactionMetricsRow[]).map(
+        (transaction) => [transaction.id, transaction]
+      )
+    )
+    const tradeIdsByUser = new Map<string, Set<number>>()
+    const completedTradeIdsByUser = new Map<string, Set<number>>()
+    const openTradeIdsByUser = new Map<string, Set<number>>()
+
+    for (const participant of (tradeParticipantsResult.data ?? []) as TradeParticipantMetricsRow[]) {
+      if (!participant.user_id) continue
+
+      const transaction = transactions.get(participant.transaction_id)
+      if (!transaction) continue
+
+      const totalTrades = tradeIdsByUser.get(participant.user_id) ?? new Set<number>()
+      totalTrades.add(participant.transaction_id)
+      tradeIdsByUser.set(participant.user_id, totalTrades)
+
+      if (transaction.status === 'completed') {
+        const completedTrades =
+          completedTradeIdsByUser.get(participant.user_id) ?? new Set<number>()
+        completedTrades.add(participant.transaction_id)
+        completedTradeIdsByUser.set(participant.user_id, completedTrades)
+      } else if (transaction.status !== 'cancelled') {
+        const openTrades = openTradeIdsByUser.get(participant.user_id) ?? new Set<number>()
+        openTrades.add(participant.transaction_id)
+        openTradeIdsByUser.set(participant.user_id, openTrades)
+      }
+    }
+
+    for (const [userId, tradeIds] of tradeIdsByUser) {
+      const row = ensureLeaderboardRow(userId)
+      row.tradeCount = tradeIds.size
+      row.completedTradeCount = completedTradeIdsByUser.get(userId)?.size ?? 0
+      row.openTradeCount = openTradeIdsByUser.get(userId)?.size ?? 0
+    }
+  }
+
+  if (auctionSchemaReady) {
+    for (const auction of (auctionListingsResult.data ?? []) as AuctionListingMetricsRow[]) {
+      const row = ensureLeaderboardRow(auction.seller_user_id)
+      if (auction.status === 'payout_released') {
+        row.salesCount = Number(row.salesCount ?? 0) + 1
+        row.salesVolume = Number(row.salesVolume ?? 0) + Number(auction.final_bid_usd ?? 0)
+      }
+
+      if (auction.winner_user_id) {
+        ensureLeaderboardRow(auction.winner_user_id)
+      }
+    }
+  }
+
+  for (const reputation of reputationSummaries) {
+    ensureLeaderboardRow(reputation.user_id)
+  }
+
+  const leaderboardRows: AdminUserLeaderboardRow[] = [...leaderboardByUser.values()]
+    .map((row) => ({
+      ...row,
+      activityScore:
+        row.deckCount +
+        row.acceptedOffers * 2 +
+        row.tradeCount * 4 +
+        row.completedTradeCount * 6 +
+        Number(row.salesCount ?? 0) * 8,
+    }))
+    .sort((left, right) => {
+      return (
+        right.activityScore - left.activityScore ||
+        Number(right.salesCount ?? 0) - Number(left.salesCount ?? 0) ||
+        right.completedTradeCount - left.completedTradeCount ||
+        right.tradeCount - left.tradeCount ||
+        right.deckCount - left.deckCount ||
+        right.deckValue - left.deckValue ||
+        left.displayName.localeCompare(right.displayName)
+      )
+    })
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-10">
@@ -516,6 +768,192 @@ export default async function AdminDashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">User Leaderboard</h2>
+                <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+                  Internal ranking of who is listing inventory and moving through offers, trades,
+                  and sale settlements.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-zinc-300">
+                  {formatWholeNumber(leaderboardRows.length)} tracked users
+                </span>
+                <span
+                  className={`rounded-full border px-3 py-1 ${
+                    tradeOffersSchemaReady
+                      ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                      : 'border-yellow-400/20 bg-yellow-400/10 text-yellow-100'
+                  }`}
+                >
+                  Offers {tradeOffersSchemaReady ? 'live' : 'offline'}
+                </span>
+                <span
+                  className={`rounded-full border px-3 py-1 ${
+                    escrowSchemaReady
+                      ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                      : 'border-yellow-400/20 bg-yellow-400/10 text-yellow-100'
+                  }`}
+                >
+                  Trades {escrowSchemaReady ? 'live' : 'offline'}
+                </span>
+                <span
+                  className={`rounded-full border px-3 py-1 ${
+                    auctionSchemaReady
+                      ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                      : 'border-yellow-400/20 bg-yellow-400/10 text-yellow-100'
+                  }`}
+                >
+                  Sales {auctionSchemaReady ? 'live' : 'offline'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Decks In Leaderboard</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {formatWholeNumber(
+                    leaderboardRows.reduce((sum, row) => sum + row.deckCount, 0)
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Offers Tracked</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {tradeOffersSchemaReady
+                    ? formatWholeNumber(
+                        leaderboardRows.reduce(
+                          (sum, row) => sum + row.offersSent + row.offersReceived,
+                          0
+                        ) / 2
+                      )
+                    : 'N/A'}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Trades Tracked</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {escrowSchemaReady
+                    ? formatWholeNumber(
+                        leaderboardRows.reduce((sum, row) => sum + row.tradeCount, 0)
+                      )
+                    : 'N/A'}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm text-zinc-400">Sales Settled</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {auctionSchemaReady
+                    ? formatWholeNumber(
+                        leaderboardRows.reduce(
+                          (sum, row) => sum + Number(row.salesCount ?? 0),
+                          0
+                        )
+                      )
+                    : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 overflow-x-auto rounded-3xl border border-white/10">
+              <table className="min-w-full divide-y divide-white/10 text-sm">
+                <thead className="bg-white/5 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  <tr>
+                    <th className="px-4 py-3">Rank</th>
+                    <th className="px-4 py-3">User</th>
+                    <th className="px-4 py-3 text-right">Decks</th>
+                    <th className="px-4 py-3 text-right">Listed Value</th>
+                    <th className="px-4 py-3 text-right">Sales</th>
+                    <th className="px-4 py-3 text-right">Sales Volume</th>
+                    <th className="px-4 py-3 text-right">Trades</th>
+                    <th className="px-4 py-3 text-right">Completed</th>
+                    <th className="px-4 py-3 text-right">Offers</th>
+                    <th className="px-4 py-3">Trust</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10 bg-zinc-950/40">
+                  {leaderboardRows.length > 0 ? (
+                    leaderboardRows.slice(0, 50).map((row, index) => (
+                      <tr key={row.userId} className="align-top">
+                        <td className="px-4 py-4 font-medium text-white">#{index + 1}</td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-white">
+                            {row.username ? (
+                              <Link href={`/u/${row.username}`} className="hover:text-emerald-300">
+                                {row.displayName}
+                              </Link>
+                            ) : (
+                              row.displayName
+                            )}
+                          </div>
+                          <div className="mt-1 text-xs text-zinc-500">
+                            {row.username ? `@${row.username}` : row.userId}
+                          </div>
+                          <div className="mt-2 inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-zinc-300">
+                            {formatStatusLabel(row.bannedStatus)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right text-zinc-200">
+                          {formatWholeNumber(row.deckCount)}
+                        </td>
+                        <td className="px-4 py-4 text-right text-emerald-300">
+                          {formatUsd(row.deckValue)}
+                        </td>
+                        <td className="px-4 py-4 text-right text-zinc-200">
+                          {row.salesCount == null ? '—' : formatWholeNumber(row.salesCount)}
+                        </td>
+                        <td className="px-4 py-4 text-right text-emerald-300">
+                          {row.salesVolume == null ? '—' : formatUsd(row.salesVolume)}
+                        </td>
+                        <td className="px-4 py-4 text-right text-zinc-200">
+                          {escrowSchemaReady ? formatWholeNumber(row.tradeCount) : '—'}
+                        </td>
+                        <td className="px-4 py-4 text-right text-zinc-200">
+                          {escrowSchemaReady
+                            ? formatWholeNumber(row.completedTradeCount)
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-4 text-right text-zinc-200">
+                          {tradeOffersSchemaReady
+                            ? formatWholeNumber(row.offersSent + row.offersReceived)
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-white">
+                            {row.internalValidationScore != null
+                              ? `${row.internalValidationScore}/100`
+                              : 'N/A'}
+                          </div>
+                          <div className="mt-1 text-xs text-zinc-500">
+                            {row.internalValidationTier ?? 'No tier yet'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} className="px-4 py-8 text-center text-zinc-400">
+                        No user activity has been recorded yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {(!tradeOffersSchemaReady || !escrowSchemaReady || !auctionSchemaReady) && (
+              <div className="mt-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                Missing schemas stay visible as unavailable instead of defaulting to fake zeros.
+                Offers use <code>trade_offers</code>, trades use the escrow transaction tables, and
+                sales use settled <code>auction_listings</code>.
+              </div>
+            )}
           </div>
         </div>
 
