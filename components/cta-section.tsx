@@ -17,32 +17,29 @@ export function CTASection() {
                 Value for Value
               </div>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Trade deck for deck, not hype for hype
+                Keep more of your deck&apos;s real value
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-                DeckSwap is designed around value-for-value Commander matching. Bring a real inventory,
-                match against another real inventory, and keep the exchange anchored to deck value with
-                a small matching fee instead of opaque markups.
+                Start with DeckSwap when you want the strongest value outcome, move to Buy It Now when you want a clean direct sale, and use auction as the last resort when speed matters more than maximizing return.
               </p>
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6">
               <div className="text-sm text-muted-foreground">Why it matters</div>
               <div className="mt-4 space-y-3 text-sm text-foreground">
-                <p>Blended pricing makes deck value easier to compare before you start a trade conversation.</p>
-                <p>Bracket and inventory detail help players self-sort into more compatible trades.</p>
-                <p>The matching fee stays small and visible so the trade itself stays centered on value.</p>
+                <p>Trading deck for deck can preserve far more value than cashing out at the first low offer.</p>
+                <p>Buy It Now gives you a simple middle path when you want cash without waiting for the perfect trade.</p>
+                <p>Auction stays available when your priority is moving the deck and clearing space fast.</p>
               </div>
             </div>
           </div>
 
           <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Start with the real product flow
+            Start turning decks into your next upgrade
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Sign in, import a Commander list, and turn it into a browsable marketplace entry
-            with structured card data.
+            Sign in, import a Commander list, and create a listing that can attract better trades, better buyers, and better outcomes.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -58,7 +55,7 @@ export function CTASection() {
           </div>
 
           <p className="mt-4 text-xs text-muted-foreground">
-            Import if you have a full list. Create manually if you just want a quick listing.
+            Import a full list for the strongest presentation, or create manually to get a deck live quickly.
           </p>
           </div>
         </div>

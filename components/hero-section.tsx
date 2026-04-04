@@ -6,23 +6,23 @@ import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react"
 
 const workflowCards = [
   {
-    title: "Bring any list in fast",
-    subtitle: "Paste text, upload a file, or start from a public deck link",
+    title: "Turn a deck list into momentum",
+    subtitle: "Bring in any list and get to a polished, market-ready deck page fast",
     accent: "from-emerald-500/20 to-emerald-500/5",
   },
   {
-    title: "Know what you have",
-    subtitle: "See commander fit, color identity, and deck signals in one place",
+    title: "See the full value story",
+    subtitle: "Show the commander, colors, tokens, and details that make the deck worth more",
     accent: "from-cyan-500/20 to-cyan-500/5",
   },
   {
-    title: "Price decks with confidence",
-    subtitle: "Track real card images, finishes, and blended deck value",
+    title: "Price for better outcomes",
+    subtitle: "Anchor your next move with clearer deck value instead of guessing from singles",
     accent: "from-amber-500/20 to-amber-500/5",
   },
   {
-    title: "Trade with real context",
-    subtitle: "List decks publicly with pricing, comments, and seller signals",
+    title: "Choose the best path to move it",
+    subtitle: "Trade first, sell direct next, and use auction when speed matters most",
     accent: "from-rose-500/20 to-rose-500/5",
   },
 ]
@@ -52,16 +52,16 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Buy, trade, and auction Commander decks with clearer pricing and context
+              Get more from every Commander deck you are ready to move
             </span>
           </div>
 
           <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-            The marketplace for <span className="text-primary">complete Commander decks</span>
+            Unlock more value from <span className="text-primary">complete Commander decks</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Import a list, price the whole deck, include tokens and presentation details, and move into trades, offers, or auctions with far more confidence than a loose card total.
+            Turn deck lists into premium listings, discover stronger trade matches, and sell with more confidence by showing the whole deck instead of a pile of singles.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -82,13 +82,13 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              Safer trade flow with escrow foundations
+              More confidence when high-value decks change hands
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Clear pricing tied to real deck inventory
+              Clearer pricing tied to the full deck
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              Seller signals, comments, and faster-sale options
+              More ways to trade, sell, and keep momentum
             </div>
           </div>
 
@@ -139,7 +139,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.tokenReadyDecks}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                listings already include tokens and helpers for a fuller deck picture.
+                decks already show tokens and extras that strengthen the listing.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
@@ -148,7 +148,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.tradeOffers}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                active offer opportunities already moving through the marketplace.
+                active opportunities already giving players paths to a deal.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
@@ -157,7 +157,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
                 {inventory.deckComments}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                public comments adding context, questions, and buying confidence.
+                public signals helping buyers and traders move with more confidence.
               </p>
             </div>
           </div>

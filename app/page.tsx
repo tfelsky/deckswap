@@ -287,14 +287,13 @@ export default async function HomePage({
               <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div className="max-w-3xl">
                   <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">
-                    Deck Marketplace Filters
+                    Find Your Next Deck
                   </div>
                   <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
                     Find decks that match the colors you actually want to play
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    Browse mono-color staples, guild decks, shard and wedge builds, four-color piles,
-                    and five-color lists without digging through everything at once.
+                    Skip the noise and jump straight to the mana identities, play patterns, and deck styles that fit your table.
                   </p>
                 </div>
 
@@ -370,7 +369,7 @@ export default async function HomePage({
                             </div>
 
                             <div className="mt-3 text-xs text-muted-foreground transition group-hover:text-foreground/80">
-                              Browse {item.label.toLowerCase()} decks now live on Mythiverse Exchange.
+                              See {item.label.toLowerCase()} decks that are ready to trade, buy, or inspire your next build.
                             </div>
 
                             {COLOR_FILTER_FLAVOR[item.code] && (
@@ -407,17 +406,17 @@ export default async function HomePage({
           id="highest-value"
           decks={highestValueDecks}
           title="Highest Value Decks"
-          subtitle="Premium inventory with the biggest totals in the marketplace right now"
+          subtitle="Complete decks with the most value on the table right now"
           emptyTitle="No premium decks yet"
-          emptyDescription="As higher-value decks are listed, this shelf will highlight the top end of the market."
+          emptyDescription="As more premium decks are listed, this shelf will spotlight the collections worth watching first."
         />
         <FeaturedDeckShelf
           id="auctions"
           decks={auctionWatchDecks}
           title="Auction Watch"
-          subtitle="Decks that look like strong candidates for a faster sale path"
+          subtitle="Decks that may be better suited for a faster cash exit"
           emptyTitle="No auction-ready decks yet"
-          emptyDescription="When more decks cross the higher-value threshold, auction candidates will show up here."
+          emptyDescription="When more decks are better positioned for a quick sale, this shelf will surface them here."
         />
 
         <section className="py-12 sm:py-20">
@@ -425,14 +424,13 @@ export default async function HomePage({
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-3xl border border-border bg-card p-8">
                 <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                  Live Market Activity
+                  Market Momentum
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  See where the market is moving
+                  See where deals are starting to happen
                 </h2>
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
-                  Live listings matter most when you can also see open trade intent, active discussion,
-                  and which decks may be ready to move faster.
+                  Momentum matters. Open offers, accepted matches, and active discussion help you spot which decks are closest to moving.
                 </p>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -462,14 +460,13 @@ export default async function HomePage({
 
               <div className="rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent p-8">
                 <div className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-amber-300">
-                  Auction Path
+                  Fast Sale Option
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
                   Need to move a deck faster?
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                  Some decks are better suited to a quicker sale than a long trade conversation.
-                  Start with reserve or no-reserve auction planning and compare the likely outcome.
+                  Start by maximizing value through DeckSwap, move to Buy It Now for a direct sale, and use auction when speed matters most and you want the market to decide.
                 </p>
 
                 <div className="mt-6 space-y-3">
@@ -488,7 +485,7 @@ export default async function HomePage({
                     ))
                   ) : (
                     <div className="rounded-2xl border border-border bg-background/80 px-4 py-4 text-sm text-muted-foreground">
-                      As more higher-value decks are listed, strong auction candidates will surface here.
+                      As more decks fit a faster-sale strategy, they will show up here.
                     </div>
                   )}
                 </div>
@@ -502,10 +499,10 @@ export default async function HomePage({
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-3xl border border-border bg-card p-8">
                 <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                  Recent Discussion
+                  Buyer Interest
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  Decks getting attention
+                  Decks already getting attention
                 </h2>
                 <div className="mt-6 space-y-3">
                   {recentCommentedDecks.length > 0 ? (
@@ -523,7 +520,7 @@ export default async function HomePage({
                     ))
                   ) : (
                     <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-4 text-sm text-muted-foreground">
-                      As comments come in, this section will highlight decks drawing real interest.
+                      As buyers and traders start asking questions, this section will highlight the decks pulling them in.
                     </div>
                   )}
                 </div>
@@ -531,10 +528,10 @@ export default async function HomePage({
 
               <div className="rounded-3xl border border-border bg-card p-8">
                 <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                  Start Here
+                  Pick Your Path
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                  Choose the path that fits what you want to do
+                  Start where the outcome looks best
                 </h2>
                 <div className="mt-6 grid gap-3">
                   <Link
@@ -543,7 +540,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Import a deck</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Turn a list into a priced, shareable deck page in minutes.
+                      Turn a deck list into a polished listing that is ready to attract buyers and trade offers.
                     </div>
                   </Link>
                   <Link
@@ -552,7 +549,7 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Browse featured decks</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Explore live listings with pricing, seller context, and trade potential.
+                      Discover complete decks with clearer value, stronger context, and better buying confidence.
                     </div>
                   </Link>
                   <Link
@@ -561,16 +558,16 @@ export default async function HomePage({
                   >
                     <div className="font-medium text-foreground">Review trade offers</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Negotiate, counter, and move strong matches toward a safer close.
+                      Protect more value by moving strong deck-for-deck matches toward a confident close.
                     </div>
                   </Link>
                   <Link
                     href="/auction-prototype"
                     className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary"
                   >
-                    <div className="font-medium text-foreground">Test the auction sale path</div>
+                    <div className="font-medium text-foreground">Explore the auction path</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Compare reserve and no-reserve outcomes for a quicker exit.
+                      Use auction when you need a quicker exit after trade and Buy It Now have done their job.
                     </div>
                   </Link>
                 </div>

@@ -23,12 +23,26 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+type DeckProgressRow = {
+  id: number
+  is_listed_for_trade?: boolean | null
+  buy_now_price_usd?: number | null
+}
+
+type TradeOfferCountRow = {
+  id: number
+}
+
 function verifyStatus(verifications: ProfileVerification[], type: string) {
   return verifications.find((item) => item.verification_type === type)?.status ?? 'not_submitted'
 }
 
 function verificationForType(verifications: ProfileVerification[], type: string) {
   return verifications.find((item) => item.verification_type === type) ?? null
+}
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
 }
 
 export default async function ProfileSettingsPage() {
@@ -49,6 +63,27 @@ export default async function ProfileSettingsPage() {
       .from('profile_verifications')
       .select('id, user_id, verification_type, status, notes, submitted_at, reviewed_at, reviewed_by, review_notes')
       .eq('user_id', user.id),
+  ])
+
+  const [decksResult, listedDecksResult, buyNowDecksResult, offersResult] = await Promise.all([
+    supabase
+      .from('decks')
+      .select('id, is_listed_for_trade, buy_now_price_usd')
+      .eq('user_id', user.id),
+    supabase
+      .from('decks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_listed_for_trade', true),
+    supabase
+      .from('decks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gt('buy_now_price_usd', 0),
+    supabase
+      .from('trade_offers')
+      .select('id')
+      .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`),
   ])
 
   const profileSchemaMissing = [
@@ -117,6 +152,53 @@ export default async function ProfileSettingsPage() {
   const trustBadges = getTrustBadges(summary, verifications)
   const externalLinks = marketplaceLinks(profile)
   const access = await getAdminAccessForUser(user)
+  const decks = ((decksResult.data ?? []) as DeckProgressRow[]) ?? []
+  const deckCount = decks.length
+  const listedDeckCount = Number(listedDecksResult.count ?? 0)
+  const buyNowDeckCount = Number(buyNowDecksResult.count ?? 0)
+  const offerCount = (((offersResult.data ?? []) as TradeOfferCountRow[]) ?? []).length
+  const hasUsername = !!profile.username?.trim()
+  const hasBio = !!profile.bio?.trim() || !!profile.marketplace_tagline?.trim()
+  const hasImportOrManualDeck = deckCount > 0
+  const hasTradeReadyDeck = listedDeckCount > 0
+  const hasBuyNowDeck = buyNowDeckCount > 0
+  const hasOfferActivity = offerCount > 0
+  const discoveryChecklist = [
+    {
+      label: 'Complete your public trader profile',
+      done: hasUsername && hasBio,
+      href: '#public-profile',
+      help: 'Add a username, bio, and tagline so your seller card feels real.',
+    },
+    {
+      label: 'Add your first deck',
+      done: hasImportOrManualDeck,
+      href: '/import-deck',
+      help: 'Import from Moxfield, text, or file to unlock pricing and listing flows.',
+    },
+    {
+      label: 'List at least one deck for Deck Swap',
+      done: hasTradeReadyDeck,
+      href: '/my-decks',
+      help: 'Start with the highest-value path first by opening trade listing settings.',
+    },
+    {
+      label: 'Try a Buy It Now listing',
+      done: hasBuyNowDeck,
+      href: '/my-decks',
+      help: 'Offer a direct-sale fallback after Deck Swap, before trying auctions.',
+    },
+    {
+      label: 'Check your offer workflow',
+      done: hasOfferActivity,
+      href: '/trade-offers',
+      help: 'See how offers, counters, and negotiation flow through the marketplace.',
+    },
+  ]
+  const completedDiscoverySteps = discoveryChecklist.filter((step) => step.done).length
+  const discoveryPercent = clampPercent(
+    (completedDiscoverySteps / discoveryChecklist.length) * 100
+  )
 
   async function savePublicProfile(formData: FormData) {
     'use server'
@@ -374,6 +456,104 @@ export default async function ProfileSettingsPage() {
             </div>
           </div>
 
+          <div className="mt-6 rounded-3xl border border-sky-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(24,24,27,0.9))] p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium tracking-wide text-sky-200">
+                  Marketplace Progress
+                </div>
+                <h2 className="mt-4 text-3xl font-semibold tracking-tight">
+                  Discover the next feature by finishing the next step
+                </h2>
+                <p className="mt-3 text-sm text-zinc-300">
+                  The simplest path is: complete your profile, add a deck, try Deck Swap first,
+                  then Buy It Now, and only lean on auctions if the first two lanes do not move the
+                  deck.
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-black/20 px-5 py-4 text-center">
+                <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">Discovery</div>
+                <div className="mt-2 text-3xl font-semibold text-white">{discoveryPercent}%</div>
+                <div className="mt-1 text-sm text-zinc-400">
+                  {completedDiscoverySteps} of {discoveryChecklist.length} steps done
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-sky-400 transition-all"
+                style={{ width: `${discoveryPercent}%` }}
+              />
+            </div>
+
+            <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-3">
+                {discoveryChecklist.map((step) => (
+                  <div
+                    key={step.label}
+                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {step.done ? 'Complete' : 'Next'}: {step.label}
+                        </div>
+                        <p className="mt-1 text-sm text-zinc-400">{step.help}</p>
+                      </div>
+                      <Link
+                        href={step.href}
+                        className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                          step.done
+                            ? 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                            : 'bg-sky-400 text-zinc-950 hover:opacity-90'
+                        }`}
+                      >
+                        {step.done ? 'Review' : 'Open'}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Decks Added</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{deckCount}</div>
+                  <div className="mt-1 text-sm text-zinc-400">
+                    Imported or manually created inventory
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Deck Swap Live</div>
+                  <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                    {listedDeckCount}
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-400">
+                    Highest-value lane before direct sale or auction
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Buy It Now Live</div>
+                  <div className="mt-2 text-2xl font-semibold text-amber-200">
+                    {buyNowDeckCount}
+                  </div>
+                  <div className="mt-1 text-sm text-zinc-400">
+                    Direct-sale fallback listings
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Offer Activity</div>
+                  <div className="mt-2 text-2xl font-semibold text-sky-200">{offerCount}</div>
+                  <div className="mt-1 text-sm text-zinc-400">
+                    Total offers sent or received so far
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {profileSchemaMissing && (
             <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
               Profile tables are not in Supabase yet. Run the SQL in `docs/sql/user-profiles-and-trust.sql` before expecting this page to persist data.
@@ -385,7 +565,7 @@ export default async function ProfileSettingsPage() {
       <section className="mx-auto max-w-7xl px-6 py-10">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
-            <form action={savePublicProfile} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <form id="public-profile" action={savePublicProfile} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Public Profile</h2>
               <p className="mt-2 text-sm text-zinc-400">
                 This is what buyers and trading partners can see.

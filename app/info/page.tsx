@@ -18,8 +18,7 @@ export default function InfoPage() {
                 A better way to sell, trade, and discover complete Magic decks
               </h1>
               <p className="mt-4 text-lg text-muted-foreground">
-                Mythiverse Exchange helps players turn deck inventory into something easier to value,
-                present, and move with confidence, whether the goal is a trade, a direct sale, or a faster auction path.
+                Mythiverse Exchange helps players unlock more value from complete decks by making them easier to present, easier to price, and easier to move through trade, direct sale, or auction.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -50,13 +49,13 @@ export default function InfoPage() {
                   href="/checkout-prototype"
                   className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
                 >
-                  View Checkout Prototype
+                  See Checkout
                 </Link>
                 <Link
                   href="/auction-prototype"
                   className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
                 >
-                  View Auction Prototype
+                  See Auction
                 </Link>
                 <Link
                   href="/holiday-giveback"
@@ -80,22 +79,19 @@ export default function InfoPage() {
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="text-sm font-medium text-foreground">Keep more deck value in play</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Value-for-value trading can preserve more of a deck&apos;s real inventory value than
-                a traditional trade-in or buylist.
+                Trading deck for deck can preserve far more of a deck&apos;s real value than cashing out at the first low offer.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="text-sm font-medium text-foreground">Import with useful detail</div>
+              <div className="text-sm font-medium text-foreground">Show why the deck is worth more</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Full imports, correct commanders, packaging notes, and token inventory produce
-                cleaner pricing and better listing context.
+                Commanders, tokens, packaging, and presentation details help buyers and traders see the full story instead of just a card total.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="text-sm font-medium text-foreground">Add trust around the handoff</div>
+              <div className="text-sm font-medium text-foreground">Move high-value decks with more confidence</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Escrow, shipping, insurance, and reputation are there to make higher-value deck
-                trades feel safer and easier to review.
+                Reputation, shipping support, and safer exchange flows help serious decks change hands with less friction and more trust.
               </p>
             </div>
           </div>
@@ -105,34 +101,33 @@ export default function InfoPage() {
           <div className="mb-12 rounded-3xl border border-border bg-card p-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                Explore the Marketplace
+                Choose the Best Outcome
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Choose the path that matches how you want to move a deck
+                Start with the path that protects the most value
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                Some players want to showcase a list, some want the best deck-for-deck fit, and some
-                just want a quicker sale. Mythiverse Exchange is designed to support each of those moments.
+                The smartest sequence is simple: trade first to maximize value, use Buy It Now when you want a direct sale, and fall back to auction when speed matters most.
               </p>
             </div>
 
             <div className="mt-8 grid gap-4 lg:grid-cols-3">
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
-                <div className="text-sm font-medium text-foreground">Import and list</div>
+                <div className="text-sm font-medium text-foreground">DeckSwap first</div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Best when you want pricing, deck details, comments, and a clean marketplace page.
+                  Best when your goal is to keep more value by finding the strongest deck-for-deck match.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
-                <div className="text-sm font-medium text-foreground">Trade through escrow</div>
+                <div className="text-sm font-medium text-foreground">Buy It Now second</div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Best when both sides want deck-for-deck value with more confidence around the exchange.
+                  Best when you want a clean direct sale at a price that still reflects the deck&apos;s upside.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-secondary/30 p-5">
-                <div className="text-sm font-medium text-foreground">Auction for a quicker sale</div>
+                <div className="text-sm font-medium text-foreground">Auction last</div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Best when speed matters more than a precise value-for-value trade match.
+                  Best when moving the deck quickly matters more than holding out for the highest return.
                 </p>
               </div>
             </div>
@@ -141,15 +136,13 @@ export default function InfoPage() {
           <div className="rounded-3xl border border-border bg-card p-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                Suggested Partners
+                Keep Exploring
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Useful marketplaces and accessories while DeckSwap grows
+                Trusted places for cards, gear, and collecting essentials
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                These are practical marketplaces and accessory brands players already recognize.
-                Over time, some outbound links on Mythiverse Exchange may become referral links, which means
-                Mythiverse Exchange could earn a commission from qualifying purchases.
+                These are brands players already know when they want to fill gaps, pick up accessories, or keep upgrading the collection around their next deck move.
               </p>
             </div>
 
