@@ -251,6 +251,9 @@ export default async function HomePage({
     )
     .slice(0, 4)
     .map(toDeckShelfCard)
+  const latestDecks = [...filteredDeckViews]
+    .slice(0, 4)
+    .map(toDeckShelfCard)
 
   const tradeOffers = (tradeOffersData ?? []) as TradeOfferRow[]
   const deckComments = (deckCommentsData ?? []) as DeckCommentRow[]
@@ -405,6 +408,14 @@ export default async function HomePage({
             </div>
           </div>
         </section>
+        <FeaturedDeckShelf
+          id="latest-decks"
+          decks={latestDecks}
+          title="Latest Decks"
+          subtitle="Fresh arrivals that just hit the marketplace"
+          emptyTitle="No new decks yet"
+          emptyDescription="As new decks go live, the latest arrivals will show up here first."
+        />
         <FeaturedDecks decks={featuredDecks} />
         <FeaturedDeckShelf
           id="highest-value"

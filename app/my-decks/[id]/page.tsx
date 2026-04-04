@@ -20,6 +20,7 @@ import {
   INVENTORY_STATUSES,
   isInventoryStatusLocked,
   normalizeInventoryStatus,
+  resolveInventoryStatusForSettings,
 } from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
@@ -309,9 +310,11 @@ export default async function ManageDeckPage({
       String(formData.get('buy_now_currency') || 'USD')
     )
     const buyNowListingNotes = String(formData.get('buy_now_listing_notes') || '').trim() || null
-    const inventoryStatus = normalizeInventoryStatus(
-      String(formData.get('inventory_status') || 'staged')
-    )
+    const inventoryStatus = resolveInventoryStatusForSettings({
+      selectedStatus: String(formData.get('inventory_status') || 'staged'),
+      isListedForTrade,
+      buyNowPrice: buyNowPriceUsd,
+    })
     const wantedColorIdentities = formData
       .getAll('wanted_color_identities')
       .map((value) => String(value).trim().toUpperCase())
@@ -761,6 +764,9 @@ export default async function ManageDeckPage({
 
                   <p className="mt-3 text-xs text-zinc-500">
                     Current status: {getInventoryStatusDescription(inventoryStatus)} Visibility: {getInventoryStatusVisibility(inventoryStatus)}.
+                  </p>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Automatic behavior: saving with Buy It Now set promotes the deck to <span className="text-amber-200">Buy It Now Live</span>. Saving with Deck Swap enabled but no BIN promotes it to <span className="text-emerald-200">DeckSwap Live</span>. If neither lane is active, it falls back to <span className="text-zinc-300">Staged</span> and stays private.
                   </p>
                 </div>
 

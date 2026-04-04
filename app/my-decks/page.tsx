@@ -4,9 +4,13 @@ import AppHeader from '@/components/app-header'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import {
+  getInventoryStatusDescription,
+  getInventoryStatusVisibility,
+  isInventoryStatusCompleted,
   getInventoryStatusBadgeClass,
   getInventoryStatusLabel,
   isInventoryStatusLocked,
+  isInventoryStatusPublic,
 } from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
@@ -128,6 +132,9 @@ export default async function MyDecksPage() {
     const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
     return { ...deck, bracket, format: normalizeDeckFormat(deck.format) }
   })
+  const liveDecks = deckViews.filter((deck) => isInventoryStatusPublic(deck.inventory_status))
+  const privateDecks = deckViews.filter((deck) => getInventoryStatusVisibility(deck.inventory_status) === 'private')
+  const completedDecks = deckViews.filter((deck) => isInventoryStatusCompleted(deck.inventory_status))
   const deckValues = deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
   const totalDeckValue = deckValues.reduce((sum, value) => sum + value, 0)
   const totalDeckSwapValue = deckValues.reduce(
@@ -230,6 +237,26 @@ export default async function MyDecksPage() {
               <div className="mt-2 text-3xl font-semibold">1-2-3</div>
               <div className="mt-2 text-xs text-zinc-500">Deck Swap first, Buy It Now second, auction only as the fallback lane.</div>
             </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-3 2xl:col-span-6">
+              <div className="text-sm text-zinc-400">Inventory Visibility</div>
+              <div className="mt-2 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                  <div className="text-xs uppercase tracking-wide text-emerald-200">Live</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{liveDecks.length}</div>
+                  <p className="mt-2 text-xs text-emerald-50/80">Public marketplace listings that buyers and traders can discover right now.</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4">
+                  <div className="text-xs uppercase tracking-wide text-zinc-400">Private</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{privateDecks.length}</div>
+                  <p className="mt-2 text-xs text-zinc-400">Staged, escrow, donation, and operational states stay out of the public marketplace.</p>
+                </div>
+                <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
+                  <div className="text-xs uppercase tracking-wide text-sky-200">Completed</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{completedDecks.length}</div>
+                  <p className="mt-2 text-xs text-sky-50/80">Closed-out deck moves like sold, checked out, delivered, or completed escrow.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -247,16 +274,28 @@ export default async function MyDecksPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {deckViews.map((deck) => (
-              <article
-                key={deck.id}
-                className={`group overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
-                  isInventoryStatusLocked(deck.inventory_status)
-                    ? 'border-zinc-700/80 opacity-70'
-                    : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
-                }`}
-              >
+          <div className="space-y-10">
+            {[
+              { title: 'Live Inventory', description: 'Public decks currently available for discovery.', decks: liveDecks },
+              { title: 'Private Inventory', description: 'Hidden decks in staging, escrow, donation, or internal operational states.', decks: privateDecks },
+              { title: 'Completed Deck Moves', description: 'Closed-out deck movements that are no longer active inventory.', decks: completedDecks },
+            ].map((section) =>
+              section.decks.length > 0 ? (
+                <div key={section.title}>
+                  <div className="mb-5">
+                    <h2 className="text-2xl font-semibold">{section.title}</h2>
+                    <p className="mt-1 text-sm text-zinc-400">{section.description}</p>
+                  </div>
+                  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {section.decks.map((deck) => (
+                      <article
+                        key={deck.id}
+                        className={`group overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
+                          isInventoryStatusLocked(deck.inventory_status)
+                            ? 'border-zinc-700/80 opacity-70'
+                            : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
+                        }`}
+                      >
                 {(() => {
                   const tradeValue = calculateDeckTradeValue(Number(deck.price_total_usd_foil ?? 0))
 
@@ -386,6 +425,9 @@ export default async function MyDecksPage() {
                     >
                       {getInventoryStatusLabel(deck.inventory_status)}
                     </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                      {getInventoryStatusVisibility(deck.inventory_status)}
+                    </span>
                     {Number(deck.buy_now_price_usd ?? 0) > 0 && (
                       <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
                         Buy It Now {formatCurrencyAmount(
@@ -394,6 +436,10 @@ export default async function MyDecksPage() {
                         )}
                       </span>
                     )}
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-400">
+                    {getInventoryStatusDescription(deck.inventory_status)}
                   </div>
 
                   <div className="mt-5 flex gap-3">
@@ -420,7 +466,11 @@ export default async function MyDecksPage() {
                   )
                 })()}
               </article>
-            ))}
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
           </div>
         )}
       </section>

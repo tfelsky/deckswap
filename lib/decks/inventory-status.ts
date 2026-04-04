@@ -130,3 +130,37 @@ export function isInventoryStatusPublic(status?: string | null) {
 export function isInventoryStatusCompleted(status?: string | null) {
   return getInventoryStatusVisibility(status) === 'completed'
 }
+
+export function resolveInventoryStatusForSettings(input: {
+  selectedStatus?: string | null
+  isListedForTrade: boolean
+  buyNowPrice?: number | null
+}) {
+  const normalized = normalizeInventoryStatus(input.selectedStatus)
+
+  if (
+    normalized === 'holiday_pending_receipt' ||
+    normalized === 'holiday_received' ||
+    normalized === 'checked_out' ||
+    normalized === 'awaiting_delivery' ||
+    normalized === 'escrow_pending_shipment' ||
+    normalized === 'escrow_in_transit' ||
+    normalized === 'escrow_received' ||
+    normalized === 'escrow_review' ||
+    normalized === 'escrow_completed' ||
+    normalized === 'auction_pending' ||
+    normalized === 'auction_live'
+  ) {
+    return normalized
+  }
+
+  if (Number(input.buyNowPrice ?? 0) > 0) {
+    return 'buy_it_now_live'
+  }
+
+  if (input.isListedForTrade) {
+    return 'deck_swap_live'
+  }
+
+  return 'staged'
+}
