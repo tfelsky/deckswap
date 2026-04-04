@@ -1,6 +1,8 @@
 export type DeckMarketingFields = {
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
+  is_sealed?: boolean | null
+  is_complete_precon?: boolean | null
   box_type?: string | null
 }
 
@@ -17,6 +19,9 @@ export function getDeckMarketingChips(deck: DeckMarketingFields) {
 
   if (deck.is_boxed === true) chips.push('Boxed')
   else if (deck.is_boxed === false) chips.push('Unboxed')
+
+  if (deck.is_sealed === true) chips.push('Sealed')
+  if (deck.is_complete_precon === true) chips.push('Complete Precon')
 
   const boxType = normalizeBoxType(deck.box_type)
   if (deck.is_boxed && boxType) {

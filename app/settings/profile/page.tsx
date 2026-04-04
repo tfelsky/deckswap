@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import {
+  formatVerificationStatus,
+  verificationStatusTone,
+} from '@/lib/profile-verifications'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
   formatShipFrom,
@@ -22,6 +26,10 @@ function verifyStatus(verifications: ProfileVerification[], type: string) {
   return verifications.find((item) => item.verification_type === type)?.status ?? 'not_submitted'
 }
 
+function verificationForType(verifications: ProfileVerification[], type: string) {
+  return verifications.find((item) => item.verification_type === type) ?? null
+}
+
 export default async function ProfileSettingsPage() {
   const supabase = await createClient()
   const {
@@ -38,7 +46,7 @@ export default async function ProfileSettingsPage() {
     supabase.from('profile_reputation_summary').select('*').eq('user_id', user.id).maybeSingle(),
     supabase
       .from('profile_verifications')
-      .select('id, user_id, verification_type, status, notes')
+      .select('id, user_id, verification_type, status, notes, submitted_at, reviewed_at, reviewed_by, review_notes')
       .eq('user_id', user.id),
   ])
 
@@ -100,6 +108,9 @@ export default async function ProfileSettingsPage() {
   } satisfies ReputationSummary)
 
   const verifications = ((verificationResult.data ?? []) as ProfileVerification[]) ?? []
+  const sellerAttestationVerification = verificationForType(verifications, 'seller_attestation')
+  const shippingVerification = verificationForType(verifications, 'shipping_address')
+  const governmentIdVerification = verificationForType(verifications, 'government_id')
   const profileCompletion = getProfileCompletion(profile, privateProfile, summary)
   const profileHints = getProfileHints(profile, privateProfile)
   const trustBadges = getTrustBadges(summary, verifications)
@@ -180,25 +191,101 @@ export default async function ProfileSettingsPage() {
 
     if (!user) redirect('/sign-in')
 
+    const { data: existingVerificationRows } = await supabase
+      .from('profile_verifications')
+      .select('id, user_id, verification_type, status, notes, submitted_at, reviewed_at, reviewed_by, review_notes')
+      .eq('user_id', user.id)
+
+    const existingVerificationMap = new Map<string, ProfileVerification>(
+      ((existingVerificationRows ?? []) as ProfileVerification[]).map((row) => [row.verification_type, row])
+    )
+    const now = new Date().toISOString()
+
+    const nextVerificationPayload = ({
+      verificationType,
+      requested,
+      notes,
+    }: {
+      verificationType: string
+      requested: boolean
+      notes: string
+    }) => {
+      const existing = existingVerificationMap.get(verificationType)
+      const existingStatus = existing?.status ?? 'not_submitted'
+
+      if (!requested && existingStatus === 'verified') {
+        return {
+          user_id: user.id,
+          verification_type: verificationType,
+          status: existingStatus,
+          notes: existing?.notes ?? notes,
+          submitted_at: existing?.submitted_at ?? null,
+          reviewed_at: existing?.reviewed_at ?? null,
+          reviewed_by: existing?.reviewed_by ?? null,
+          review_notes: existing?.review_notes ?? null,
+        }
+      }
+
+      if (!requested) {
+        return {
+          user_id: user.id,
+          verification_type: verificationType,
+          status: 'not_submitted',
+          notes,
+          submitted_at: null,
+          reviewed_at: null,
+          reviewed_by: null,
+          review_notes: null,
+        }
+      }
+
+      if (existingStatus === 'verified') {
+        return {
+          user_id: user.id,
+          verification_type: verificationType,
+          status: 'verified',
+          notes,
+          submitted_at: existing?.submitted_at ?? now,
+          reviewed_at: existing?.reviewed_at ?? null,
+          reviewed_by: existing?.reviewed_by ?? null,
+          review_notes: existing?.review_notes ?? null,
+        }
+      }
+
+      return {
+        user_id: user.id,
+        verification_type: verificationType,
+        status: 'submitted',
+        notes,
+        submitted_at: now,
+        reviewed_at: null,
+        reviewed_by: null,
+        review_notes: null,
+      }
+    }
+
     const verificationPayloads = [
-      {
-        user_id: user.id,
-        verification_type: 'seller_attestation',
-        status: formData.get('seller_attestation') === 'on' ? 'submitted' : 'not_submitted',
-        notes: 'Submitted from profile settings.',
-      },
-      {
-        user_id: user.id,
-        verification_type: 'shipping_address',
-        status: formData.get('shipping_address_verified') === 'on' ? 'submitted' : 'not_submitted',
-        notes: 'Shipping address ready for review.',
-      },
-      {
-        user_id: user.id,
-        verification_type: 'government_id',
-        status: formData.get('government_id_ready') === 'on' ? 'submitted' : 'not_submitted',
-        notes: 'Government ID placeholder reserved for future collection flow.',
-      },
+      nextVerificationPayload({
+        verificationType: 'seller_attestation',
+        requested: formData.get('seller_attestation') === 'on',
+        notes:
+          String(formData.get('seller_attestation_notes') || '').trim() ||
+          'Seller attestation submitted from profile settings.',
+      }),
+      nextVerificationPayload({
+        verificationType: 'shipping_address',
+        requested: formData.get('shipping_address_verified') === 'on',
+        notes:
+          String(formData.get('shipping_address_notes') || '').trim() ||
+          'Shipping address ready for review.',
+      }),
+      nextVerificationPayload({
+        verificationType: 'government_id',
+        requested: formData.get('government_id_ready') === 'on',
+        notes:
+          String(formData.get('government_id_notes') || '').trim() ||
+          'Government ID verification requested from profile settings.',
+      }),
     ]
 
     for (const payload of verificationPayloads) {
@@ -418,8 +505,8 @@ export default async function ProfileSettingsPage() {
                   <input name="shipping_country" defaultValue={privateProfile.shipping_country ?? ''} className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm text-zinc-400">Government ID placeholder key</label>
-                  <input name="government_id_storage_key" defaultValue={privateProfile.government_id_storage_key ?? ''} placeholder="reserved/key/for/later-upload" className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
+                  <label className="mb-2 block text-sm text-zinc-400">Internal ID reference</label>
+                  <input name="government_id_storage_key" defaultValue={privateProfile.government_id_storage_key ?? ''} placeholder="optional review note or intake reference" className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-sm text-zinc-400">Customer service notes</label>
@@ -438,44 +525,92 @@ export default async function ProfileSettingsPage() {
 
           <div className="space-y-6">
             <form action={submitTrustIntent} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-              <h2 className="text-2xl font-semibold">Trust Signals</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Submit the pieces that make you easier to trust before the full verification workflow ships.
-              </p>
-
-              <div className="mt-6 space-y-4 text-sm text-zinc-300">
-                <label className="block rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" name="seller_attestation" defaultChecked={verifyStatus(verifications, 'seller_attestation') !== 'not_submitted'} />
-                    <div>
-                      <div className="font-medium text-white">Seller / trader attestation</div>
-                      <p className="mt-1 text-zinc-400">I will ship the agreed inventory honestly and communicate clearly if issues come up.</p>
-                    </div>
-                  </div>
-                </label>
-
-                <label className="block rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" name="shipping_address_verified" defaultChecked={verifyStatus(verifications, 'shipping_address') !== 'not_submitted'} />
-                    <div>
-                      <div className="font-medium text-white">Shipping address ready for review</div>
-                      <p className="mt-1 text-zinc-400">My shipping details are complete enough for a manual trust check.</p>
-                    </div>
-                  </div>
-                </label>
-
-                <label className="block rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" name="government_id_ready" defaultChecked={verifyStatus(verifications, 'government_id') !== 'not_submitted'} />
-                    <div>
-                      <div className="font-medium text-white">Government ID placeholder reserved</div>
-                      <p className="mt-1 text-zinc-400">I am willing to complete ID verification for higher-trust trades when the upload flow is live.</p>
-                    </div>
-                  </div>
-                </label>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-semibold">Verification Requests</h2>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Submit the trust checks you want reviewed so your seller profile can earn clearer marketplace signals.
+                  </p>
+                </div>
+                {access.isAdmin && (
+                  <Link
+                    href="/admin/verifications"
+                    className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100 hover:bg-emerald-400/15"
+                  >
+                    Open review queue
+                  </Link>
+                )}
               </div>
 
-              <button className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">Save Trust Status</button>
+              <div className="mt-6 space-y-4 text-sm text-zinc-300">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" name="seller_attestation" defaultChecked={verifyStatus(verifications, 'seller_attestation') !== 'not_submitted'} />
+                      <div>
+                        <div className="font-medium text-white">Seller / trader attestation</div>
+                        <p className="mt-1 text-zinc-400">Confirm that you list inventory honestly, pack carefully, and communicate quickly if a trade or sale changes.</p>
+                      </div>
+                    </label>
+                    <span className={`rounded-full border px-3 py-1 text-xs ${verificationStatusTone(sellerAttestationVerification?.status)}`}>
+                      {formatVerificationStatus(sellerAttestationVerification?.status)}
+                    </span>
+                  </div>
+                  <textarea
+                    name="seller_attestation_notes"
+                    rows={2}
+                    defaultValue={sellerAttestationVerification?.notes ?? ''}
+                    placeholder="Optional context for review"
+                    className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" name="shipping_address_verified" defaultChecked={verifyStatus(verifications, 'shipping_address') !== 'not_submitted'} />
+                      <div>
+                        <div className="font-medium text-white">Shipping address ready for review</div>
+                        <p className="mt-1 text-zinc-400">Ask for a manual check once your private shipping details are complete and ready for live logistics.</p>
+                      </div>
+                    </label>
+                    <span className={`rounded-full border px-3 py-1 text-xs ${verificationStatusTone(shippingVerification?.status)}`}>
+                      {formatVerificationStatus(shippingVerification?.status)}
+                    </span>
+                  </div>
+                  <textarea
+                    name="shipping_address_notes"
+                    rows={2}
+                    defaultValue={shippingVerification?.notes ?? ''}
+                    placeholder="Optional note for the reviewer"
+                    className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" name="government_id_ready" defaultChecked={verifyStatus(verifications, 'government_id') !== 'not_submitted'} />
+                      <div>
+                        <div className="font-medium text-white">Government ID review</div>
+                        <p className="mt-1 text-zinc-400">Request higher-trust review for larger deals once your private ID intake reference is ready.</p>
+                      </div>
+                    </label>
+                    <span className={`rounded-full border px-3 py-1 text-xs ${verificationStatusTone(governmentIdVerification?.status)}`}>
+                      {formatVerificationStatus(governmentIdVerification?.status)}
+                    </span>
+                  </div>
+                  <textarea
+                    name="government_id_notes"
+                    rows={2}
+                    defaultValue={governmentIdVerification?.notes ?? privateProfile.government_id_storage_key ?? ''}
+                    placeholder="Optional secure intake reference or note"
+                    className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              <button className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">Submit Verification Requests</button>
             </form>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
@@ -545,7 +680,7 @@ export default async function ProfileSettingsPage() {
               <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
                 <h2 className="text-2xl font-semibold text-white">Internal Access</h2>
                 <p className="mt-2 text-sm text-emerald-50/80">
-                  This account has elevated internal access for DeckSwap operations.
+                  This account has elevated internal access for Mythiverse Exchange operations.
                 </p>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">

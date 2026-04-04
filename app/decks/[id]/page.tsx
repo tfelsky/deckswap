@@ -11,10 +11,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
-import { isLikelyTokenCard } from '@/lib/commander/parse'
 import { normalizeImportedCommanderOverlap } from '@/lib/commander/normalize'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateDeckForFormat } from '@/lib/commander/validate'
+import { rebuildDeckStructureFromSavedRows } from '@/lib/deck-repair'
 import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
 import {
   formatCommentTimestamp,
@@ -84,6 +84,8 @@ type Deck = {
   price_total_eur?: number | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
+  is_sealed?: boolean | null
+  is_complete_precon?: boolean | null
   box_type?: string | null
 }
 
@@ -190,20 +192,6 @@ function changeTone(value: number | null) {
   return 'text-zinc-300'
 }
 
-function rowMatchKey(input: {
-  name: string
-  setCode?: string | null
-  collectorNumber?: string | null
-  foil?: boolean | null
-}) {
-  return [
-    input.name.trim().toLowerCase(),
-    input.setCode?.trim().toLowerCase() ?? '',
-    input.collectorNumber?.trim().toLowerCase() ?? '',
-    input.foil ? 'foil' : 'nonfoil',
-  ].join('::')
-}
-
 export default async function DeckDetailPage({
   params,
   searchParams,
@@ -223,7 +211,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -894,7 +882,7 @@ export default async function DeckDetailPage({
     }
   }
 
-  async function reclassifyTokensAction() {
+  async function repairDeckStructureAction() {
     'use server'
 
     const supabase = await createClient()
@@ -911,7 +899,7 @@ export default async function DeckDetailPage({
       const { data: currentCards, error: currentCardsError } = await supabase
         .from('deck_cards')
         .select(
-          'id, deck_id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, condition, condition_source'
+          'section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, condition, condition_source, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
         )
         .eq('deck_id', deckId)
         .order('sort_order', { ascending: true })
@@ -919,7 +907,7 @@ export default async function DeckDetailPage({
       const { data: currentTokens, error: currentTokensError } = await supabase
         .from('deck_tokens')
         .select(
-          'id, quantity, token_name, set_code, set_name, collector_number, foil, sort_order'
+          'quantity, token_name, set_code, set_name, collector_number, foil, sort_order, image_url, scryfall_id, oracle_id, finishes, type_line'
         )
         .eq('deck_id', deckId)
         .order('sort_order', { ascending: true })
@@ -932,225 +920,57 @@ export default async function DeckDetailPage({
         throw new Error(currentTokensError.message)
       }
 
-      const allCardRows = (currentCards ?? []) as Array<{
-        id: number
-        quantity: number
-        card_name: string
-        set_code?: string | null
-        set_name?: string | null
-        collector_number?: string | null
-        foil?: boolean | null
-        sort_order?: number | null
-        section: 'commander' | 'mainboard'
-        condition?: string | null
-        condition_source?: string | null
-      }>
+      const rebuiltDeck = rebuildDeckStructureFromSavedRows(
+        (currentCards ?? []) as Parameters<typeof rebuildDeckStructureFromSavedRows>[0],
+        (currentTokens ?? []) as Parameters<typeof rebuildDeckStructureFromSavedRows>[1]
+      )
 
-      const allTokenRows = (currentTokens ?? []) as Array<{
-        id: number
-        quantity: number
-        token_name: string
-        set_code?: string | null
-        set_name?: string | null
-        collector_number?: string | null
-        foil?: boolean | null
-        sort_order?: number | null
-      }>
-
-      const commanderRows = allCardRows.filter((card) => card.section === 'commander')
-      const normalizedMainboardMap = new Map<
-        string,
-        {
-          quantity: number
-          card_name: string
-          set_code?: string | null
-          set_name?: string | null
-          collector_number?: string | null
-          foil?: boolean | null
-          condition?: string | null
-          condition_source?: string | null
-        }
-      >()
-      const normalizedTokenMap = new Map<
-        string,
-        {
-          quantity: number
-          token_name: string
-          set_code?: string | null
-          set_name?: string | null
-          collector_number?: string | null
-          foil?: boolean | null
-        }
-      >()
-
-      const addMainboard = (
-        row: {
-        quantity: number
-        card_name: string
-        set_code?: string | null
-        set_name?: string | null
-        collector_number?: string | null
-        foil?: boolean | null
-        condition?: string | null
-        condition_source?: string | null
-      },
-        strategy: 'merge' | 'fill'
-      ) => {
-        const key = rowMatchKey({
-          name: row.card_name,
-          setCode: row.set_code,
-          collectorNumber: row.collector_number,
-          foil: row.foil,
-        })
-        const existing = normalizedMainboardMap.get(key)
-        if (existing) {
-          if (strategy === 'merge') {
-            existing.quantity += row.quantity
-          }
-          return
-        }
-        normalizedMainboardMap.set(key, { ...row })
-      }
-
-      const addToken = (
-        row: {
-        quantity: number
-        token_name: string
-        set_code?: string | null
-        set_name?: string | null
-        collector_number?: string | null
-        foil?: boolean | null
-      },
-        strategy: 'merge' | 'fill'
-      ) => {
-        const key = rowMatchKey({
-          name: row.token_name,
-          setCode: row.set_code,
-          collectorNumber: row.collector_number,
-          foil: row.foil,
-        })
-        const existing = normalizedTokenMap.get(key)
-        if (existing) {
-          if (strategy === 'merge') {
-            existing.quantity += row.quantity
-          }
-          return
-        }
-        normalizedTokenMap.set(key, { ...row })
-      }
-
-      for (const card of allCardRows) {
-        if (card.section !== 'mainboard') {
-          continue
-        }
-
-        if (isLikelyTokenCard(card.card_name, card.set_code)) {
-          addToken({
-            quantity: card.quantity,
-            token_name: card.card_name,
-            set_code: card.set_code ?? null,
-            set_name: card.set_name ?? null,
-            collector_number: card.collector_number ?? null,
-            foil: card.foil ?? false,
-          }, 'fill')
-        } else {
-          addMainboard({
-            quantity: card.quantity,
-            card_name: card.card_name,
-            set_code: card.set_code ?? null,
-            set_name: card.set_name ?? null,
-            collector_number: card.collector_number ?? null,
-            foil: card.foil ?? false,
-            condition: card.condition ?? 'near_mint',
-            condition_source: card.condition_source ?? 'import_default',
-          }, 'merge')
-        }
-      }
-
-      for (const token of allTokenRows) {
-        if (isLikelyTokenCard(token.token_name, token.set_code)) {
-          addToken({
-            quantity: token.quantity,
-            token_name: token.token_name,
-            set_code: token.set_code ?? null,
-            set_name: token.set_name ?? null,
-            collector_number: token.collector_number ?? null,
-            foil: token.foil ?? false,
-          }, 'merge')
-        } else {
-          addMainboard({
-            quantity: token.quantity,
-            card_name: token.token_name,
-            set_code: token.set_code ?? null,
-            set_name: token.set_name ?? null,
-            collector_number: token.collector_number ?? null,
-            foil: token.foil ?? false,
-            condition: 'near_mint',
-            condition_source: 'import_default',
-          }, 'fill')
-        }
-      }
-
-      const normalizedMainboardRows = Array.from(normalizedMainboardMap.values())
-      const normalizedTokenRows = Array.from(normalizedTokenMap.values())
-
-      const { error: deleteMainboardError } = await supabase
+      const { error: deleteCardsError } = await supabase
         .from('deck_cards')
         .delete()
         .eq('deck_id', deckId)
-        .eq('section', 'mainboard')
 
-      if (deleteMainboardError) {
-        throw new Error(deleteMainboardError.message)
+      if (deleteCardsError) {
+        throw new Error(deleteCardsError.message)
       }
 
-      const { error: deleteAllTokensError } = await supabase
+      const { error: deleteTokensError } = await supabase
         .from('deck_tokens')
         .delete()
         .eq('deck_id', deckId)
 
-      if (deleteAllTokensError) {
-        throw new Error(deleteAllTokensError.message)
+      if (deleteTokensError) {
+        throw new Error(deleteTokensError.message)
       }
 
-      if (normalizedMainboardRows.length > 0) {
-        const nextCardSortBase =
-          commanderRows.reduce(
-            (max, card) => Math.max(max, Number(card.sort_order ?? 0)),
-            -1
-          ) + 1
+      const rebuiltCardRows = [
+        ...rebuiltDeck.commanders.map((row, index) => ({
+          deck_id: deckId,
+          ...row,
+          sort_order: index,
+        })),
+        ...rebuiltDeck.mainboard.map((row, index) => ({
+          deck_id: deckId,
+          ...row,
+          sort_order: rebuiltDeck.commanders.length + index,
+        })),
+      ]
 
-        const { error: insertCardsError } = await supabase.from('deck_cards').insert(
-          normalizedMainboardRows.map((row, index) => ({
-            deck_id: deckId,
-            section: 'mainboard',
-            quantity: row.quantity,
-            card_name: row.card_name,
-            condition: row.condition ?? 'near_mint',
-            condition_source: row.condition_source ?? 'import_default',
-            set_code: row.set_code ?? null,
-            set_name: row.set_name ?? null,
-            collector_number: row.collector_number ?? null,
-            foil: row.foil ?? false,
-            sort_order: nextCardSortBase + index,
-          }))
-        )
+      if (rebuiltCardRows.length > 0) {
+        const { error: insertCardsError } = await supabase
+          .from('deck_cards')
+          .insert(rebuiltCardRows)
 
         if (insertCardsError) {
           throw new Error(insertCardsError.message)
         }
       }
 
-      if (normalizedTokenRows.length > 0) {
+      if (rebuiltDeck.tokens.length > 0) {
         const { error: insertTokensError } = await supabase.from('deck_tokens').insert(
-          normalizedTokenRows.map((row, index) => ({
+          rebuiltDeck.tokens.map((row, index) => ({
             deck_id: deckId,
-            quantity: row.quantity,
-            token_name: row.token_name,
-            set_code: row.set_code ?? null,
-            set_name: row.set_name ?? null,
-            collector_number: row.collector_number ?? null,
-            foil: row.foil ?? false,
+            ...row,
             sort_order: index,
           }))
         )
@@ -1166,30 +986,31 @@ export default async function DeckDetailPage({
         deckId,
         actorUserId: user.id,
         sourceType: typedDeck.source_type ?? null,
-        eventType: 'token_reclassification_succeeded',
+        eventType: 'deck_structure_repair_succeeded',
         severity: 'info',
-        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} reclassified saved rows between mainboard and tokens.`,
+        message: `${access.isAdmin && typedDeck.user_id !== user.id ? 'Admin' : 'Owner'} repaired saved rows across commander, mainboard, and tokens.`,
         details: {
-          normalizedMainboardRows: normalizedMainboardRows.length,
-          normalizedTokenRows: normalizedTokenRows.length,
+          commanderRows: rebuiltDeck.commanders.length,
+          mainboardRows: rebuiltDeck.mainboard.length,
+          tokenRows: rebuiltDeck.tokens.length,
         },
       })
 
-      redirect(`/decks/${deckId}?tokensReclassified=1`)
+      redirect(`/decks/${deckId}?deckRepaired=1`)
     } catch (error) {
-      console.error('Token reclassification failed:', error)
+      console.error('Deck structure repair failed:', error)
       await logDeckImportEvent(supabase, {
         deckId,
         actorUserId: user?.id ?? null,
         sourceType: typedDeck.source_type ?? null,
-        eventType: 'token_reclassification_failed',
+        eventType: 'deck_structure_repair_failed',
         severity: 'warning',
-        message: error instanceof Error ? error.message : 'Token reclassification failed.',
+        message: error instanceof Error ? error.message : 'Deck structure repair failed.',
         details: {
-          trigger: 'deck_detail_reclassify_tokens',
+          trigger: 'deck_detail_repair_structure',
         },
       })
-      redirect(`/decks/${deckId}?tokenReclassifyFailed=1`)
+      redirect(`/decks/${deckId}?deckRepairFailed=1`)
     }
   }
 
@@ -1212,8 +1033,8 @@ export default async function DeckDetailPage({
   const showReprocessFailed = resolvedSearchParams?.reprocessFailed === '1'
   const showReimported = resolvedSearchParams?.reimported === '1'
   const showReimportFailed = resolvedSearchParams?.reimportFailed === '1'
-  const showTokensReclassified = resolvedSearchParams?.tokensReclassified === '1'
-  const showTokenReclassifyFailed = resolvedSearchParams?.tokenReclassifyFailed === '1'
+  const showDeckRepaired = resolvedSearchParams?.deckRepaired === '1'
+  const showDeckRepairFailed = resolvedSearchParams?.deckRepairFailed === '1'
   const canRunImportRecovery = !!user && (isOwner || isAdmin)
   const canReimportFromSource =
     canRunImportRecovery &&
@@ -1377,11 +1198,11 @@ export default async function DeckDetailPage({
             </div>
           )}
 
-          {showTokensReclassified && (
+          {showDeckRepaired && (
             <div className="mt-6 rounded-3xl border border-sky-500/20 bg-sky-500/10 p-5 text-sm text-sky-100 shadow-[0_0_0_1px_rgba(14,165,233,0.08)]">
-              <div className="font-medium text-sky-200">Token repair completed</div>
+              <div className="font-medium text-sky-200">Deck repair completed</div>
               <p className="mt-3 text-sky-100/90">
-                Saved rows were normalized between mainboard and tokens, then the deck was refreshed.
+                Saved rows were rebuilt across commander, mainboard, and tokens, then validation was refreshed.
               </p>
             </div>
           )}
@@ -1417,12 +1238,12 @@ export default async function DeckDetailPage({
             </div>
           )}
 
-          {showTokenReclassifyFailed && (
+          {showDeckRepairFailed && (
             <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
-              <div className="font-medium text-red-200">Token reclassification failed</div>
+              <div className="font-medium text-red-200">Deck repair failed</div>
               <p className="mt-3 text-red-100/90">
                 {latestImportIssue?.message ||
-                  'Saved rows could not be reclassified right now. You can still try a source re-import or standard reprocess.'}
+                  'Saved rows could not be repaired right now. You can still try a source re-import or standard reprocess.'}
               </p>
             </div>
           )}
@@ -1467,12 +1288,12 @@ export default async function DeckDetailPage({
                         </FormActionButton>
                       </form>
                     )}
-                    <form action={reclassifyTokensAction}>
+                    <form action={repairDeckStructureAction}>
                       <FormActionButton
-                        pendingLabel="Reclassifying..."
+                        pendingLabel="Repairing..."
                         className="rounded-xl border border-yellow-200/20 bg-black/20 px-4 py-2 text-sm font-medium text-yellow-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                       >
-                        Reclassify tokens
+                        Repair saved deck
                       </FormActionButton>
                     </form>
                   </div>
@@ -1516,12 +1337,12 @@ export default async function DeckDetailPage({
                       </FormActionButton>
                     </form>
                   )}
-                  <form action={reclassifyTokensAction}>
+                  <form action={repairDeckStructureAction}>
                     <FormActionButton
-                      pendingLabel="Reclassifying..."
+                      pendingLabel="Repairing..."
                       className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-amber-50 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Reclassify tokens
+                      Repair saved deck
                     </FormActionButton>
                   </form>
                 </div>
@@ -1562,12 +1383,12 @@ export default async function DeckDetailPage({
                     </FormActionButton>
                   </form>
                 )}
-                <form action={reclassifyTokensAction}>
+                <form action={repairDeckStructureAction}>
                   <FormActionButton
-                    pendingLabel="Reclassifying..."
+                    pendingLabel="Repairing..."
                     className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-black/30 disabled:cursor-wait disabled:opacity-70"
                   >
-                    Reclassify tokens
+                    Repair saved deck
                   </FormActionButton>
                 </form>
               </div>

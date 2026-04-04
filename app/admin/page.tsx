@@ -255,6 +255,18 @@ export default async function AdminDashboardPage() {
                   Listings missing commander identity or needing repair after import.
                 </p>
               </div>
+              <Link
+                href="/admin/verifications"
+                className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10"
+              >
+                <div className="text-sm text-zinc-400">Verification Queue</div>
+                <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                  Review Requests
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Open the new seller and identity verification review flow.
+                </p>
+              </Link>
             </div>
           </div>
 

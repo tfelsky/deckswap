@@ -20,6 +20,8 @@ type Deck = {
   image_url?: string | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
+  is_sealed?: boolean | null
+  is_complete_precon?: boolean | null
   box_type?: string | null
 }
 
@@ -70,7 +72,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, format, price_total_usd_foil, image_url, is_sleeved, is_boxed, box_type')
+    .select('id, name, commander, format, price_total_usd_foil, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, box_type')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 

@@ -228,6 +228,8 @@ export default async function ManageDeckPage({
     const nextFormat = normalizeDeckFormat(String(formData.get('format') || 'unknown'))
     const isSleeved = formData.get('is_sleeved') === 'on'
     const isBoxed = formData.get('is_boxed') === 'on'
+    const isSealed = formData.get('is_sealed') === 'on'
+    const isCompletePrecon = formData.get('is_complete_precon') === 'on'
     const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
 
     const { data: currentCards } = await supabase
@@ -280,6 +282,8 @@ export default async function ManageDeckPage({
         commander_mode: validation.commanderMode,
         is_sleeved: isSleeved,
         is_boxed: isBoxed,
+        is_sealed: isSealed,
+        is_complete_precon: isCompletePrecon,
         box_type: boxType,
       })
       .eq('id', deckId)
@@ -582,7 +586,7 @@ export default async function ManageDeckPage({
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-sm font-medium text-white">Marketplace presentation</div>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Show whether the deck is sleeved, boxed, and what deck box it comes in.
+                    Show whether the deck is sleeved, boxed, sealed, and whether a Wizards Commander precon is still complete.
                   </p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -604,6 +608,24 @@ export default async function ManageDeckPage({
                         className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
                       />
                       Boxed
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-200">
+                      <input
+                        type="checkbox"
+                        name="is_sealed"
+                        defaultChecked={(deck as typeof deck & { is_sealed?: boolean | null }).is_sealed ?? false}
+                        className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                      />
+                      Sealed
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-200">
+                      <input
+                        type="checkbox"
+                        name="is_complete_precon"
+                        defaultChecked={(deck as typeof deck & { is_complete_precon?: boolean | null }).is_complete_precon ?? false}
+                        className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                      />
+                      Complete Commander precon
                     </label>
                   </div>
 

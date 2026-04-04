@@ -17,6 +17,8 @@ export default function CreateDeckPage() {
   const [value, setValue] = useState<number | ''>('')
   const [isSleeved, setIsSleeved] = useState(false)
   const [isBoxed, setIsBoxed] = useState(false)
+  const [isSealed, setIsSealed] = useState(false)
+  const [isCompletePrecon, setIsCompletePrecon] = useState(false)
   const [boxType, setBoxType] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +52,8 @@ export default function CreateDeckPage() {
         price_estimate: value === '' ? null : Number(value),
         is_sleeved: isSleeved,
         is_boxed: isBoxed,
+        is_sealed: isSealed,
+        is_complete_precon: isCompletePrecon,
         box_type: isBoxed ? normalizeBoxType(boxType) : null,
         user_id: user.id,
       },
@@ -157,7 +161,7 @@ export default function CreateDeckPage() {
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
               <h2 className="text-lg font-semibold text-white">Listing presentation</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Show buyers how the deck is packaged before they click into the listing.
+                Show buyers how the deck is packaged, whether it is sealed, and whether a Wizards Commander precon is still complete.
               </p>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -179,6 +183,24 @@ export default function CreateDeckPage() {
                     className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
                   />
                   Boxed
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isSealed}
+                    onChange={(e) => setIsSealed(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  Sealed
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isCompletePrecon}
+                    onChange={(e) => setIsCompletePrecon(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  Complete Commander precon
                 </label>
               </div>
 

@@ -100,6 +100,7 @@ Scope:
 - harden Moxfield, Archidekt, file, and text import reliability
 - expand library import beyond the first-pass Moxfield and Archidekt provider support
 - improve commander inference and post-import repair paths
+- expand the new saved-row repair tooling so broken imports can be fixed safely without a full source re-import
 - keep deck color identity, counts, pricing snapshots, and validation fully in sync during import and re-enrichment
 - surface better import diagnostics when parsing or schema issues occur
 - decide whether guest preview should gain server-side persistence or stay intentionally lightweight
@@ -123,6 +124,7 @@ Scope:
 - turn reserved trust fields into real workflows
 - automate more of the internal validation score from real login, messaging, and transaction events
 - add marketplace link verification and moderation
+- build on the new verification queue with secure ID collection and reviewer notes
 - add ID collection and protected file storage
 - expand user preferences into deck-interest signals such as colors, archetypes, and wanted / owned deck directions
 - expose better seller/trader summaries across listing pages
@@ -252,7 +254,7 @@ Those are all worthwhile, but they are less immediately valuable than fixing imp
 - Deck color identity derivation and homepage color filters
 - Deck marketing fields and per-card condition grading
 - Public comments on deck pages
-- Profiles, trust controls, and internal validation scoring
+- Profiles, trust controls, internal validation scoring, and a first admin verification review queue
 - Superadmin role foundation
 - Trade offers, counteroffers, and escrow draft handoff
 - Auction launch prototype

@@ -41,6 +41,10 @@ export type ProfileVerification = {
   verification_type: string
   status?: string | null
   notes?: string | null
+  submitted_at?: string | null
+  reviewed_at?: string | null
+  reviewed_by?: string | null
+  review_notes?: string | null
 }
 
 export type ReputationSummary = {
@@ -376,7 +380,7 @@ export function getTrustBadges(
 
   if (summary?.is_manually_verified) badges.add('Manually Verified')
   if (summary?.is_known_user) badges.add('Known User')
-  if (summary?.is_friend_of_platform) badges.add('Friend Of DeckSwap')
+  if (summary?.is_friend_of_platform) badges.add('Friend Of Mythiverse')
 
   for (const verification of verifications ?? []) {
     if (verification.status !== 'verified') continue
