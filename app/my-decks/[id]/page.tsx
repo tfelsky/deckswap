@@ -12,6 +12,15 @@ import {
 } from '@/lib/currency'
 import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
+import {
+  getInventoryStatusBadgeClass,
+  getInventoryStatusDescription,
+  getInventoryStatusLabel,
+  getInventoryStatusVisibility,
+  INVENTORY_STATUSES,
+  isInventoryStatusLocked,
+  normalizeInventoryStatus,
+} from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
@@ -48,6 +57,8 @@ function parseCurrencyInput(value: FormDataEntryValue | null) {
   const parsed = Number(raw)
   return Number.isFinite(parsed) && parsed >= 0 ? Number(parsed.toFixed(2)) : null
 }
+
+const HOLIDAY_PROGRAM_ADDRESS = 'Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario'
 
 export default async function ManageDeckPage({
   params,
@@ -233,6 +244,16 @@ export default async function ManageDeckPage({
       String(value)
     )
   )
+  const inventoryStatus = normalizeInventoryStatus(
+    (deck as typeof deck & { inventory_status?: string | null }).inventory_status
+  )
+  const inventoryStatusLocked = isInventoryStatusLocked(inventoryStatus)
+  const holidayDonationSubmittedAt = (
+    deck as typeof deck & { holiday_donation_submitted_at?: string | null }
+  ).holiday_donation_submitted_at
+  const holidayDonationAgreedAt = (
+    deck as typeof deck & { holiday_donation_agreed_at?: string | null }
+  ).holiday_donation_agreed_at
 
   async function updateOverview(formData: FormData) {
     'use server'
@@ -288,6 +309,9 @@ export default async function ManageDeckPage({
       String(formData.get('buy_now_currency') || 'USD')
     )
     const buyNowListingNotes = String(formData.get('buy_now_listing_notes') || '').trim() || null
+    const inventoryStatus = normalizeInventoryStatus(
+      String(formData.get('inventory_status') || 'staged')
+    )
     const wantedColorIdentities = formData
       .getAll('wanted_color_identities')
       .map((value) => String(value).trim().toUpperCase())
@@ -356,6 +380,7 @@ export default async function ManageDeckPage({
         buy_now_price_usd: buyNowPriceUsd,
         buy_now_currency: buyNowPriceUsd != null ? buyNowCurrency : 'USD',
         buy_now_listing_notes: buyNowPriceUsd != null ? buyNowListingNotes : null,
+        inventory_status: inventoryStatus,
         wanted_color_identities: isListedForTrade ? wantedColorIdentities : [],
         wanted_formats: isListedForTrade ? wantedFormats : [],
         box_type: boxType,
@@ -364,6 +389,41 @@ export default async function ManageDeckPage({
       .eq('user_id', user.id)
 
     redirect(`/my-decks/${deckId}?tab=settings`)
+  }
+
+  async function submitHolidayDonation(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    if (formData.get('confirm_holiday_donation') !== 'on') {
+      redirect(`/my-decks/${deckId}?tab=settings&holiday=confirm`)
+    }
+
+    const now = new Date().toISOString()
+
+    await supabase
+      .from('decks')
+      .update({
+        inventory_status: 'holiday_pending_receipt',
+        holiday_donation_agreed_at: now,
+        holiday_donation_submitted_at: now,
+        is_listed_for_trade: false,
+        buy_now_price_usd: null,
+        buy_now_currency: 'USD',
+        buy_now_listing_notes: null,
+      })
+      .eq('id', deckId)
+      .eq('user_id', user.id)
+
+    redirect(`/my-decks/${deckId}?tab=settings&holiday=submitted`)
   }
 
   async function deleteDeck() {
@@ -450,16 +510,24 @@ export default async function ManageDeckPage({
 
           <Link
             href={`/auction-prototype?deckId=${deckId}`}
-            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-sm font-medium text-amber-300 hover:bg-amber-400/15"
+            className={`rounded-xl border px-3 py-1 text-sm font-medium ${
+              inventoryStatusLocked
+                ? 'pointer-events-none border-zinc-700 bg-zinc-800/70 text-zinc-500'
+                : 'border-amber-400/20 bg-amber-400/10 text-amber-300 hover:bg-amber-400/15'
+            }`}
           >
-            Auction This Deck
+            {inventoryStatusLocked ? 'Auction Locked' : 'Auction This Deck'}
           </Link>
 
           <Link
             href="/trade-offers"
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white hover:bg-white/10"
+            className={`rounded-xl border px-3 py-1 text-sm ${
+              inventoryStatusLocked
+                ? 'pointer-events-none border-zinc-700 bg-zinc-800/70 text-zinc-500'
+                : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+            }`}
           >
-            Trade Offers
+            {inventoryStatusLocked ? 'Offer Flow Locked' : 'Trade Offers'}
           </Link>
 
           {isAdmin && (
@@ -505,6 +573,34 @@ export default async function ManageDeckPage({
               </div>
             </div>
           </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getInventoryStatusBadgeClass(inventoryStatus)}`}
+            >
+              {getInventoryStatusLabel(inventoryStatus)}
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+              {getInventoryStatusDescription(inventoryStatus)} Visibility: {getInventoryStatusVisibility(inventoryStatus)}.
+            </span>
+          </div>
+
+          {inventoryStatus === 'holiday_pending_receipt' && (
+            <div className="mt-6 rounded-3xl border border-zinc-500/30 bg-zinc-500/10 p-5 text-zinc-200">
+              <div className="text-sm font-medium text-white">Holiday donation submitted</div>
+              <p className="mt-2 text-sm text-zinc-300">
+                This deck is now parked in a pending-receipt state and should not be treated like an active marketplace listing.
+              </p>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                Ship to: {HOLIDAY_PROGRAM_ADDRESS}
+              </div>
+              {holidayDonationSubmittedAt && (
+                <p className="mt-3 text-xs text-zinc-400">
+                  Submitted {formatImportedAt(holidayDonationSubmittedAt)}.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -642,6 +738,32 @@ export default async function ManageDeckPage({
               </p>
 
               <form action={updateSettings} className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-medium text-white">Inventory status</div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Use this to reflect whether the deck is staged, live for a lane, already committed, in escrow, awaiting delivery, or donated.
+                  </p>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm text-zinc-300">Current inventory status</label>
+                    <select
+                      name="inventory_status"
+                      defaultValue={inventoryStatus}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                    >
+                      {INVENTORY_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {getInventoryStatusLabel(status)} ({getInventoryStatusVisibility(status)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <p className="mt-3 text-xs text-zinc-500">
+                    Current status: {getInventoryStatusDescription(inventoryStatus)} Visibility: {getInventoryStatusVisibility(inventoryStatus)}.
+                  </p>
+                </div>
+
                 <div>
                   <label className="mb-2 block text-sm text-zinc-400">Detected / chosen format</label>
                   <select
@@ -909,6 +1031,34 @@ export default async function ManageDeckPage({
                   Save Settings
                 </button>
               </form>
+
+              <form action={submitHolidayDonation} className="rounded-3xl border border-zinc-500/30 bg-zinc-800/60 p-5">
+                <div className="text-sm font-medium text-zinc-100">Holiday charity donation</div>
+                <p className="mt-2 text-sm text-zinc-300">
+                  Submit this deck to the Mythiverse Exchange holiday program when you are ready to give it away instead of trading or selling it.
+                </p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
+                </div>
+                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    name="confirm_holiday_donation"
+                    className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  <span>
+                    I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario.
+                  </span>
+                </label>
+                {holidayDonationAgreedAt && (
+                  <p className="mt-3 text-xs text-zinc-400">
+                    Donation confirmed {formatImportedAt(holidayDonationAgreedAt)}.
+                  </p>
+                )}
+                <button className="mt-4 w-full rounded-xl border border-zinc-500/40 bg-zinc-400/20 py-3 text-sm font-medium text-zinc-100 hover:bg-zinc-400/30">
+                  Submit for Holiday Donation
+                </button>
+              </form>
             </div>
 
             <div className="space-y-6">
@@ -919,6 +1069,7 @@ export default async function ManageDeckPage({
                   <p>Source type: {deck.source_type || 'Unknown'}</p>
                   <p>Source URL: {deck.source_url || 'None recorded'}</p>
                   <p>Validation status: {deck.is_valid ? 'Valid' : 'Needs review'}</p>
+                  <p>Inventory status: {getInventoryStatusLabel(inventoryStatus)}</p>
                 </div>
               </div>
 

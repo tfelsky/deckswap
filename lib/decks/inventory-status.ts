@@ -16,6 +16,7 @@ export const INVENTORY_STATUSES = [
 ] as const
 
 export type InventoryStatus = (typeof INVENTORY_STATUSES)[number]
+export type InventoryStatusVisibility = 'private' | 'public' | 'completed'
 
 const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
   staged: 'Staged',
@@ -68,6 +69,23 @@ const INVENTORY_STATUS_BADGES: Record<InventoryStatus, string> = {
   holiday_received: 'border-zinc-500/30 bg-zinc-500/15 text-zinc-200',
 }
 
+const INVENTORY_STATUS_VISIBILITY: Record<InventoryStatus, InventoryStatusVisibility> = {
+  staged: 'private',
+  deck_swap_live: 'public',
+  buy_it_now_live: 'public',
+  auction_live: 'public',
+  auction_pending: 'public',
+  checked_out: 'completed',
+  awaiting_delivery: 'completed',
+  escrow_pending_shipment: 'private',
+  escrow_in_transit: 'private',
+  escrow_received: 'private',
+  escrow_review: 'private',
+  escrow_completed: 'completed',
+  holiday_pending_receipt: 'private',
+  holiday_received: 'private',
+}
+
 const LOCKED_STATUSES = new Set<InventoryStatus>([
   'checked_out',
   'awaiting_delivery',
@@ -99,4 +117,16 @@ export function getInventoryStatusBadgeClass(status?: string | null) {
 
 export function isInventoryStatusLocked(status?: string | null) {
   return LOCKED_STATUSES.has(normalizeInventoryStatus(status))
+}
+
+export function getInventoryStatusVisibility(status?: string | null): InventoryStatusVisibility {
+  return INVENTORY_STATUS_VISIBILITY[normalizeInventoryStatus(status)]
+}
+
+export function isInventoryStatusPublic(status?: string | null) {
+  return getInventoryStatusVisibility(status) === 'public'
+}
+
+export function isInventoryStatusCompleted(status?: string | null) {
+  return getInventoryStatusVisibility(status) === 'completed'
 }

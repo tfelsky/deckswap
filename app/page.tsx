@@ -14,6 +14,7 @@ import {
   FIVE_COLOR_FILTERS,
 } from "@/lib/decks/color-identity"
 import { getDeckMarketingChips } from "@/lib/decks/marketing"
+import { isInventoryStatusPublic } from "@/lib/decks/inventory-status"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
@@ -34,6 +35,7 @@ type LandingDeck = {
   is_sealed?: boolean | null
   is_complete_precon?: boolean | null
   is_listed_for_trade?: boolean | null
+  inventory_status?: string | null
   box_type?: string | null
 }
 
@@ -179,7 +181,7 @@ export default async function HomePage({
   const { data: decksData } = await supabase
     .from("decks")
     .select(
-      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, color_identity, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type"
+      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, color_identity, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, inventory_status, box_type"
     )
     .order("id", { ascending: false })
 
@@ -210,7 +212,9 @@ export default async function HomePage({
     cardsByDeck.set(card.deck_id, existing)
   }
 
-  const deckViews = decks.map((deck) => {
+  const publicDecks = decks.filter((deck) => isInventoryStatusPublic(deck.inventory_status))
+
+  const deckViews = publicDecks.map((deck) => {
     const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
     const totalCards =
       Number(deck.commander_count ?? 0) +

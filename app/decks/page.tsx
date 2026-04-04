@@ -2,6 +2,13 @@ import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import {
+  isInventoryStatusCompleted,
+  getInventoryStatusBadgeClass,
+  getInventoryStatusLabel,
+  isInventoryStatusLocked,
+  isInventoryStatusPublic,
+} from '@/lib/decks/inventory-status'
+import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
@@ -25,6 +32,7 @@ type Deck = {
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
   buy_now_currency?: string | null
+  inventory_status?: string | null
   image_url?: string | null
   commander_count?: number | null
   mainboard_count?: number | null
@@ -70,7 +78,7 @@ export default async function DecksPage() {
   const { data, error } = await supabase
     .from('decks')
     .select(
-      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
+      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, inventory_status, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
     )
     .order('id', { ascending: true })
 
@@ -82,7 +90,9 @@ export default async function DecksPage() {
     )
   }
 
-  const decks = (data ?? []) as Deck[]
+  const allDecks = (data ?? []) as Deck[]
+  const decks = allDecks.filter((deck) => isInventoryStatusPublic(deck.inventory_status))
+  const completedDeckCount = allDecks.filter((deck) => isInventoryStatusCompleted(deck.inventory_status)).length
   const deckIds = decks.map((deck) => deck.id)
 
   const { data: deckCards } = deckIds.length
@@ -168,7 +178,14 @@ export default async function DecksPage() {
                 Discover deck inventory across Commander, Standard, Pauper, Canadian Highlander, Legacy, Modern, and Premodern with blended pricing and format-aware details.
               </p>
             </div>
-
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/completed-sales"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+              >
+                Completed Sales
+              </Link>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -216,6 +233,13 @@ export default async function DecksPage() {
               <div className="text-sm text-zinc-400">Token Ready</div>
               <div className="mt-2 text-3xl font-semibold text-emerald-300">
                 {tokenReadyDecks}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 lg:col-span-4">
+              <div className="text-sm text-zinc-400">Visibility Rules</div>
+              <div className="mt-2 text-sm text-zinc-300">
+                Only decks in public live statuses appear here. Staged, donation, checkout, and escrow-management statuses stay out of the live marketplace.
+                {completedDeckCount > 0 ? ` ${completedDeckCount} deck${completedDeckCount === 1 ? ' has' : 's have'} already moved into completed status.` : ''}
               </div>
             </div>
           </div>
@@ -360,7 +384,13 @@ export default async function DecksPage() {
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {deckViews.map((deck) => (
               <Link key={deck.id} href={`/decks/${deck.id}`}>
-                <article className="group cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900">
+                <article
+                  className={`group cursor-pointer overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
+                    isInventoryStatusLocked(deck.inventory_status)
+                      ? 'border-zinc-700/80 opacity-80'
+                      : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
+                  }`}
+                >
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
                       <>
@@ -396,6 +426,11 @@ export default async function DecksPage() {
                       {formatSupportsCommanderRules(deck.format)
                         ? deck.bracket.label
                         : getDeckFormatLabel(deck.format)}
+                    </div>
+                    <div
+                      className={`absolute right-4 top-4 rounded-full border px-3 py-1 text-[11px] font-medium backdrop-blur ${getInventoryStatusBadgeClass(deck.inventory_status)}`}
+                    >
+                      {getInventoryStatusLabel(deck.inventory_status)}
                     </div>
                   </div>
 
@@ -437,6 +472,12 @@ export default async function DecksPage() {
                       </div>
                     )}
 
+                    {isInventoryStatusLocked(deck.inventory_status) && (
+                      <div className="mt-4 rounded-2xl border border-zinc-600/40 bg-zinc-800/70 px-4 py-3 text-xs text-zinc-300">
+                        This deck is currently committed to another flow and is not positioned like an active live listing.
+                      </div>
+                    )}
+
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                         {formatSupportsCommanderRules(deck.format)
@@ -455,6 +496,11 @@ export default async function DecksPage() {
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                         {Number(deck.token_count ?? 0)} token
                         {Number(deck.token_count ?? 0) === 1 ? '' : 's'}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs ${getInventoryStatusBadgeClass(deck.inventory_status)}`}
+                      >
+                        {getInventoryStatusLabel(deck.inventory_status)}
                       </span>
                       {getDeckMarketingChips(deck).map((chip) => (
                         <span

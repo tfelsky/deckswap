@@ -3,6 +3,11 @@ import { getAdminAccessForUser } from '@/lib/admin/access'
 import AppHeader from '@/components/app-header'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import {
+  getInventoryStatusBadgeClass,
+  getInventoryStatusLabel,
+  isInventoryStatusLocked,
+} from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
 import { createClient } from '@/lib/supabase/server'
@@ -20,6 +25,7 @@ type Deck = {
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
   buy_now_currency?: string | null
+  inventory_status?: string | null
   image_url?: string | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
@@ -76,7 +82,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
+    .select('id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, inventory_status, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -245,7 +251,11 @@ export default async function MyDecksPage() {
             {deckViews.map((deck) => (
               <article
                 key={deck.id}
-                className="group overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900"
+                className={`group overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
+                  isInventoryStatusLocked(deck.inventory_status)
+                    ? 'border-zinc-700/80 opacity-70'
+                    : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
+                }`}
               >
                 {(() => {
                   const tradeValue = calculateDeckTradeValue(Number(deck.price_total_usd_foil ?? 0))
@@ -288,6 +298,11 @@ export default async function MyDecksPage() {
                       {formatSupportsCommanderRules(deck.format)
                         ? deck.bracket.label
                         : getDeckFormatLabel(deck.format)}
+                    </div>
+                    <div
+                      className={`absolute right-4 top-4 rounded-full border px-3 py-1 text-[11px] font-medium backdrop-blur ${getInventoryStatusBadgeClass(deck.inventory_status)}`}
+                    >
+                      {getInventoryStatusLabel(deck.inventory_status)}
                     </div>
                   </div>
                 </Link>
@@ -366,6 +381,11 @@ export default async function MyDecksPage() {
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                       Owned by You
                     </span>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs ${getInventoryStatusBadgeClass(deck.inventory_status)}`}
+                    >
+                      {getInventoryStatusLabel(deck.inventory_status)}
+                    </span>
                     {Number(deck.buy_now_price_usd ?? 0) > 0 && (
                       <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
                         Buy It Now {formatCurrencyAmount(
@@ -379,7 +399,11 @@ export default async function MyDecksPage() {
                   <div className="mt-5 flex gap-3">
                     <Link
                       href={`/decks/${deck.id}`}
-                      className="flex-1 rounded-2xl bg-emerald-400 px-4 py-3 text-center text-sm font-medium text-zinc-950 hover:opacity-90"
+                      className={`flex-1 rounded-2xl px-4 py-3 text-center text-sm font-medium ${
+                        isInventoryStatusLocked(deck.inventory_status)
+                          ? 'bg-zinc-700 text-zinc-200'
+                          : 'bg-emerald-400 text-zinc-950 hover:opacity-90'
+                      }`}
                     >
                       View Deck
                     </Link>

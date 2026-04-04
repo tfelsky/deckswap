@@ -39,6 +39,14 @@ import {
   getDeckFormatLabel,
   normalizeDeckFormat,
 } from '@/lib/decks/formats'
+import {
+  getInventoryStatusBadgeClass,
+  getInventoryStatusDescription,
+  getInventoryStatusLabel,
+  getInventoryStatusVisibility,
+  isInventoryStatusLocked,
+  normalizeInventoryStatus,
+} from '@/lib/decks/inventory-status'
 import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue, calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
@@ -97,6 +105,8 @@ type Deck = {
   buy_now_price_usd?: number | null
   buy_now_currency?: string | null
   buy_now_listing_notes?: string | null
+  inventory_status?: string | null
+  holiday_donation_submitted_at?: string | null
   wanted_color_identities?: string[] | null
   wanted_formats?: string[] | null
   box_type?: string | null
@@ -224,7 +234,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_currency, buy_now_listing_notes, wanted_color_identities, wanted_formats, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_currency, buy_now_listing_notes, inventory_status, holiday_donation_submitted_at, wanted_color_identities, wanted_formats, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -349,6 +359,8 @@ export default async function DeckDetailPage({
   }
   const buyNowPrice = Number(typedDeck.buy_now_price_usd ?? 0)
   const hasBuyNow = buyNowPrice > 0
+  const inventoryStatus = normalizeInventoryStatus(typedDeck.inventory_status)
+  const inventoryStatusLocked = isInventoryStatusLocked(inventoryStatus)
   const marketingChips = getDeckMarketingChips(typedDeck)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
@@ -359,6 +371,38 @@ export default async function DeckDetailPage({
     currentPrice,
     findNearestSnapshotBeforeDays(snapshots, 60)?.price_total_usd_foil ?? null
   )
+
+  if (!isOwner && !isAdmin && getInventoryStatusVisibility(inventoryStatus) === 'private') {
+    return (
+      <main className="min-h-screen bg-zinc-950 p-8 text-white">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-zinc-900 p-8">
+          <div
+            className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getInventoryStatusBadgeClass(inventoryStatus)}`}
+          >
+            {getInventoryStatusLabel(inventoryStatus)}
+          </div>
+          <h1 className="mt-5 text-3xl font-semibold">This deck is not in the live marketplace right now</h1>
+          <p className="mt-3 text-zinc-400">
+            Private inventory states like staging, donation intake, escrow handling, and post-checkout processing stay off the public marketplace.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/decks"
+              className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
+            >
+              Browse Live Decks
+            </Link>
+            <Link
+              href="/completed-sales"
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+            >
+              View Completed Sales
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const commentAuthorIds = [...new Set(typedComments.map((comment) => comment.user_id))]
   const { data: commentAuthorsData, error: commentAuthorsError } = commentAuthorIds.length
@@ -1166,27 +1210,44 @@ export default async function DeckDetailPage({
             )}
           </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <span
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  typedDeck.is_listed_for_trade
+          <div className="mt-4 flex flex-wrap gap-3">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs ${getInventoryStatusBadgeClass(inventoryStatus)}`}
+            >
+              {getInventoryStatusLabel(inventoryStatus)}
+            </span>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs ${
+                typedDeck.is_listed_for_trade
                   ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
                   : 'border-white/10 bg-white/5 text-zinc-300'
               }`}
-              >
-                {typedDeck.is_listed_for_trade ? 'Listed for Deck Swap' : 'Not currently listed for Deck Swap'}
+            >
+              {typedDeck.is_listed_for_trade ? 'Listed for Deck Swap' : 'Not currently listed for Deck Swap'}
+            </span>
+            {hasBuyNow && (
+              <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+                Buy It Now {formatCurrencyAmount(buyNowPrice, buyNowCurrency)}
               </span>
-              {hasBuyNow && (
-                <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
-                  Buy It Now {formatCurrencyAmount(buyNowPrice, buyNowCurrency)}
-                </span>
-              )}
-              {typedDeck.trade_wanted_profile && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
-                  Looking for: {typedDeck.trade_wanted_profile}
+            )}
+            {typedDeck.trade_wanted_profile && (
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
+                Looking for: {typedDeck.trade_wanted_profile}
               </span>
             )}
           </div>
+
+          {inventoryStatusLocked && (
+            <div className="mt-6 rounded-2xl border border-zinc-600/40 bg-zinc-800/70 p-4 text-sm text-zinc-200">
+              <div className="font-medium text-white">{getInventoryStatusLabel(inventoryStatus)}</div>
+              <p className="mt-2 text-zinc-300">{getInventoryStatusDescription(inventoryStatus)}</p>
+              {inventoryStatus === 'holiday_pending_receipt' && (
+                <p className="mt-2 text-zinc-400">
+                  This deck has been committed to the Mythiverse Exchange Holiday program and is no longer being presented like a live trade or sale listing.
+                </p>
+              )}
+            </div>
+          )}
 
           {isSuperadmin && (
             <div className="mt-6 flex flex-wrap gap-3">
@@ -1594,14 +1655,18 @@ export default async function DeckDetailPage({
                       </div>
                       <div>
                         <div className="text-sm font-medium text-white">
-                          {hasBuyNow
+                          {inventoryStatusLocked
+                            ? getInventoryStatusLabel(inventoryStatus)
+                            : hasBuyNow
                             ? `Buy it now is live at ${formatCurrencyAmount(buyNowPrice, buyNowCurrency)}`
                             : typedDeck.is_listed_for_trade
                               ? 'Deck Swap is active'
                               : 'Turn on trade listing'}
                         </div>
                         <div className="mt-1 text-xs text-zinc-400">
-                          {hasBuyNow
+                          {inventoryStatusLocked
+                            ? getInventoryStatusDescription(inventoryStatus)
+                            : hasBuyNow
                             ? 'Seller is offering a direct-sale fallback after trying to preserve more value through Deck Swap.'
                             : 'Add wanted colors and formats so matches can find the right deck faster.'}
                         </div>
@@ -1625,6 +1690,10 @@ export default async function DeckDetailPage({
                           Listing settings
                         </Link>
                       </>
+                    ) : inventoryStatusLocked ? (
+                      <div className="rounded-2xl border border-zinc-600/40 bg-zinc-800/70 px-4 py-3 text-sm font-medium text-zinc-200">
+                        {getInventoryStatusLabel(inventoryStatus)}
+                      </div>
                     ) : typedDeck.is_listed_for_trade ? (
                       <Link
                         href={`/trade-offers/propose?deckId=${deckId}`}
