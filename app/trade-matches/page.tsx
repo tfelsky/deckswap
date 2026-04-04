@@ -20,6 +20,7 @@ type DeckRow = {
   price_total_usd_foil?: number | null
   image_url?: string | null
   color_identity?: string[] | null
+  is_listed_for_trade?: boolean | null
 }
 
 type DeckCardForBracket = {
@@ -108,7 +109,7 @@ export default async function TradeMatchesPage() {
 
   const { data: myDeckRows } = await supabase
     .from('decks')
-    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity')
+      .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -152,9 +153,10 @@ export default async function TradeMatchesPage() {
 
   const { data: otherDeckRows } = await supabase
     .from('decks')
-    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity')
-    .neq('user_id', user.id)
-    .order('id', { ascending: false })
+      .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade')
+      .neq('user_id', user.id)
+      .eq('is_listed_for_trade', true)
+      .order('id', { ascending: false })
     .limit(80)
 
   const otherDecks = ((otherDeckRows ?? []) as DeckRow[]).filter(

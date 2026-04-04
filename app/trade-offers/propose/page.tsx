@@ -13,6 +13,7 @@ type DeckOption = {
   commander?: string | null
   image_url?: string | null
   price_total_usd_foil?: number | null
+  is_listed_for_trade?: boolean | null
 }
 
 function formatUsd(value?: number | null) {
@@ -43,12 +44,12 @@ export default async function ProposeTradeOfferPage({
   const [requestedDeckResult, ownDecksResult] = await Promise.all([
     supabase
       .from('decks')
-      .select('id, user_id, name, commander, image_url, price_total_usd_foil')
+      .select('id, user_id, name, commander, image_url, price_total_usd_foil, is_listed_for_trade')
       .eq('id', requestedDeckId)
       .single(),
     supabase
       .from('decks')
-      .select('id, user_id, name, commander, image_url, price_total_usd_foil')
+      .select('id, user_id, name, commander, image_url, price_total_usd_foil, is_listed_for_trade')
       .eq('user_id', user.id)
       .order('id', { ascending: false }),
   ])
@@ -63,6 +64,10 @@ export default async function ProposeTradeOfferPage({
   )
 
   if (requestedDeck.user_id === user.id) {
+    redirect(`/decks/${requestedDeck.id}`)
+  }
+
+  if (!requestedDeck.is_listed_for_trade) {
     redirect(`/decks/${requestedDeck.id}`)
   }
 
@@ -91,12 +96,12 @@ export default async function ProposeTradeOfferPage({
     const [offeredDeckResult, requestedDeckResult] = await Promise.all([
       supabase
         .from('decks')
-        .select('id, user_id')
+        .select('id, user_id, is_listed_for_trade')
         .eq('id', offeredDeckId)
         .single(),
       supabase
         .from('decks')
-        .select('id, user_id')
+        .select('id, user_id, is_listed_for_trade')
         .eq('id', requestedDeckId)
         .single(),
     ])
@@ -107,7 +112,8 @@ export default async function ProposeTradeOfferPage({
       offeredDeckResult.data.user_id !== user.id ||
       requestedDeckResult.error ||
       !requestedDeckResult.data ||
-      requestedDeckResult.data.user_id === user.id
+      requestedDeckResult.data.user_id === user.id ||
+      requestedDeckResult.data.is_listed_for_trade !== true
     ) {
       redirect(`/trade-offers/propose?deckId=${requestedDeckId}&error=1`)
     }

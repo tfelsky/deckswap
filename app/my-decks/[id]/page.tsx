@@ -6,6 +6,7 @@ import { validateDeckForFormat } from '@/lib/commander/validate'
 import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
+import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
@@ -184,6 +185,17 @@ export default async function ManageDeckPage({
     currentPrice,
     findNearestSnapshotBeforeDays(snapshots, 60)?.price_total_usd_foil ?? null
   )
+  const highestValueCard = gradingCards[0] ?? null
+  const selectedWantedColors = new Set(
+    ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
+      (value: string) => String(value)
+    )
+  )
+  const selectedWantedFormats = new Set(
+    ((deck as typeof deck & { wanted_formats?: string[] | null }).wanted_formats ?? []).map((value: string) =>
+      String(value)
+    )
+  )
 
   async function updateOverview(formData: FormData) {
     'use server'
@@ -230,7 +242,18 @@ export default async function ManageDeckPage({
     const isBoxed = formData.get('is_boxed') === 'on'
     const isSealed = formData.get('is_sealed') === 'on'
     const isCompletePrecon = formData.get('is_complete_precon') === 'on'
+    const isListedForTrade = formData.get('is_listed_for_trade') === 'on'
     const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
+    const tradeListingNotes = String(formData.get('trade_listing_notes') || '').trim() || null
+    const tradeWantedProfile = String(formData.get('trade_wanted_profile') || '').trim() || null
+    const wantedColorIdentities = formData
+      .getAll('wanted_color_identities')
+      .map((value) => String(value).trim().toUpperCase())
+      .filter(Boolean)
+    const wantedFormats = formData
+      .getAll('wanted_formats')
+      .map((value) => normalizeDeckFormat(String(value)))
+      .filter((value) => value !== 'unknown')
 
     const { data: currentCards } = await supabase
       .from('deck_cards')
@@ -284,6 +307,11 @@ export default async function ManageDeckPage({
         is_boxed: isBoxed,
         is_sealed: isSealed,
         is_complete_precon: isCompletePrecon,
+        is_listed_for_trade: isListedForTrade,
+        trade_listing_notes: tradeListingNotes,
+        trade_wanted_profile: tradeWantedProfile,
+        wanted_color_identities: isListedForTrade ? wantedColorIdentities : [],
+        wanted_formats: isListedForTrade ? wantedFormats : [],
         box_type: boxType,
       })
       .eq('id', deckId)
@@ -637,6 +665,118 @@ export default async function ManageDeckPage({
                       placeholder="Boulder 100+"
                       className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
                     />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                  <div className="text-sm font-medium text-white">Deck Swap listing</div>
+                  <p className="mt-2 text-sm text-emerald-50/80">
+                    Turn this on when the deck is ready for trade offers. You can finish edits first, then list when the presentation and condition spot-check feel right.
+                  </p>
+
+                  <label className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-black/20 px-4 py-3 text-sm text-emerald-50">
+                    <input
+                      type="checkbox"
+                      name="is_listed_for_trade"
+                      defaultChecked={(deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade ?? false}
+                      className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                    />
+                    List this deck for trade
+                  </label>
+
+                  <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Condition spot-check</div>
+                      {highestValueCard ? (
+                        <>
+                          <div className="mt-2 text-sm font-medium text-white">
+                            {highestValueCard.card_name}
+                          </div>
+                          <div className="mt-1 text-sm text-zinc-300">
+                            ${highestValueCard.unitPrice.toFixed(2)} each
+                          </div>
+                          <p className="mt-3 text-sm text-zinc-400">
+                            Before you mark the deck available, confirm the most expensive card is graded correctly. Buyers will anchor on the top-end pieces first.
+                          </p>
+                          <div className="mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium
+                            border-amber-400/20 bg-amber-400/10 text-amber-200">
+                            {highestValueCard.condition_source === 'manual'
+                              ? 'Top card manually graded'
+                              : 'Top card still using import default'}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-sm text-zinc-400">
+                          Import pricing first so the listing flow can highlight the most important card to confirm.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">What are you looking for?</label>
+                        <textarea
+                          name="trade_wanted_profile"
+                          rows={4}
+                          defaultValue={(deck as typeof deck & { trade_wanted_profile?: string | null }).trade_wanted_profile ?? ''}
+                          placeholder="Example: Looking for tuned white-based commander decks, sealed precons, or value-close trades with strong token support."
+                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">Preferred color identities</label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {ALL_COLOR_FILTERS.map((filter) => (
+                            <label
+                              key={filter.code}
+                              className="flex items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-200"
+                            >
+                              <input
+                                type="checkbox"
+                                name="wanted_color_identities"
+                                value={filter.code}
+                                defaultChecked={selectedWantedColors.has(filter.code)}
+                                className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                              />
+                              {filter.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">Preferred formats</label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {SUPPORTED_DECK_FORMATS.filter((format) => format !== 'unknown').map((format) => (
+                            <label
+                              key={format}
+                              className="flex items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-200"
+                            >
+                              <input
+                                type="checkbox"
+                                name="wanted_formats"
+                                value={format}
+                                defaultChecked={selectedWantedFormats.has(format)}
+                                className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                              />
+                              {getDeckFormatLabel(format)}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">Listing notes</label>
+                        <textarea
+                          name="trade_listing_notes"
+                          rows={3}
+                          defaultValue={(deck as typeof deck & { trade_listing_notes?: string | null }).trade_listing_notes ?? ''}
+                          placeholder="Example: Open to even trades, willing to add sealed accessories, prefer Canada/US shipping lanes."
+                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

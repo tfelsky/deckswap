@@ -33,6 +33,7 @@ type LandingDeck = {
   is_boxed?: boolean | null
   is_sealed?: boolean | null
   is_complete_precon?: boolean | null
+  is_listed_for_trade?: boolean | null
   box_type?: string | null
 }
 
@@ -146,6 +147,7 @@ function toDeckShelfCard(
     is_boxed?: boolean | null
     is_sealed?: boolean | null
     is_complete_precon?: boolean | null
+    is_listed_for_trade?: boolean | null
     box_type?: string | null
   }
 ) {
@@ -177,7 +179,7 @@ export default async function HomePage({
   const { data: decksData } = await supabase
     .from("decks")
     .select(
-      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, color_identity, is_sleeved, is_boxed, is_sealed, is_complete_precon, box_type"
+      "id, name, commander, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, color_identity, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type"
     )
     .order("id", { ascending: false })
 

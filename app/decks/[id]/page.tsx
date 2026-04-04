@@ -86,6 +86,11 @@ type Deck = {
   is_boxed?: boolean | null
   is_sealed?: boolean | null
   is_complete_precon?: boolean | null
+  is_listed_for_trade?: boolean | null
+  trade_listing_notes?: string | null
+  trade_wanted_profile?: string | null
+  wanted_color_identities?: string[] | null
+  wanted_formats?: string[] | null
   box_type?: string | null
 }
 
@@ -211,7 +216,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, wanted_color_identities, wanted_formats, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -1094,7 +1099,7 @@ export default async function DeckDetailPage({
               Import Deck
             </Link>
 
-            {user && !isOwner && (
+            {user && !isOwner && typedDeck.is_listed_for_trade && (
               <Link
                 href={`/trade-offers/propose?deckId=${deckId}`}
                 className="inline-block rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15"
@@ -1128,6 +1133,23 @@ export default async function DeckDetailPage({
               >
                 Admin Dashboard
               </Link>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs ${
+                typedDeck.is_listed_for_trade
+                  ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                  : 'border-white/10 bg-white/5 text-zinc-300'
+              }`}
+            >
+              {typedDeck.is_listed_for_trade ? 'Listed for Deck Swap' : 'Not currently listed for Deck Swap'}
+            </span>
+            {typedDeck.trade_wanted_profile && (
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
+                Looking for: {typedDeck.trade_wanted_profile}
+              </span>
             )}
           </div>
 
