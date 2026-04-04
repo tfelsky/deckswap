@@ -301,7 +301,7 @@ export default async function MyDecksPage() {
 
                   return (
                     <>
-                <Link href={`/decks/${deck.id}`} className="block">
+                <Link href={`/my-decks/${deck.id}?tab=settings`} className="block">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
                       <>
@@ -444,21 +444,26 @@ export default async function MyDecksPage() {
 
                   <div className="mt-5 flex gap-3">
                     <Link
-                      href={`/decks/${deck.id}`}
-                      className={`flex-1 rounded-2xl px-4 py-3 text-center text-sm font-medium ${
-                        isInventoryStatusLocked(deck.inventory_status)
-                          ? 'bg-zinc-700 text-zinc-200'
-                          : 'bg-emerald-400 text-zinc-950 hover:opacity-90'
-                      }`}
+                      href={`/my-decks/${deck.id}?tab=settings`}
+                      className="flex-1 rounded-2xl bg-emerald-400 px-4 py-3 text-center text-sm font-medium text-zinc-950 hover:opacity-90"
                     >
-                      View Deck
+                      Market This Deck
                     </Link>
 
                     <Link
                       href={`/my-decks/${deck.id}`}
                       className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-medium text-white hover:bg-white/10"
                     >
-                      Edit Deck
+                      Deck Details
+                    </Link>
+                  </div>
+
+                  <div className="mt-3">
+                    <Link
+                      href={`/decks/${deck.id}`}
+                      className="text-xs text-zinc-400 underline-offset-4 hover:text-white hover:underline"
+                    >
+                      Public preview
                     </Link>
                   </div>
                 </div>

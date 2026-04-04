@@ -729,7 +729,7 @@ export default async function ManageDeckPage({
                   <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
                     <div className="text-sm font-medium text-white">Inventory status</div>
                     <p className="mt-2 text-sm text-zinc-400">
-                      Status is automatic. This deck starts in staging after import, then changes when you actually activate a lane or move into an operational flow.
+                      Status is automatic. This deck starts in staging after import, then changes when you activate DeckSwap, set a Buy It Now price, or move into auction and fulfillment flow.
                     </p>
 
                     <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
@@ -754,7 +754,7 @@ export default async function ManageDeckPage({
                         href="#deckswap-lane"
                         className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100 hover:bg-emerald-400/15"
                       >
-                        Start with DeckSwap
+                        Start DeckSwap
                       </a>
                       <a
                         href="#buy-now-lane"
@@ -770,7 +770,7 @@ export default async function ManageDeckPage({
                             : 'border-orange-400/20 bg-orange-400/10 text-orange-100 hover:bg-orange-400/15'
                         }`}
                       >
-                        {inventoryStatusLocked ? 'Auction Unavailable' : 'Start Auction Rules'}
+                        {inventoryStatusLocked ? 'Auction Unavailable' : 'Set Auction Rules'}
                       </Link>
                     </div>
                   </div>
