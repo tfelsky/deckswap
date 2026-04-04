@@ -95,7 +95,7 @@ export default async function ManageDeckPage({
 
   const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
     card_name: string
-    section: 'commander' | 'mainboard' | 'token'
+    section: 'commander' | 'mainboard' | 'sideboard' | 'token'
     quantity: number
     cmc?: number | null
     mana_cost?: string | null
@@ -262,7 +262,7 @@ export default async function ManageDeckPage({
 
     const validation = validateDeckForFormat(
       ((currentCards ?? []) as Array<{
-        section: 'commander' | 'mainboard'
+        section: 'commander' | 'mainboard' | 'sideboard'
         quantity: number
         card_name: string
         set_code?: string | null
@@ -301,6 +301,7 @@ export default async function ManageDeckPage({
         validation_errors: validation.errors,
         commander_count: validation.commanderCount,
         mainboard_count: validation.mainboardCount,
+        sideboard_count: validation.sideboardCount ?? 0,
         token_count: validation.tokenCount,
         commander_mode: validation.commanderMode,
         is_sleeved: isSleeved,

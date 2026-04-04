@@ -23,12 +23,13 @@ type BaseCard = {
   oracle_text?: string | null
   keywords?: string[] | null
   condition?: string | null
-  section: 'commander' | 'mainboard' | 'token'
+  section: 'commander' | 'mainboard' | 'sideboard' | 'token'
 }
 
 type DeckCardViewsProps = {
   commanders: BaseCard[]
   mainboard: BaseCard[]
+  sideboard: BaseCard[]
   tokens: BaseCard[]
 }
 
@@ -426,14 +427,15 @@ function CardTile({
 export default function DeckCardViews({
   commanders,
   mainboard,
+  sideboard,
   tokens,
 }: DeckCardViewsProps) {
   const [view, setView] = useState<'table' | 'grid'>('table')
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
 
   const modalCards = useMemo(
-    () => [...commanders, ...mainboard, ...tokens],
-    [commanders, mainboard, tokens]
+    () => [...commanders, ...mainboard, ...sideboard, ...tokens],
+    [commanders, mainboard, sideboard, tokens]
   )
 
   const selectedIndex = modalCards.findIndex((card) => card.id === selectedCardId)
@@ -605,6 +607,61 @@ export default function DeckCardViews({
                 key={card.id}
                 card={card}
                 onOpen={() => openCard(card)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+        <h2 className="text-2xl font-semibold">Sideboard</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Optional 60-card format sideboard stored with the deck import.
+        </p>
+
+        {sideboard.length === 0 ? (
+          <div className="mt-5 text-sm text-zinc-400">No sideboard cards saved.</div>
+        ) : view === 'table' ? (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
+            <div className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-wide text-zinc-400">
+              <div>Qty</div>
+              <div>Card</div>
+              <div>Printing</div>
+              <div>Price</div>
+              <div>Preview</div>
+            </div>
+
+            {sideboard.map((card) => (
+              <div
+                key={card.id}
+                className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 px-4 py-3 text-sm transition hover:bg-white/[0.03] last:border-b-0"
+              >
+                <div className="text-zinc-300">{card.quantity}</div>
+                <div className="font-medium text-white">{card.card_name}</div>
+                <div className="text-zinc-400">{printLine(card) || 'N/A'}</div>
+                <div className="font-medium text-emerald-300">
+                  {formatUsd(getUnitPrice(card))}
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => openCard(card)}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10"
+                  >
+                    Open
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {sideboard.map((card) => (
+              <CardTile
+                key={card.id}
+                card={card}
+                onOpen={() => openCard(card)}
+                label="Sideboard"
               />
             ))}
           </div>

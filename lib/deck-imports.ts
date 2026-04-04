@@ -18,6 +18,7 @@ type ImportNormalizedDeckArgs = {
   sourceUrl?: string | null
   parsedCards: ImportedDeckCard[]
   sourceFormatHint?: string | null
+  manualFormatOverride?: string | null
   actorUserId?: string | null
   guestDraftPresent?: boolean
   guestDraftToken?: string
@@ -32,6 +33,10 @@ export function toFriendlyImportError(message?: string) {
 
   if (message.includes("Could not find the 'format' column of 'decks'")) {
     return 'Your database is missing the new decks.format column. Run the latest Supabase migration for deck format and price history, then try the import again.'
+  }
+
+  if (message.includes("Could not find the 'sideboard_count' column of 'decks'")) {
+    return 'Your database is missing the new decks.sideboard_count column. Run the Standard sideboard migration, then try the import again.'
   }
 
   if (message.includes("Could not find the relation 'public.deck_price_history'")) {
@@ -53,12 +58,15 @@ export async function importNormalizedDeckToCollection({
   sourceUrl,
   parsedCards,
   sourceFormatHint,
+  manualFormatOverride,
   actorUserId,
   guestDraftPresent = false,
   guestDraftToken = '',
 }: ImportNormalizedDeckArgs) {
   const normalizedCards = normalizeImportedCommanderOverlap(parsedCards)
-  const detectedFormat = normalizeDeckFormat(detectDeckFormat(normalizedCards, sourceFormatHint))
+  const detectedFormat = normalizeDeckFormat(
+    manualFormatOverride || detectDeckFormat(normalizedCards, sourceFormatHint)
+  )
   const validation = validateDeckForFormat(normalizedCards, detectedFormat)
   const commanderNames = normalizedCards
     .filter((card) => card.section === 'commander')
@@ -77,6 +85,7 @@ export async function importNormalizedDeckToCollection({
         imported_at: new Date().toISOString(),
         commander_count: validation.commanderCount,
         mainboard_count: validation.mainboardCount,
+        sideboard_count: validation.sideboardCount ?? 0,
         token_count: validation.tokenCount,
         commander_mode: validation.commanderMode,
         commander_names: commanderNames,
@@ -123,7 +132,12 @@ export async function importNormalizedDeckToCollection({
   })
 
   const deckCards = normalizedCards
-    .filter((card) => card.section === 'commander' || card.section === 'mainboard')
+    .filter(
+      (card) =>
+        card.section === 'commander' ||
+        card.section === 'mainboard' ||
+        card.section === 'sideboard'
+    )
     .map((card, index) => ({
       deck_id: deckId,
       section: card.section,

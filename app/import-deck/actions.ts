@@ -16,6 +16,7 @@ export type ImportDeckActionState = {
   fields?: {
     deckName: string
     sourceType: string
+    formatOverride: string
     sourceUrl: string
     rawList: string
   }
@@ -24,12 +25,14 @@ export type ImportDeckActionState = {
 function buildActionFields(
   deckName: string,
   sourceType: string,
+  formatOverride: string,
   sourceUrl: string,
   rawList: string
 ) {
   return {
     deckName,
     sourceType,
+    formatOverride,
     sourceUrl,
     rawList,
   }
@@ -84,13 +87,14 @@ export async function importDeckAction(
 
   const deckName = String(formData.get('deck_name') || '').trim()
   const sourceType = String(formData.get('source_type') || 'text').trim()
+  const formatOverride = String(formData.get('format_override') || 'auto').trim().toLowerCase()
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
   const guestDraftPresent = String(formData.get('guest_draft_present') || '').trim() === '1'
   const guestDraftToken = String(formData.get('guest_draft_token') || '').trim()
   const deckFile = formData.get('deck_file')
   const hasUploadedFile = deckFile instanceof File && deckFile.size > 0
-  const fields = buildActionFields(deckName, sourceType, sourceUrl, rawList)
+  const fields = buildActionFields(deckName, sourceType, formatOverride, sourceUrl, rawList)
 
   let resolvedDeckName = deckName
   let resolvedRawList = rawList
@@ -116,7 +120,7 @@ export async function importDeckAction(
     if (!sourceUrl) {
       return {
         error: 'Add a Moxfield deck URL to import from a link.',
-        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+        fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
       }
     }
 
@@ -141,7 +145,7 @@ export async function importDeckAction(
           error instanceof Error
             ? error.message
             : 'Failed to import that Moxfield deck.',
-        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+        fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
       }
     }
   }
@@ -149,7 +153,7 @@ export async function importDeckAction(
   if (!resolvedDeckName) {
     return {
       error: 'Deck name is required unless the source provides one.',
-      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
     }
   }
 
@@ -161,7 +165,7 @@ export async function importDeckAction(
           hasRawList: !!resolvedRawList,
           hasSourceUrl: !!sourceUrl,
         }),
-        fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+        fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
       }
     }
 
@@ -177,13 +181,14 @@ export async function importDeckAction(
       sourceUrl,
       parsedCards,
       sourceFormatHint,
+      manualFormatOverride: formatOverride === 'auto' ? null : formatOverride,
       guestDraftPresent,
       guestDraftToken,
     })
   } catch (error) {
     return {
       error: toFriendlyImportError(error instanceof Error ? error.message : undefined),
-      fields: buildActionFields(resolvedDeckName, sourceType, sourceUrl, resolvedRawList),
+      fields: buildActionFields(resolvedDeckName, sourceType, formatOverride, sourceUrl, resolvedRawList),
     }
   }
 

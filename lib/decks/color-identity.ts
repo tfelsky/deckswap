@@ -87,7 +87,7 @@ export function getColorIdentityLabel(value: string[] | null | undefined) {
 
 export function deriveDeckColorIdentity(
   cards: Array<{
-    section: 'commander' | 'mainboard' | 'token'
+    section: 'commander' | 'mainboard' | 'sideboard' | 'token'
     color_identity?: string[] | null
   }>
 ) {

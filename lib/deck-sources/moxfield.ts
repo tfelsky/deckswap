@@ -67,7 +67,7 @@ async function fetchMoxfieldDeckTitle(sourceUrl: string) {
 
 function parseMoxfieldBoard(
   board: MoxfieldBoard | Record<string, MoxfieldCardEntry> | undefined,
-  section: 'commander' | 'mainboard' | 'token'
+  section: 'commander' | 'mainboard' | 'sideboard' | 'token'
 ): ImportedDeckCard[] {
   const cardMap = board && 'cards' in board ? board.cards : board
 
@@ -153,6 +153,7 @@ export async function fetchMoxfieldDeck(
   const cards = [
     ...parseMoxfieldBoard(deck.boards?.commanders ?? deck.commanders, 'commander'),
     ...parseMoxfieldBoard(deck.boards?.mainboard ?? deck.mainboard, 'mainboard'),
+    ...parseMoxfieldBoard(deck.boards?.sideboard ?? deck.sideboard, 'sideboard'),
     ...parseMoxfieldBoard(deck.boards?.tokens ?? deck.tokens, 'token'),
   ]
 

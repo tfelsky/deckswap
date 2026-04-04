@@ -1,5 +1,5 @@
 export type ImportedDeckCard = {
-  section: 'commander' | 'mainboard' | 'token'
+  section: 'commander' | 'mainboard' | 'sideboard' | 'token'
   quantity: number
   cardName: string
   foil?: boolean

@@ -20,6 +20,72 @@ function isBasicLand(cardName: string) {
   return basics.has(cardName.toLowerCase())
 }
 
+function toSectionCounts(cards: ImportedDeckCard[]) {
+  const commanders = cards.filter((c) => c.section === 'commander')
+  const mainboardCards = cards.filter((c) => c.section === 'mainboard')
+  const sideboardCards = cards.filter((c) => c.section === 'sideboard')
+  const tokenCards = cards.filter((c) => c.section === 'token')
+
+  return {
+    commanders,
+    mainboardCards,
+    sideboardCards,
+    commanderCount: commanders.reduce((sum, c) => sum + c.quantity, 0),
+    mainboardCount: mainboardCards.reduce((sum, c) => sum + c.quantity, 0),
+    sideboardCount: sideboardCards.reduce((sum, c) => sum + c.quantity, 0),
+    tokenCount: tokenCards.reduce((sum, c) => sum + c.quantity, 0),
+  }
+}
+
+function validateSixtyCardConstructedDeck(
+  cards: ImportedDeckCard[],
+  formatLabel: string
+) {
+  const { commanders, mainboardCards, sideboardCards, commanderCount, mainboardCount, sideboardCount, tokenCount } =
+    toSectionCounts(cards)
+
+  const errors: string[] = []
+
+  if (commanderCount > 0) {
+    errors.push(`${formatLabel} decks should not include a commander section.`)
+  }
+
+  if (mainboardCount === 0) {
+    errors.push('Deck must include at least one mainboard card.')
+  }
+
+  if (mainboardCount < 60) {
+    errors.push(`${formatLabel} decks usually need at least 60 mainboard cards, found ${mainboardCount}.`)
+  }
+
+  if (sideboardCount > 15) {
+    errors.push(`${formatLabel} sideboards can include up to 15 cards, found ${sideboardCount}.`)
+  }
+
+  const nameCounts = new Map<string, number>()
+
+  for (const card of [...mainboardCards, ...sideboardCards]) {
+    const key = card.cardName.trim().toLowerCase()
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + card.quantity)
+  }
+
+  for (const [name, qty] of nameCounts.entries()) {
+    if (qty > 4 && !isBasicLand(name)) {
+      errors.push(`Too many copies for ${name}: ${qty}. Standard-style decks usually allow up to 4 between mainboard and sideboard.`)
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    commanderCount,
+    mainboardCount,
+    sideboardCount,
+    tokenCount,
+    commanderMode: commanders.length > 0 ? 'single' : 'invalid',
+    errors,
+  }
+}
+
 function validateCommanderColorIdentity(cards: ImportedDeckCard[]) {
   const commanders = cards.filter((card) => card.section === 'commander')
   const allowedColors = new Set<string>()
@@ -92,16 +158,9 @@ function isLegalCommanderPair(a: ImportedDeckCard, b: ImportedDeckCard) {
 }
 
 export function validateCommanderDeck(cards: ImportedDeckCard[]) {
-  const commanders = cards.filter((c) => c.section === 'commander')
-
-  const mainboardCards = cards.filter((c) => c.section === 'mainboard')
-  const nonTokenCards = cards.filter((c) => c.section !== 'token')
-
-  const mainboardCount = mainboardCards.reduce((sum, c) => sum + c.quantity, 0)
-
-  const tokenCount = cards
-    .filter((c) => c.section === 'token')
-    .reduce((sum, c) => sum + c.quantity, 0)
+  const { commanders, mainboardCards, sideboardCount, commanderCount, mainboardCount, tokenCount } =
+    toSectionCounts(cards)
+  const nonTokenCards = cards.filter((c) => c.section !== 'token' && c.section !== 'sideboard')
 
   const errors: string[] = []
   let commanderMode:
@@ -111,7 +170,7 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
     | 'background_pair'
     | 'invalid' = 'invalid'
 
-  if (commanders.length === 1) {
+  if (commanderCount === 1) {
     commanderMode = 'single'
 
     if (mainboardCount !== 99) {
@@ -119,7 +178,7 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
         `Single-commander deck must have 99 maindeck cards, found ${mainboardCount}.`
       )
     }
-  } else if (commanders.length === 2) {
+  } else if (commanderCount === 2) {
     const pair = isLegalCommanderPair(commanders[0], commanders[1])
     commanderMode = pair.mode
 
@@ -135,7 +194,11 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
       )
     }
   } else {
-    errors.push(`Deck must have 1 or 2 commanders, found ${commanders.length}.`)
+    errors.push(`Deck must have 1 or 2 commanders, found ${commanderCount}.`)
+  }
+
+  if (sideboardCount > 0) {
+    errors.push(`Commander imports should not include a sideboard section, found ${sideboardCount} sideboard cards.`)
   }
 
   const nameCounts = new Map<string, number>()
@@ -155,8 +218,9 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
 
   return {
     isValid: errors.length === 0,
-    commanderCount: commanders.length,
+    commanderCount,
     mainboardCount,
+    sideboardCount,
     tokenCount,
     commanderMode,
     errors,
@@ -173,16 +237,16 @@ export function validateDeckForFormat(
     return validateCommanderDeck(cards)
   }
 
-  const commanders = cards.filter((c) => c.section === 'commander')
-  const mainboardCards = cards.filter((c) => c.section !== 'token')
-  const mainboardCount = mainboardCards.reduce((sum, c) => sum + c.quantity, 0)
-  const tokenCount = cards
-    .filter((c) => c.section === 'token')
-    .reduce((sum, c) => sum + c.quantity, 0)
+  if (normalizedFormat === 'standard') {
+    return validateSixtyCardConstructedDeck(cards, 'Standard')
+  }
+
+  const { commanders, commanderCount, mainboardCount, sideboardCount, tokenCount } =
+    toSectionCounts(cards)
 
   const errors: string[] = []
 
-  if (mainboardCount === 0) {
+  if (mainboardCount === 0 && sideboardCount === 0) {
     errors.push('Deck must include at least one non-token card.')
   }
 
@@ -205,8 +269,9 @@ export function validateDeckForFormat(
 
   return {
     isValid: errors.length === 0,
-    commanderCount: commanders.length,
+    commanderCount,
     mainboardCount,
+    sideboardCount,
     tokenCount,
     commanderMode: commanders.length > 0 ? 'single' : 'invalid',
     errors,

@@ -2,7 +2,7 @@ import type { ImportedDeckCard } from './types'
 
 type DeckCardLike = {
   id: number
-  section: 'commander' | 'mainboard'
+  section: 'commander' | 'mainboard' | 'sideboard'
   quantity: number
   card_name: string
 }

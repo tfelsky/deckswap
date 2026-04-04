@@ -325,7 +325,7 @@ function isLikelyArchidektToken(card: ImportedDeckCard) {
 
 function inferSectionFromArchidektRow(
   row: Record<string, string>
-): 'commander' | 'mainboard' | 'token' {
+): 'commander' | 'mainboard' | 'sideboard' | 'token' {
   const commanderFlag = getFirstValue(row, [
     'commander',
     'iscommander',
@@ -352,6 +352,14 @@ function inferSectionFromArchidektRow(
     category.includes('helper')
   ) {
     return 'token'
+  }
+
+  if (
+    category.includes('sideboard') ||
+    category.includes('maybeboard') ||
+    category.includes('companion')
+  ) {
+    return 'sideboard'
   }
 
   if (category.includes('commander')) {
@@ -418,17 +426,13 @@ function parseArchidektTable(input: string): ImportedDeckCard[] {
 
 function parseCardLine(
   line: string,
-  currentSection: 'commander' | 'mainboard' | 'token'
+  currentSection: 'commander' | 'mainboard' | 'sideboard' | 'token'
 ): ImportedDeckCard | null {
   const cleaned = normalizeLine(stripBulletPrefix(line))
 
   if (!cleaned) return null
   if (cleaned.startsWith('//')) return null
   if (cleaned.startsWith('#')) return null
-  if (/^(sideboard|maybeboard|companion|companions)\b[:\s-]*$/i.test(cleaned)) {
-    return null
-  }
-
   // Supports:
   // 1 Sol Ring
   // 1x Sol Ring
@@ -438,7 +442,7 @@ function parseCardLine(
   const qtyMatch = cleaned.match(/^(\d+)x?\s+(.+)$/i)
   const trailingQtyMatch = cleaned.match(/^(.+?)\s+x?(\d+)$/i)
   const colonSectionMatch = cleaned.match(
-    /^(commander|commanders|mainboard|maindeck|deck|tokens|token)\s*:\s*(.+)$/i
+    /^(commander|commanders|mainboard|maindeck|deck|sideboard|maybeboard|companion|companions|tokens|token)\s*:\s*(.+)$/i
   )
 
   if (colonSectionMatch) {
@@ -447,6 +451,10 @@ function parseCardLine(
       colonSectionMatch[2],
       inlineSection.startsWith('commander')
         ? 'commander'
+        : inlineSection.startsWith('sideboard') ||
+          inlineSection.startsWith('maybeboard') ||
+          inlineSection.startsWith('companion')
+        ? 'sideboard'
         : inlineSection.startsWith('token')
         ? 'token'
         : 'mainboard'
@@ -457,13 +465,13 @@ function parseCardLine(
   const prefixedSectionMatch = cleaned.match(/^(sb|sideboard|maybeboard|mb|cmdr|commander)\s*[:\-]\s*(.+)$/i)
   if (prefixedSectionMatch) {
     const sectionLabel = prefixedSectionMatch[1].toLowerCase()
-    if (sectionLabel === 'sb' || sectionLabel === 'sideboard' || sectionLabel === 'maybeboard') {
-      return null
-    }
-
     return parseCardLine(
       prefixedSectionMatch[2],
-      sectionLabel === 'cmdr' || sectionLabel === 'commander' ? 'commander' : currentSection
+      sectionLabel === 'cmdr' || sectionLabel === 'commander'
+        ? 'commander'
+        : sectionLabel === 'sb' || sectionLabel === 'sideboard' || sectionLabel === 'maybeboard'
+        ? 'sideboard'
+        : currentSection
     )
   }
 
@@ -514,7 +522,7 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
 
   const lines = input.split('\n')
 
-  let currentSection: 'commander' | 'mainboard' | 'token' = 'mainboard'
+  let currentSection: 'commander' | 'mainboard' | 'sideboard' | 'token' = 'mainboard'
   const cards: ImportedDeckCard[] = []
 
   for (const raw of lines) {
@@ -551,7 +559,7 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
       lower === 'companion' ||
       lower === 'companions'
     ) {
-      currentSection = 'mainboard'
+      currentSection = 'sideboard'
       continue
     }
 

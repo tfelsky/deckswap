@@ -14,7 +14,7 @@ import {
 
 type DeckCardRow = {
   id: number
-  section: 'commander' | 'mainboard'
+  section: 'commander' | 'mainboard' | 'sideboard'
   quantity: number
   card_name: string
   set_code: string | null
@@ -424,6 +424,7 @@ async function inferCommanderDeckState(deckId: number) {
     commander: string | null
     commander_count: number
     mainboard_count: number
+    sideboard_count: number
     token_count: number
     commander_mode: string
     commander_names: string[]
@@ -435,6 +436,7 @@ async function inferCommanderDeckState(deckId: number) {
     commander: commanderNames[0] ?? null,
     commander_count: validation.commanderCount,
     mainboard_count: validation.mainboardCount,
+    sideboard_count: validation.sideboardCount ?? 0,
     token_count: validation.tokenCount,
     commander_mode: validation.commanderMode,
     commander_names: commanderNames,
@@ -552,6 +554,7 @@ export async function syncDeckDerivedState(deckId: number) {
       commander: commanderNames[0] ?? null,
       commander_count: validation.commanderCount,
       mainboard_count: validation.mainboardCount,
+      sideboard_count: validation.sideboardCount ?? 0,
       token_count: tokenCount,
       commander_mode: validation.commanderMode,
       commander_names: commanderNames,

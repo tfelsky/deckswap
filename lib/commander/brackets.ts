@@ -12,7 +12,7 @@ export type CommanderBracketSummary = {
 
 export type BracketCard = {
   card_name: string
-  section: 'commander' | 'mainboard' | 'token'
+  section: 'commander' | 'mainboard' | 'sideboard' | 'token'
   quantity: number
   mana_cost?: string | null
   cmc?: number | null
@@ -173,7 +173,7 @@ function uniqueCardNames(cards: BracketCard[]) {
   const names = new Set<string>()
 
   for (const card of cards) {
-    if (card.section === 'token') continue
+    if (card.section === 'token' || card.section === 'sideboard') continue
     names.add(card.card_name.trim().toLowerCase())
   }
 
@@ -207,7 +207,9 @@ export function getCommanderBracketLabel(bracket: CommanderBracket | null) {
 export function getCommanderBracketSummary(
   cards: BracketCard[]
 ): CommanderBracketSummary {
-  const deckCards = cards.filter((card) => card.section !== 'token')
+  const deckCards = cards.filter(
+    (card) => card.section !== 'token' && card.section !== 'sideboard'
+  )
 
   if (deckCards.length === 0) {
     return {

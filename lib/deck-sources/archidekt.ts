@@ -194,6 +194,10 @@ function inferArchidektSection(entry: ArchidektCardEntry) {
     return 'token' as const
   }
 
+  if (categoryNames.some((value) => /sideboard|maybeboard|companion/i.test(value))) {
+    return 'sideboard' as const
+  }
+
   if (categoryNames.some((value) => /commander/i.test(value))) {
     return 'commander' as const
   }

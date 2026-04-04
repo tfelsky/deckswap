@@ -65,7 +65,9 @@ function ImportDeckPageContent() {
 
   const fields = state?.fields ?? guestDraft ?? undefined
   const showGuestBanner = !!guestDraft || searchParams.get('fromGuest') === '1'
+  const fieldFormatOverride = state?.fields?.formatOverride ?? 'auto'
   const [sourceType, setSourceType] = useState(fields?.sourceType ?? 'text')
+  const [formatOverride, setFormatOverride] = useState(fieldFormatOverride)
 
   useEffect(() => {
     if (!state?.fields || !showGuestBanner) return
@@ -75,6 +77,7 @@ function ImportDeckPageContent() {
         guestDraft?.draftToken ?? searchParams.get(GUEST_IMPORT_DRAFT_QUERY_KEY)?.trim() ?? undefined,
       deckName: state.fields.deckName,
       sourceType: state.fields.sourceType,
+      formatOverride: state.fields.formatOverride,
       sourceUrl: state.fields.sourceUrl,
       rawList: state.fields.rawList,
     }
@@ -86,6 +89,10 @@ function ImportDeckPageContent() {
   useEffect(() => {
     setSourceType(fields?.sourceType ?? 'text')
   }, [fields?.sourceType])
+
+  useEffect(() => {
+    setFormatOverride(fieldFormatOverride)
+  }, [fieldFormatOverride])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -181,12 +188,12 @@ function ImportDeckPageContent() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Import a Commander deck
+              Import a deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Bring in a deck from text, file, or a public Moxfield link, then let DeckSwap
-              handle parsing, commander detection, and validation.
+              Bring in a Commander or Standard-style deck from text, file, or a public Moxfield
+              link, then let Mythiverse Exchange handle parsing, sideboards, and validation.
             </p>
           </div>
 
@@ -255,6 +262,57 @@ function ImportDeckPageContent() {
                         value={option.value}
                         checked={selected}
                         onChange={(e) => setSourceType(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="text-sm font-medium text-white">{option.title}</div>
+                      <div className="mt-2 text-sm text-zinc-400">{option.description}</div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+              <div className="text-sm font-medium text-white">Format handling</div>
+              <p className="mt-2 text-sm text-zinc-400">
+                Leave this on auto-detect for most imports. If a 60-card list should be treated as
+                Standard-style, you can force that here and the importer will keep sideboard-aware
+                validation on from the start.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  {
+                    value: 'auto',
+                    title: 'Auto-detect',
+                    description: 'Use source hints and deck structure to choose the format.',
+                  },
+                  {
+                    value: 'commander',
+                    title: 'Commander',
+                    description: 'Best for lists missing commander headers or imported loosely.',
+                  },
+                  {
+                    value: 'standard',
+                    title: 'Standard-style',
+                    description: 'Use 60-card deck rules with an optional 15-card sideboard.',
+                  },
+                ].map((option) => {
+                  const selected = formatOverride === option.value
+                  return (
+                    <label
+                      key={option.value}
+                      className={`cursor-pointer rounded-2xl border p-4 transition ${
+                        selected
+                          ? 'border-emerald-400/30 bg-emerald-400/10'
+                          : 'border-white/10 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="format_override"
+                        value={option.value}
+                        checked={selected}
+                        onChange={(e) => setFormatOverride(e.target.value)}
                         className="sr-only"
                       />
                       <div className="text-sm font-medium text-white">{option.title}</div>
@@ -351,8 +409,8 @@ Tokens
                       className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
                     />
                     <p className="mt-2 text-xs text-zinc-500">
-                      Full Commander lists import best. If commander detection misses, you can fix
-                      it from the deck page after import.
+                      Commander and Standard-style lists both work here. Sideboard headers are
+                      supported, and you can still fix the format from the deck page later.
                     </p>
                   </div>
                 </div>
@@ -378,8 +436,8 @@ Tokens
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-zinc-500">
-                Commander validation is live. Broader format rules will return once that support is
-                cleaned up.
+                Commander and Standard-style validation are live. Use the format setting above if a
+                historical 60-card deck should import under Standard rules.
               </div>
               <button
                 type="submit"
@@ -415,7 +473,7 @@ function ImportDeckPageFallback() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Import a Commander deck
+              Import a deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">

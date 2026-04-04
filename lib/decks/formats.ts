@@ -41,6 +41,12 @@ function isBasicLand(cardName: string) {
   return basics.has(cardName.toLowerCase())
 }
 
+function toSectionCount(cards: ImportedDeckCard[], section: ImportedDeckCard['section']) {
+  return cards
+    .filter((card) => card.section === section)
+    .reduce((sum, card) => sum + card.quantity, 0)
+}
+
 export function normalizeDeckFormat(value: string | null | undefined): StoredDeckFormat {
   const normalized = (value ?? '').trim().toLowerCase()
   if (SUPPORTED_SET.has(normalized)) {
@@ -84,27 +90,32 @@ export function detectDeckFormat(
 
   const commanders = cards.filter((card) => card.section === 'commander')
   const nonTokenCards = cards.filter((card) => card.section !== 'token')
+  const mainboardCount = toSectionCount(cards, 'mainboard')
+  const sideboardCount = toSectionCount(cards, 'sideboard')
   const totalNonTokenCards = nonTokenCards.reduce((sum, card) => sum + card.quantity, 0)
 
   if (commanders.length > 0) {
     return 'commander'
   }
 
-  const nonBasicUniqueNames = new Set<string>()
-  let hasDuplicateNonBasics = false
+  const nameCounts = new Map<string, number>()
 
   for (const card of nonTokenCards) {
     const key = card.cardName.trim().toLowerCase()
-    if (!isBasicLand(key)) {
-      if (nonBasicUniqueNames.has(key)) {
-        hasDuplicateNonBasics = true
-      }
-      nonBasicUniqueNames.add(key)
-    }
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + card.quantity)
   }
 
-  if (totalNonTokenCards >= 60 && totalNonTokenCards <= 75) {
-    return 'unknown'
+  const hasTooManyCopies = Array.from(nameCounts.entries()).some(
+    ([name, qty]) => !isBasicLand(name) && qty > 4
+  )
+
+  if (
+    mainboardCount >= 60 &&
+    sideboardCount <= 15 &&
+    totalNonTokenCards <= 75 &&
+    !hasTooManyCopies
+  ) {
+    return 'standard'
   }
 
   return 'unknown'

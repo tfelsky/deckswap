@@ -97,7 +97,7 @@ type Deck = {
 type DeckCard = {
   id: number
   deck_id?: number
-  section: 'commander' | 'mainboard'
+  section: 'commander' | 'mainboard' | 'sideboard'
   quantity: number
   card_name: string
   set_code?: string | null
@@ -1021,6 +1021,7 @@ export default async function DeckDetailPage({
 
   const commanders = typedCards.filter((card) => card.section === 'commander')
   const mainboard = typedCards.filter((card) => card.section === 'mainboard')
+  const sideboard = typedCards.filter((card) => card.section === 'sideboard')
   const commanderCandidates = getCommanderCandidates(typedCards)
   const bracketSummary = getCommanderBracketSummary(typedCards)
   const showImportedWarning =
@@ -2052,6 +2053,7 @@ export default async function DeckDetailPage({
         <DeckCardViews
           commanders={commanders}
           mainboard={mainboard}
+          sideboard={sideboard}
           tokens={tokenCards}
         />
       </section>

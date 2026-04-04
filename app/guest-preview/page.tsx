@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 type PreviewCard = {
   id: number
-  section: 'commander' | 'mainboard' | 'token'
+  section: 'commander' | 'mainboard' | 'sideboard' | 'token'
   quantity: number
   cardName: string
   setCode?: string
@@ -104,6 +104,7 @@ export default function GuestPreviewPage() {
 
   const commanders = parsed.filter((card) => card.section === 'commander')
   const mainboard = parsed.filter((card) => card.section === 'mainboard')
+  const sideboard = parsed.filter((card) => card.section === 'sideboard')
   const tokens = parsed.filter((card) => card.section === 'token')
   const totalCards = parsed.reduce((sum, card) => sum + card.quantity, 0)
 
@@ -220,6 +221,7 @@ export default function GuestPreviewPage() {
             {[
               { title: 'Commander', cards: commanders },
               { title: 'Mainboard', cards: mainboard },
+              { title: 'Sideboard', cards: sideboard },
               { title: 'Tokens', cards: tokens },
             ].map((group) => (
               <div key={group.title} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
