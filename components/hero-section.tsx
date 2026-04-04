@@ -135,12 +135,12 @@ export function HeroSection({ inventory }: HeroSectionProps) {
 
           <div className="mx-auto mt-6 grid max-w-5xl gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
-              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Inventory</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-primary/80">Tokens Included</div>
               <div className="mt-3 text-2xl font-semibold text-foreground">
                 {inventory.tokenReadyDecks}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                listings already include token inventory for a fuller deck picture.
+                listings already include tokens and helpers for a fuller deck picture.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5 text-left">
