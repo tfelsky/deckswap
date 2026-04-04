@@ -479,7 +479,7 @@ export default async function ManageDeckPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-32 text-white">
+    <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-40 text-white">
       <AppHeader
         current="my-decks"
         isSignedIn
@@ -542,7 +542,7 @@ export default async function ManageDeckPage({
           )}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-white/10 bg-zinc-900 p-6">
+        <div className="mt-8 rounded-3xl border border-white/10 bg-zinc-900 p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-300">
@@ -604,7 +604,7 @@ export default async function ManageDeckPage({
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3 border-t border-white/10 pt-5">
             <Link
               href={`/my-decks/${deckId}`}
               className={`rounded-2xl px-4 py-2 text-sm font-medium ${
