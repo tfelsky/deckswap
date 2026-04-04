@@ -977,7 +977,7 @@ export default async function DeckDetailPage({
       const { data: currentCards, error: currentCardsError } = await supabase
         .from('deck_cards')
         .select(
-          'section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, condition, condition_source, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
+          'section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, price_usd, price_usd_foil, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, condition, finishes, oracle_text, type_line, rarity, mana_cost, cmc, power, toughness, oracle_id, scryfall_id, price_usd_etched, price_eur, price_eur_foil, price_tix'
         )
         .eq('deck_id', deckId)
         .order('sort_order', { ascending: true })
@@ -985,7 +985,7 @@ export default async function DeckDetailPage({
       const { data: currentTokens, error: currentTokensError } = await supabase
         .from('deck_tokens')
         .select(
-          'quantity, token_name, set_code, set_name, collector_number, foil, sort_order, image_url, scryfall_id, oracle_id, finishes, type_line'
+          'quantity, token_name, set_code, set_name, collector_number, foil, sort_order, image_url'
         )
         .eq('deck_id', deckId)
         .order('sort_order', { ascending: true })
@@ -1025,12 +1025,26 @@ export default async function DeckDetailPage({
       const rebuiltCardRows = [
         ...rebuiltDeck.commanders.map((row, index) => ({
           deck_id: deckId,
-          ...row,
+          section: 'commander' as const,
+          quantity: row.quantity,
+          card_name: row.card_name,
+          condition: row.condition ?? 'near_mint',
+          set_code: row.set_code ?? null,
+          set_name: row.set_name ?? null,
+          collector_number: row.collector_number ?? null,
+          foil: row.foil ?? false,
           sort_order: index,
         })),
         ...rebuiltDeck.mainboard.map((row, index) => ({
           deck_id: deckId,
-          ...row,
+          section: 'mainboard' as const,
+          quantity: row.quantity,
+          card_name: row.card_name,
+          condition: row.condition ?? 'near_mint',
+          set_code: row.set_code ?? null,
+          set_name: row.set_name ?? null,
+          collector_number: row.collector_number ?? null,
+          foil: row.foil ?? false,
           sort_order: rebuiltDeck.commanders.length + index,
         })),
       ]
@@ -1049,7 +1063,13 @@ export default async function DeckDetailPage({
         const { error: insertTokensError } = await supabase.from('deck_tokens').insert(
           rebuiltDeck.tokens.map((row, index) => ({
             deck_id: deckId,
-            ...row,
+            quantity: row.quantity,
+            token_name: row.token_name,
+            set_code: row.set_code ?? null,
+            set_name: row.set_name ?? null,
+            collector_number: row.collector_number ?? null,
+            foil: row.foil ?? false,
+            image_url: row.image_url ?? null,
             sort_order: index,
           }))
         )
