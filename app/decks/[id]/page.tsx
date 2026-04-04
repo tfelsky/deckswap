@@ -1448,14 +1448,134 @@ export default async function DeckDetailPage({
               </div>
 
               <div className="p-6 xl:flex xl:flex-col xl:justify-between xl:p-8">
-                <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-200">
-                  {getDeckFormatLabel(deckFormat)}
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-200">
+                      {getDeckFormatLabel(deckFormat)}
+                    </div>
+                    <div
+                      className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.2em] ${
+                        typedDeck.is_valid
+                          ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                          : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-100'
+                      }`}
+                    >
+                      {typedDeck.is_valid ? 'Ready to market' : 'Needs review'}
+                    </div>
+                    <div
+                      className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.2em] ${
+                        typedDeck.is_listed_for_trade
+                          ? 'border-sky-400/20 bg-sky-400/10 text-sky-200'
+                          : 'border-white/10 bg-white/5 text-zinc-300'
+                      }`}
+                    >
+                      {typedDeck.is_listed_for_trade ? 'Deck Swap live' : 'Not listed'}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0">
+                      <h1 className="text-3xl font-semibold">{typedDeck.name}</h1>
+                      <p className="mt-2 text-zinc-400">
+                        {typedDeck.commander || 'Commander pending review'}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-400">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          Imported {formatImportedAt(typedDeck.imported_at)}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          {mainboard.reduce((sum, card) => sum + card.quantity, 0)} mainboard
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          {sideboard.reduce((sum, card) => sum + card.quantity, 0)} sideboard
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          {tokenCards.reduce((sum, card) => sum + card.quantity, 0)} tokens
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid min-w-[260px] gap-3 sm:grid-cols-2 xl:w-[340px]">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Market
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                          ${Math.round(tradeValue.deckValue)}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Deck Swap
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-sky-200">
+                          ${Math.round(tradeValue.deckSwapValue)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <h1 className="mt-4 text-3xl font-semibold">{typedDeck.name}</h1>
-                <p className="mt-2 text-zinc-400">{typedDeck.commander || 'Commander pending review'}</p>
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 xl:max-w-sm">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Imported</div>
-                  <div className="mt-2 text-sm text-zinc-300">{formatImportedAt(typedDeck.imported_at)}</div>
+
+                <div className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Fastest path to market
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {typedDeck.is_valid ? 'Validation looks good' : 'Fix validation notes'}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-400">
+                          {typedDeck.is_valid
+                            ? 'This deck is structurally ready for listing.'
+                            : 'Clean up the import flags before sending offers or listing.'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {marketingChips.length > 0 ? marketingChips.join(' · ') : 'Add deck presentation'}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-400">
+                          Sleeves, box, sealed status, and precon completeness help buyers trust the listing.
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {typedDeck.is_listed_for_trade ? 'Deck Swap is active' : 'Turn on trade listing'}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-400">
+                          Add wanted colors and formats so matches can find the right deck faster.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 xl:justify-end">
+                    {isOwner ? (
+                      <>
+                        <Link
+                          href={`/my-decks/${deckId}`}
+                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white hover:bg-white/10"
+                        >
+                          Edit deck
+                        </Link>
+                        <Link
+                          href={`/my-decks/${deckId}?tab=settings`}
+                          className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200 hover:bg-emerald-400/15"
+                        >
+                          Listing settings
+                        </Link>
+                      </>
+                    ) : typedDeck.is_listed_for_trade ? (
+                      <Link
+                        href={`/trade-offers/propose?deckId=${deckId}`}
+                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200 hover:bg-emerald-400/15"
+                      >
+                        Propose trade
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
