@@ -282,6 +282,15 @@ function isDeckPriceHistorySchemaMissing(message?: string | null) {
   )
 }
 
+function isDeckPriceHistoryBlocked(message?: string | null) {
+  if (!message) return false
+
+  return (
+    message.includes('row-level security policy for table "deck_price_history"') ||
+    message.includes("row-level security policy for table 'deck_price_history'")
+  )
+}
+
 function toImportedDeckCard(card: DerivedStateCardRow): ImportedDeckCard {
   return {
     section: card.section,
@@ -668,9 +677,12 @@ export async function enrichDeckWithScryfall(
   } catch (error) {
     if (
       error instanceof Error &&
-      isDeckPriceHistorySchemaMissing(error.message)
+      (isDeckPriceHistorySchemaMissing(error.message) ||
+        isDeckPriceHistoryBlocked(error.message))
     ) {
-      console.warn('Skipping deck price snapshot because deck_price_history is missing.')
+      console.warn(
+        'Skipping deck price snapshot because deck_price_history is unavailable for this write path.'
+      )
       return
     }
 

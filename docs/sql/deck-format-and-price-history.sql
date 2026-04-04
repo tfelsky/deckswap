@@ -12,3 +12,31 @@ create table if not exists public.deck_price_history (
 
 create index if not exists deck_price_history_deck_id_captured_at_idx
   on public.deck_price_history (deck_id, captured_at desc);
+
+alter table public.deck_price_history enable row level security;
+
+drop policy if exists "deck price history is publicly readable"
+  on public.deck_price_history;
+
+create policy "deck price history is publicly readable"
+  on public.deck_price_history
+  for select
+  using (true);
+
+drop policy if exists "deck owners and admins insert deck price history"
+  on public.deck_price_history;
+
+create policy "deck owners and admins insert deck price history"
+  on public.deck_price_history
+  for insert
+  with check (
+    exists (
+      select 1
+      from public.decks
+      where decks.id = deck_price_history.deck_id
+        and (
+          decks.user_id = auth.uid()
+          or auth.jwt() ->> 'email' = 'tim.felsky@gmail.com'
+        )
+    )
+  );
