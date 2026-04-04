@@ -130,13 +130,6 @@ export default async function MyDecksPage() {
     (sum, value) => sum + calculateDeckTradeValue(value).extraVsBuylist,
     0
   )
-  const highestValue = Math.max(0, ...deckValues)
-  const averageDeckValue = deckViews.length > 0 ? totalDeckValue / deckViews.length : 0
-  const premiumDeckCount = deckValues.filter((value) => value >= 500).length
-  const tradeReadyValue = deckViews
-    .filter((deck) => !!deck.is_sleeved || !!deck.is_boxed)
-    .reduce((sum, deck) => sum + Number(deck.price_total_usd_foil ?? 0), 0)
-  const auctionCandidateCount = deckValues.filter((value) => value >= 250).length
 
   const ratedDecks = deckViews.filter(
     (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
@@ -181,7 +174,7 @@ export default async function MyDecksPage() {
 
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-10">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">My Listings</div>
               <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
@@ -191,7 +184,7 @@ export default async function MyDecksPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Total Deck Value</div>
               <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                ${totalDeckValue.toFixed(2)}
+                ${Math.round(totalDeckValue)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Blended card value across the whole deck inventory.</div>
             </div>
@@ -199,7 +192,7 @@ export default async function MyDecksPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Deck Swap Value</div>
               <div className="mt-2 text-3xl font-semibold text-sky-200">
-                ${totalDeckSwapValue.toFixed(2)}
+                ${Math.round(totalDeckSwapValue)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Value after Deck Swap fee, shipping, and insurance.</div>
             </div>
@@ -207,7 +200,7 @@ export default async function MyDecksPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Buylist Estimate</div>
               <div className="mt-2 text-3xl font-semibold text-amber-200">
-                ${totalBuylistValue.toFixed(2)}
+                ${Math.round(totalBuylistValue)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Conservative store-style trade-in estimate.</div>
             </div>
@@ -215,48 +208,12 @@ export default async function MyDecksPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Extra vs Buylist</div>
               <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                ${totalExtraVsBuylist.toFixed(2)}
+                ${Math.round(totalExtraVsBuylist)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Estimated additional value kept through Deck Swap.</div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Highest Value</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                ${highestValue.toFixed(2)}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">Your most valuable listed deck right now.</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Avg. Deck Value</div>
-              <div className="mt-2 text-3xl font-semibold text-amber-200">
-                ${averageDeckValue.toFixed(2)}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">A useful midpoint for trade and sale planning.</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Trade-Ready Value</div>
-              <div className="mt-2 text-3xl font-semibold text-sky-200">
-                ${tradeReadyValue.toFixed(2)}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">Sleeved or boxed value ready for faster movement.</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Premium Decks</div>
-              <div className="mt-2 text-3xl font-semibold">{premiumDeckCount}</div>
-              <div className="mt-2 text-xs text-zinc-500">$500+ decks with stronger trade leverage.</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Auction Candidates</div>
-              <div className="mt-2 text-3xl font-semibold">{auctionCandidateCount}</div>
-              <div className="mt-2 text-xs text-zinc-500">$250+ decks worth considering for auction.</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-4 2xl:col-span-2">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-1 2xl:col-span-1">
               <div className="text-sm text-zinc-400">Avg. Bracket</div>
               <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
               <div className="mt-2 text-xs text-zinc-500">Commander-only signal for decks with bracket data.</div>
@@ -345,7 +302,7 @@ export default async function MyDecksPage() {
                         MSRP
                       </div>
                       <div className="text-lg font-semibold text-emerald-300">
-                        ${tradeValue.deckValue.toFixed(2)}
+                        ${Math.round(tradeValue.deckValue)}
                       </div>
                     </div>
                   </div>
@@ -356,7 +313,7 @@ export default async function MyDecksPage() {
                         Buylist
                       </div>
                       <div className="mt-1 text-lg font-semibold text-amber-200">
-                        ${tradeValue.buylistValue.toFixed(2)}
+                        ${Math.round(tradeValue.buylistValue)}
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">
                         {(tradeValue.buylistRate * 100).toFixed(0)}% estimate
@@ -367,7 +324,7 @@ export default async function MyDecksPage() {
                         Deck Swap Value
                       </div>
                       <div className="mt-1 text-lg font-semibold text-sky-200">
-                        ${tradeValue.deckSwapValue.toFixed(2)}
+                        ${Math.round(tradeValue.deckSwapValue)}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
