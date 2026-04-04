@@ -52,17 +52,16 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Commander decks with pricing, trade intent, and cleaner trust signals
+              Buy, trade, and auction Commander decks with clearer pricing and context
             </span>
           </div>
 
           <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-            Trade decks with <span className="text-primary">real inventory and real intent</span>
+            The marketplace for <span className="text-primary">complete Commander decks</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Swap full decks without losing the spread to a buylist. Import your list, see what it is
-            worth, and move into trades or a faster sale path with far more context than a plain card total.
+            Import a list, price the whole deck, include tokens and presentation details, and move into trades, offers, or auctions with far more confidence than a loose card total.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
