@@ -58,6 +58,54 @@ type ScryfallCard = {
   collector_number: string
 }
 
+function getMissingSchemaColumn(message?: string | null, table?: string) {
+  if (!message) return null
+
+  const schemaCacheMatch = message.match(/Could not find the '([^']+)' column of '([^']+)' in the schema cache/i)
+  if (schemaCacheMatch) {
+    const [, columnName, tableName] = schemaCacheMatch
+    if (!table || table === tableName.split('.').pop()) {
+      return columnName
+    }
+  }
+
+  const relationMatch = message.match(/column "([^"]+)" of relation "([^"]+)"/i)
+  if (relationMatch) {
+    const [, columnName, tableName] = relationMatch
+    if (!table || table === tableName) {
+      return columnName
+    }
+  }
+
+  return null
+}
+
+async function updateRowWithSchemaFallback(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: 'deck_cards' | 'deck_tokens' | 'decks',
+  idValue: number,
+  payload: Record<string, unknown>
+) {
+  const nextPayload = { ...payload }
+
+  while (Object.keys(nextPayload).length > 0) {
+    const { error } = await supabase.from(table).update(nextPayload).eq('id', idValue)
+
+    if (!error) {
+      return
+    }
+
+    const missingColumn = getMissingSchemaColumn(error.message, table)
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message)
+    }
+
+    delete nextPayload[missingColumn]
+  }
+
+  throw new Error(`No supported ${table} enrichment fields could be written.`)
+}
+
 function isBasicLand(cardName: string) {
   const basics = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes'])
   return basics.has(cardName.trim().toLowerCase())
@@ -539,12 +587,7 @@ export async function enrichDeckWithScryfall(
 
     const update = scryfallToDeckCardUpdate(match)
 
-    const { error } = await supabase
-      .from('deck_cards')
-      .update(update)
-      .eq('id', row.id)
-
-    if (error) throw new Error(error.message)
+    await updateRowWithSchemaFallback(supabase, 'deck_cards', row.id, update)
 
     const usd = update.price_usd ?? 0
     const usdFoil = update.price_usd_foil ?? update.price_usd ?? 0
@@ -562,12 +605,7 @@ export async function enrichDeckWithScryfall(
 
     const update = scryfallToDeckTokenUpdate(match)
 
-    const { error } = await supabase
-      .from('deck_tokens')
-      .update(update)
-      .eq('id', row.id)
-
-    if (error) throw new Error(error.message)
+    await updateRowWithSchemaFallback(supabase, 'deck_tokens', row.id, update)
   }
 
   const { data: leadCard, error: leadCardError } = await supabase
@@ -598,12 +636,7 @@ export async function enrichDeckWithScryfall(
   }
   if (leadCard?.image_url) deckUpdate.image_url = leadCard.image_url
 
-  const { error: deckUpdateError } = await supabase
-    .from('decks')
-    .update(deckUpdate)
-    .eq('id', deckId)
-
-  if (deckUpdateError) throw new Error(deckUpdateError.message)
+  await updateRowWithSchemaFallback(supabase, 'decks', deckId, deckUpdate)
 
   await inferCommanderDeckState(deckId)
   await syncDeckDerivedState(deckId)
