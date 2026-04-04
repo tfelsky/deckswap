@@ -53,3 +53,17 @@ export function calculateDeckTradeValue(value: number) {
     extraVsBuylist,
   }
 }
+
+export function calculateSuggestedBuyNowPrice(value: number) {
+  const tradeValue = calculateDeckTradeValue(value)
+  const floor = tradeValue.buylistValue
+  const ceiling = Math.max(floor, tradeValue.deckSwapValue)
+  const suggested = roundCurrency((floor + ceiling) / 2)
+
+  return {
+    ...tradeValue,
+    floor,
+    ceiling,
+    suggested,
+  }
+}

@@ -36,7 +36,7 @@ import {
 } from '@/lib/decks/formats'
 import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
-import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
+import { calculateDeckTradeValue, calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
 import {
   formatDeckImportEventTimestamp,
@@ -89,6 +89,8 @@ type Deck = {
   is_listed_for_trade?: boolean | null
   trade_listing_notes?: string | null
   trade_wanted_profile?: string | null
+  buy_now_price_usd?: number | null
+  buy_now_listing_notes?: string | null
   wanted_color_identities?: string[] | null
   wanted_formats?: string[] | null
   box_type?: string | null
@@ -216,7 +218,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, wanted_color_identities, wanted_formats, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_listing_notes, wanted_color_identities, wanted_formats, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -320,6 +322,9 @@ export default async function DeckDetailPage({
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
   const tradeValue = calculateDeckTradeValue(currentPrice)
+  const buyNowSuggestion = calculateSuggestedBuyNowPrice(currentPrice)
+  const buyNowPrice = Number(typedDeck.buy_now_price_usd ?? 0)
+  const hasBuyNow = buyNowPrice > 0
   const marketingChips = getDeckMarketingChips(typedDeck)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
@@ -1137,19 +1142,24 @@ export default async function DeckDetailPage({
             )}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <span
-              className={`rounded-full border px-3 py-1 text-xs ${
-                typedDeck.is_listed_for_trade
+            <div className="mt-4 flex flex-wrap gap-3">
+              <span
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  typedDeck.is_listed_for_trade
                   ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
                   : 'border-white/10 bg-white/5 text-zinc-300'
               }`}
-            >
-              {typedDeck.is_listed_for_trade ? 'Listed for Deck Swap' : 'Not currently listed for Deck Swap'}
-            </span>
-            {typedDeck.trade_wanted_profile && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
-                Looking for: {typedDeck.trade_wanted_profile}
+              >
+                {typedDeck.is_listed_for_trade ? 'Listed for Deck Swap' : 'Not currently listed for Deck Swap'}
+              </span>
+              {hasBuyNow && (
+                <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+                  Buy It Now ${buyNowPrice.toFixed(2)}
+                </span>
+              )}
+              {typedDeck.trade_wanted_profile && (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
+                  Looking for: {typedDeck.trade_wanted_profile}
               </span>
             )}
           </div>
@@ -1471,6 +1481,11 @@ export default async function DeckDetailPage({
                     >
                       {typedDeck.is_listed_for_trade ? 'Deck Swap live' : 'Not listed'}
                     </div>
+                    {hasBuyNow && (
+                      <div className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-amber-200">
+                        Buy It Now
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1504,14 +1519,27 @@ export default async function DeckDetailPage({
                           ${Math.round(tradeValue.deckValue)}
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                          Deck Swap
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      Deck Swap
                         </div>
                         <div className="mt-2 text-2xl font-semibold text-sky-200">
                           ${Math.round(tradeValue.deckSwapValue)}
                         </div>
                       </div>
+                      {hasBuyNow && (
+                        <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 sm:col-span-2">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">
+                            Buy It Now
+                          </div>
+                          <div className="mt-2 text-2xl font-semibold text-amber-200">
+                            ${buyNowPrice.toFixed(2)}
+                          </div>
+                          <div className="mt-1 text-xs text-amber-50/70">
+                            Direct-sale price without running an auction
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1542,10 +1570,16 @@ export default async function DeckDetailPage({
                       </div>
                       <div>
                         <div className="text-sm font-medium text-white">
-                          {typedDeck.is_listed_for_trade ? 'Deck Swap is active' : 'Turn on trade listing'}
+                          {hasBuyNow
+                            ? `Buy it now is live at $${buyNowPrice.toFixed(2)}`
+                            : typedDeck.is_listed_for_trade
+                              ? 'Deck Swap is active'
+                              : 'Turn on trade listing'}
                         </div>
                         <div className="mt-1 text-xs text-zinc-400">
-                          Add wanted colors and formats so matches can find the right deck faster.
+                          {hasBuyNow
+                            ? 'Seller is offering a direct-sale fallback after trying to preserve more value through Deck Swap.'
+                            : 'Add wanted colors and formats so matches can find the right deck faster.'}
                         </div>
                       </div>
                     </div>
@@ -1573,6 +1607,13 @@ export default async function DeckDetailPage({
                         className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200 hover:bg-emerald-400/15"
                       >
                         Propose trade
+                      </Link>
+                    ) : hasBuyNow ? (
+                      <Link
+                        href={sellerProfile?.username ? `/u/${sellerProfile.username}` : `/decks/${deckId}#seller`}
+                        className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-200 hover:bg-amber-400/15"
+                      >
+                        Buy it now interest
                       </Link>
                     ) : null}
                   </div>
@@ -1702,6 +1743,49 @@ export default async function DeckDetailPage({
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+                  <div className="text-sm text-amber-100">Buy It Now Guidance</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
+                        Buylist Floor
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-amber-200">
+                        ${buyNowSuggestion.floor.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
+                        Suggested
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-white">
+                        ${buyNowSuggestion.suggested.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
+                        Deck Swap Ceiling
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-sky-100">
+                        ${buyNowSuggestion.ceiling.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-amber-50/85">
+                    Think in order: maximize value through Deck Swap first, offer Buy It Now second, and save auctions for the fallback path when the deck still needs help moving.
+                  </p>
+                  {hasBuyNow ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white">
+                      Seller is currently willing to take <span className="font-semibold text-amber-200">${buyNowPrice.toFixed(2)}</span> without an auction.
+                      {typedDeck.buy_now_listing_notes ? ` ${typedDeck.buy_now_listing_notes}` : ''}
+                    </div>
+                  ) : isOwner ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-amber-50/85">
+                      Add a buy-it-now price in deck settings if you want to offer a direct-sale path without opening an auction.
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">

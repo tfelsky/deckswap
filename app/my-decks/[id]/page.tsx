@@ -9,6 +9,7 @@ import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
+import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -31,6 +32,14 @@ function changeTone(value: number | null) {
   if (value > 0) return 'text-emerald-300'
   if (value < 0) return 'text-red-300'
   return 'text-zinc-300'
+}
+
+function parseCurrencyInput(value: FormDataEntryValue | null) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed >= 0 ? Number(parsed.toFixed(2)) : null
 }
 
 export default async function ManageDeckPage({
@@ -186,6 +195,7 @@ export default async function ManageDeckPage({
     findNearestSnapshotBeforeDays(snapshots, 60)?.price_total_usd_foil ?? null
   )
   const highestValueCard = gradingCards[0] ?? null
+  const buyNowSuggestion = calculateSuggestedBuyNowPrice(currentPrice)
   const selectedWantedColors = new Set(
     ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
       (value: string) => String(value)
@@ -246,6 +256,8 @@ export default async function ManageDeckPage({
     const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
     const tradeListingNotes = String(formData.get('trade_listing_notes') || '').trim() || null
     const tradeWantedProfile = String(formData.get('trade_wanted_profile') || '').trim() || null
+    const buyNowPriceUsd = parseCurrencyInput(formData.get('buy_now_price_usd'))
+    const buyNowListingNotes = String(formData.get('buy_now_listing_notes') || '').trim() || null
     const wantedColorIdentities = formData
       .getAll('wanted_color_identities')
       .map((value) => String(value).trim().toUpperCase())
@@ -311,6 +323,8 @@ export default async function ManageDeckPage({
         is_listed_for_trade: isListedForTrade,
         trade_listing_notes: tradeListingNotes,
         trade_wanted_profile: tradeWantedProfile,
+        buy_now_price_usd: buyNowPriceUsd,
+        buy_now_listing_notes: buyNowPriceUsd != null ? buyNowListingNotes : null,
         wanted_color_identities: isListedForTrade ? wantedColorIdentities : [],
         wanted_formats: isListedForTrade ? wantedFormats : [],
         box_type: boxType,
@@ -672,7 +686,7 @@ export default async function ManageDeckPage({
                 <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
                   <div className="text-sm font-medium text-white">Deck Swap listing</div>
                   <p className="mt-2 text-sm text-emerald-50/80">
-                    Turn this on when the deck is ready for trade offers. You can finish edits first, then list when the presentation and condition spot-check feel right.
+                    Start here when you want to maximize value. Deck Swap should usually be the first lane, with direct sale next and auctions saved for the fallback case when you need to move a deck faster.
                   </p>
 
                   <label className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-black/20 px-4 py-3 text-sm text-emerald-50">
@@ -777,6 +791,67 @@ export default async function ManageDeckPage({
                           className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                  <div className="text-sm font-medium text-white">Buy It Now</div>
+                  <p className="mt-2 text-sm text-amber-50/80">
+                    This is the middle lane: below maximizing value through Deck Swap, but ahead of a full auction. Set a direct-sale price you would accept without running bidding, and keep it between the conservative buylist path and the stronger Deck Swap value.
+                  </p>
+
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-amber-50/85">
+                    Value ladder: <span className="font-medium text-emerald-200">1. Deck Swap first</span>, <span className="font-medium text-white">2. Buy It Now second</span>, <span className="font-medium text-amber-200">3. Auction only if the first two paths do not move the deck</span>.
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
+                      <div className="mt-2 text-xl font-semibold text-amber-200">
+                        ${buyNowSuggestion.floor.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Suggested BIN</div>
+                      <div className="mt-2 text-xl font-semibold text-white">
+                        ${buyNowSuggestion.suggested.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Swap ceiling</div>
+                      <div className="mt-2 text-xl font-semibold text-sky-200">
+                        ${buyNowSuggestion.ceiling.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-300">Buy it now price</label>
+                      <input
+                        name="buy_now_price_usd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={(deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? ''}
+                        placeholder={buyNowSuggestion.suggested.toFixed(2)}
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                      />
+                      <p className="mt-2 text-xs text-zinc-400">
+                        Leave blank to keep this deck out of direct-sale mode.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-300">Buy it now notes</label>
+                      <textarea
+                        name="buy_now_listing_notes"
+                        rows={3}
+                        defaultValue={(deck as typeof deck & { buy_now_listing_notes?: string | null }).buy_now_listing_notes ?? ''}
+                        placeholder="Example: Happy to sell outright in Canada/US, deck ships sleeved and boxed, not splitting singles."
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                      />
                     </div>
                   </div>
                 </div>

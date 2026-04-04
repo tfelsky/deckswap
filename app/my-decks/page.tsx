@@ -17,6 +17,7 @@ type Deck = {
   commander?: string | null
   format?: string | null
   price_total_usd_foil?: number | null
+  buy_now_price_usd?: number | null
   image_url?: string | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
@@ -73,7 +74,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, format, price_total_usd_foil, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
+    .select('id, name, commander, format, price_total_usd_foil, buy_now_price_usd, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -217,9 +218,9 @@ export default async function MyDecksPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-1 2xl:col-span-1">
-              <div className="text-sm text-zinc-400">Avg. Bracket</div>
-              <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
-              <div className="mt-2 text-xs text-zinc-500">Commander-only signal for decks with bracket data.</div>
+              <div className="text-sm text-zinc-400">Value Ladder</div>
+              <div className="mt-2 text-3xl font-semibold">1-2-3</div>
+              <div className="mt-2 text-xs text-zinc-500">Deck Swap first, Buy It Now second, auction only as the fallback lane.</div>
             </div>
           </div>
         </div>
@@ -363,6 +364,11 @@ export default async function MyDecksPage() {
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                       Owned by You
                     </span>
+                    {Number(deck.buy_now_price_usd ?? 0) > 0 && (
+                      <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+                        Buy It Now ${Number(deck.buy_now_price_usd).toFixed(2)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-5 flex gap-3">

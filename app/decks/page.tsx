@@ -22,6 +22,7 @@ type Deck = {
   commander?: string | null
   format?: string | null
   price_total_usd_foil?: number | null
+  buy_now_price_usd?: number | null
   image_url?: string | null
   commander_count?: number | null
   mainboard_count?: number | null
@@ -67,7 +68,7 @@ export default async function DecksPage() {
   const { data, error } = await supabase
     .from('decks')
     .select(
-      'id, name, commander, format, price_total_usd_foil, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
+      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
     )
     .order('id', { ascending: true })
 
@@ -407,15 +408,29 @@ export default async function DecksPage() {
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
-                        <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
-                          Value
+                    <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
+                        Value
                         </div>
                         <div className="text-lg font-semibold text-emerald-300">
                           ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
                         </div>
                       </div>
                     </div>
+
+                    {Number(deck.buy_now_price_usd ?? 0) > 0 && (
+                      <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3">
+                        <div className="text-[10px] uppercase tracking-wide text-amber-200/80">
+                          Buy It Now
+                        </div>
+                        <div className="mt-1 text-lg font-semibold text-amber-200">
+                          ${Number(deck.buy_now_price_usd).toFixed(2)}
+                        </div>
+                        <div className="mt-1 text-xs text-amber-50/70">
+                          Direct-sale fallback after Deck Swap
+                        </div>
+                      </div>
+                    )}
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
