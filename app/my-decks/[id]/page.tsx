@@ -17,7 +17,6 @@ import {
   getInventoryStatusDescription,
   getInventoryStatusLabel,
   getInventoryStatusVisibility,
-  INVENTORY_STATUSES,
   isInventoryStatusLocked,
   normalizeInventoryStatus,
   resolveInventoryStatusForSettings,
@@ -311,7 +310,7 @@ export default async function ManageDeckPage({
     )
     const buyNowListingNotes = String(formData.get('buy_now_listing_notes') || '').trim() || null
     const inventoryStatus = resolveInventoryStatusForSettings({
-      selectedStatus: String(formData.get('inventory_status') || 'staged'),
+      currentStatus: (deck as typeof deck & { inventory_status?: string | null }).inventory_status,
       isListedForTrade,
       buyNowPrice: buyNowPriceUsd,
     })
@@ -733,65 +732,112 @@ export default async function ManageDeckPage({
           </div>
         ) : (
           <div className="mt-6 space-y-6">
-            <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-              <h2 className="text-2xl font-semibold">Deck Settings</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Override format detection, keep import metadata visible, and let validation adapt to the kind of deck you actually uploaded.
-              </p>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_360px] xl:items-start">
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                <h2 className="text-2xl font-semibold">Deck Settings</h2>
+                <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+                  Shape how this deck appears, which lane is live, and whether it stays private, public, or completed in your inventory.
+                </p>
+              </div>
 
-              <form action={updateSettings} className="mt-6 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-medium text-white">Inventory status</div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Use this to reflect whether the deck is staged, live for a lane, already committed, in escrow, awaiting delivery, or donated.
-                  </p>
+              <form action={updateSettings} className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                    <div className="text-sm font-medium text-white">Inventory status</div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Status is automatic. This deck starts in staging after import, then changes when you actually activate a lane or move into an operational flow.
+                    </p>
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm text-zinc-300">Current inventory status</label>
-                    <select
-                      name="inventory_status"
-                      defaultValue={inventoryStatus}
-                      className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
-                    >
-                      {INVENTORY_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {getInventoryStatusLabel(status)} ({getInventoryStatusVisibility(status)})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Current status</div>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${getInventoryStatusBadgeClass(inventoryStatus)}`}
+                        >
+                          {getInventoryStatusLabel(inventoryStatus)}
+                        </span>
+                        <span className="text-sm text-zinc-400">
+                          {getInventoryStatusVisibility(inventoryStatus)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="mt-4 text-sm text-zinc-300">
+                      {getInventoryStatusDescription(inventoryStatus)}
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <a
+                        href="#deckswap-lane"
+                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100 hover:bg-emerald-400/15"
+                      >
+                        Start with DeckSwap
+                      </a>
+                      <a
+                        href="#buy-now-lane"
+                        className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100 hover:bg-amber-400/15"
+                      >
+                        Set Buy It Now
+                      </a>
+                      <Link
+                        href={`/auction-prototype?deckId=${deckId}`}
+                        className={`rounded-2xl border px-4 py-3 text-sm ${
+                          inventoryStatusLocked
+                            ? 'pointer-events-none border-zinc-700 bg-zinc-800/70 text-zinc-500'
+                            : 'border-orange-400/20 bg-orange-400/10 text-orange-100 hover:bg-orange-400/15'
+                        }`}
+                      >
+                        {inventoryStatusLocked ? 'Auction Unavailable' : 'Start Auction Rules'}
+                      </Link>
+                    </div>
                   </div>
 
-                  <p className="mt-3 text-xs text-zinc-500">
-                    Current status: {getInventoryStatusDescription(inventoryStatus)} Visibility: {getInventoryStatusVisibility(inventoryStatus)}.
-                  </p>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Automatic behavior: saving with Buy It Now set promotes the deck to <span className="text-amber-200">Buy It Now Live</span>. Saving with Deck Swap enabled but no BIN promotes it to <span className="text-emerald-200">DeckSwap Live</span>. If neither lane is active, it falls back to <span className="text-zinc-300">Staged</span> and stays private.
-                  </p>
+                  <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                    <div className="text-sm font-medium text-white">Format and validation</div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Override detection when the imported list needs a different rules profile.
+                    </p>
+
+                    <div className="mt-4">
+                      <label className="mb-2 block text-sm text-zinc-300">Detected / chosen format</label>
+                      <select
+                        name="format"
+                        defaultValue={deckFormat}
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                      >
+                        {SUPPORTED_DECK_FORMATS.map((format) => (
+                          <option key={format} value={format}>
+                            {getDeckFormatLabel(format)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs uppercase tracking-wide text-zinc-500">Automatic lane logic</div>
+                      <p className="mt-2 text-sm text-zinc-300">
+                        Saving with Buy It Now set promotes the deck to <span className="text-amber-200">Buy It Now Live</span>. Saving with Deck Swap enabled but no BIN promotes it to <span className="text-emerald-200">DeckSwap Live</span>. If neither lane is active, it falls back to <span className="text-zinc-200">Staged</span>.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm text-zinc-400">Detected / chosen format</label>
-                  <select
-                    name="format"
-                    defaultValue={deckFormat}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 p-3"
-                  >
-                    {SUPPORTED_DECK_FORMATS.map((format) => (
-                      <option key={format} value={format}>
-                        {getDeckFormatLabel(format)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-white">Marketplace presentation</div>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        Help buyers and traders understand how complete and ready this deck feels before they ever message you.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-zinc-300">
+                      {getDeckMarketingChips(deck).length > 0
+                        ? `${getDeckMarketingChips(deck).length} presentation signal${getDeckMarketingChips(deck).length === 1 ? '' : 's'} active`
+                        : 'No presentation signals yet'}
+                    </div>
+                  </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-medium text-white">Marketplace presentation</div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Show whether the deck is sleeved, boxed, sealed, and whether a Wizards Commander precon is still complete.
-                  </p>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-200">
                       <input
                         type="checkbox"
@@ -831,7 +877,7 @@ export default async function ManageDeckPage({
                     </label>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 max-w-md">
                     <label className="mb-2 block text-sm text-zinc-400">Box type</label>
                     <input
                       name="box_type"
@@ -842,7 +888,11 @@ export default async function ManageDeckPage({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                <div className="grid gap-6 2xl:grid-cols-2">
+                  <div
+                    id="deckswap-lane"
+                    className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6"
+                  >
                   <div className="text-sm font-medium text-white">Deck Swap listing</div>
                   <p className="mt-2 text-sm text-emerald-50/80">
                     Start here when you want to maximize value. Deck Swap should usually be the first lane, with direct sale next and auctions saved for the fallback case when you need to move a deck faster.
@@ -952,9 +1002,12 @@ export default async function ManageDeckPage({
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
 
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                  <div
+                    id="buy-now-lane"
+                    className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6"
+                  >
                   <div className="text-sm font-medium text-white">Buy It Now</div>
                   <p className="mt-2 text-sm text-amber-50/80">
                     This is the middle lane: below maximizing value through Deck Swap, but ahead of a full auction. Set a direct-sale price you would accept without running bidding, and keep it between the conservative buylist path and the stronger Deck Swap value.
@@ -1031,43 +1084,49 @@ export default async function ManageDeckPage({
                       </p>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 <button className="w-full rounded-xl bg-emerald-400 py-3 text-black">
                   Save Settings
                 </button>
               </form>
-
-              <form action={submitHolidayDonation} className="rounded-3xl border border-zinc-500/30 bg-zinc-800/60 p-5">
-                <div className="text-sm font-medium text-zinc-100">Holiday charity donation</div>
-                <p className="mt-2 text-sm text-zinc-300">
-                  Submit this deck to the Mythiverse Exchange holiday program when you are ready to give it away instead of trading or selling it.
-                </p>
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
-                </div>
-                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input
-                    type="checkbox"
-                    name="confirm_holiday_donation"
-                    className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
-                  />
-                  <span>
-                    I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario.
-                  </span>
-                </label>
-                {holidayDonationAgreedAt && (
-                  <p className="mt-3 text-xs text-zinc-400">
-                    Donation confirmed {formatImportedAt(holidayDonationAgreedAt)}.
-                  </p>
-                )}
-                <button className="mt-4 w-full rounded-xl border border-zinc-500/40 bg-zinc-400/20 py-3 text-sm font-medium text-zinc-100 hover:bg-zinc-400/30">
-                  Submit for Holiday Donation
-                </button>
-              </form>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 xl:sticky xl:top-32">
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                <h2 className="text-2xl font-semibold">Listing Summary</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">Current status</div>
+                    <div className="mt-2 text-lg font-semibold text-white">{getInventoryStatusLabel(inventoryStatus)}</div>
+                    <div className="mt-1 text-sm text-zinc-400">{getInventoryStatusVisibility(inventoryStatus)}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">Deck value</div>
+                    <div className="mt-2 text-lg font-semibold text-emerald-300">${currentPrice.toFixed(2)}</div>
+                    <div className="mt-1 text-sm text-zinc-400">{deck.commander || deck.name}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">Best lane right now</div>
+                    <div className="mt-2 text-lg font-semibold text-white">
+                      {Number((deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? 0) > 0
+                        ? 'Buy It Now'
+                        : (deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade
+                          ? 'DeckSwap'
+                          : 'Staged'}
+                    </div>
+                    <div className="mt-1 text-sm text-zinc-400">
+                      {Number((deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? 0) > 0
+                        ? 'Direct-sale fallback is active.'
+                        : (deck as typeof deck & { is_listed_for_trade?: boolean | null }).is_listed_for_trade
+                          ? 'Trade lane is live to protect more value.'
+                          : 'This deck is private until you activate a lane.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
                 <h2 className="text-2xl font-semibold">Import Metadata</h2>
                 <div className="mt-4 space-y-2 text-sm text-zinc-300">
@@ -1097,6 +1156,40 @@ export default async function ManageDeckPage({
                   </p>
                 </div>
               </div>
+
+              <form action={submitHolidayDonation} className="rounded-3xl border border-zinc-500/30 bg-zinc-800/60 p-5">
+                <div className="text-sm font-medium text-zinc-100">Holiday charity donation</div>
+                <p className="mt-2 text-sm text-zinc-300">
+                  Move this deck out of the marketplace and into the Mythiverse Exchange holiday program when you are ready to give it away.
+                </p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
+                </div>
+                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    name="confirm_holiday_donation"
+                    className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                  />
+                  <span>
+                    I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario.
+                  </span>
+                </label>
+                {holidayDonationAgreedAt && (
+                  <p className="mt-3 text-xs text-zinc-400">
+                    Donation confirmed {formatImportedAt(holidayDonationAgreedAt)}.
+                  </p>
+                )}
+                <button className="mt-4 w-full rounded-xl border border-zinc-500/40 bg-zinc-400/20 py-3 text-sm font-medium text-zinc-100 hover:bg-zinc-400/30">
+                  Submit for Holiday Donation
+                </button>
+              </form>
+
+              <form action={deleteDeck}>
+                <button className="w-full rounded-xl bg-red-500 py-3">
+                  Delete Deck
+                </button>
+              </form>
             </div>
             </div>
 

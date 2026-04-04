@@ -132,11 +132,11 @@ export function isInventoryStatusCompleted(status?: string | null) {
 }
 
 export function resolveInventoryStatusForSettings(input: {
-  selectedStatus?: string | null
+  currentStatus?: string | null
   isListedForTrade: boolean
   buyNowPrice?: number | null
 }) {
-  const normalized = normalizeInventoryStatus(input.selectedStatus)
+  const normalized = normalizeInventoryStatus(input.currentStatus)
 
   if (
     normalized === 'holiday_pending_receipt' ||
