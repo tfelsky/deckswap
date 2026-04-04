@@ -10,6 +10,11 @@ import {
 } from '@/components/ui/hover-card'
 import { Textarea } from '@/components/ui/textarea'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import {
+  convertDeckValueForCurrency,
+  formatCurrencyAmount,
+  normalizeSupportedCurrency,
+} from '@/lib/currency'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { normalizeImportedCommanderOverlap } from '@/lib/commander/normalize'
 import type { ImportedDeckCard } from '@/lib/commander/types'
@@ -90,6 +95,7 @@ type Deck = {
   trade_listing_notes?: string | null
   trade_wanted_profile?: string | null
   buy_now_price_usd?: number | null
+  buy_now_currency?: string | null
   buy_now_listing_notes?: string | null
   wanted_color_identities?: string[] | null
   wanted_formats?: string[] | null
@@ -218,7 +224,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_listing_notes, wanted_color_identities, wanted_formats, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_currency, buy_now_listing_notes, wanted_color_identities, wanted_formats, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -322,7 +328,25 @@ export default async function DeckDetailPage({
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
   const tradeValue = calculateDeckTradeValue(currentPrice)
-  const buyNowSuggestion = calculateSuggestedBuyNowPrice(currentPrice)
+  const buyNowCurrency = normalizeSupportedCurrency(typedDeck.buy_now_currency)
+  const buyNowSuggestionUsd = calculateSuggestedBuyNowPrice(currentPrice)
+  const buyNowSuggestion = {
+    floor: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.floor,
+      eurValue: buyNowSuggestionUsd.floor * 0.92,
+      currency: buyNowCurrency,
+    }),
+    suggested: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.suggested,
+      eurValue: buyNowSuggestionUsd.suggested * 0.92,
+      currency: buyNowCurrency,
+    }),
+    ceiling: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.ceiling,
+      eurValue: buyNowSuggestionUsd.ceiling * 0.92,
+      currency: buyNowCurrency,
+    }),
+  }
   const buyNowPrice = Number(typedDeck.buy_now_price_usd ?? 0)
   const hasBuyNow = buyNowPrice > 0
   const marketingChips = getDeckMarketingChips(typedDeck)
@@ -1154,7 +1178,7 @@ export default async function DeckDetailPage({
               </span>
               {hasBuyNow && (
                 <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
-                  Buy It Now ${buyNowPrice.toFixed(2)}
+                  Buy It Now {formatCurrencyAmount(buyNowPrice, buyNowCurrency)}
                 </span>
               )}
               {typedDeck.trade_wanted_profile && (
@@ -1533,10 +1557,10 @@ export default async function DeckDetailPage({
                             Buy It Now
                           </div>
                           <div className="mt-2 text-2xl font-semibold text-amber-200">
-                            ${buyNowPrice.toFixed(2)}
+                            {formatCurrencyAmount(buyNowPrice, buyNowCurrency)}
                           </div>
                           <div className="mt-1 text-xs text-amber-50/70">
-                            Direct-sale price without running an auction
+                            Direct-sale price without running an auction in {buyNowCurrency}
                           </div>
                         </div>
                       )}
@@ -1571,7 +1595,7 @@ export default async function DeckDetailPage({
                       <div>
                         <div className="text-sm font-medium text-white">
                           {hasBuyNow
-                            ? `Buy it now is live at $${buyNowPrice.toFixed(2)}`
+                            ? `Buy it now is live at ${formatCurrencyAmount(buyNowPrice, buyNowCurrency)}`
                             : typedDeck.is_listed_for_trade
                               ? 'Deck Swap is active'
                               : 'Turn on trade listing'}
@@ -1753,7 +1777,7 @@ export default async function DeckDetailPage({
                         Buylist Floor
                       </div>
                       <div className="mt-1 text-2xl font-semibold text-amber-200">
-                        ${buyNowSuggestion.floor.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
                       </div>
                     </div>
                     <div>
@@ -1761,7 +1785,7 @@ export default async function DeckDetailPage({
                         Suggested
                       </div>
                       <div className="mt-1 text-2xl font-semibold text-white">
-                        ${buyNowSuggestion.suggested.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
                       </div>
                     </div>
                     <div>
@@ -1769,7 +1793,7 @@ export default async function DeckDetailPage({
                         Deck Swap Ceiling
                       </div>
                       <div className="mt-1 text-2xl font-semibold text-sky-100">
-                        ${buyNowSuggestion.ceiling.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
                       </div>
                     </div>
                   </div>
@@ -1778,7 +1802,7 @@ export default async function DeckDetailPage({
                   </p>
                   {hasBuyNow ? (
                     <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white">
-                      Seller is currently willing to take <span className="font-semibold text-amber-200">${buyNowPrice.toFixed(2)}</span> without an auction.
+                      Seller is currently willing to take <span className="font-semibold text-amber-200">{formatCurrencyAmount(buyNowPrice, buyNowCurrency)}</span> without an auction.
                       {typedDeck.buy_now_listing_notes ? ` ${typedDeck.buy_now_listing_notes}` : ''}
                     </div>
                   ) : isOwner ? (

@@ -3,6 +3,13 @@ import { getAdminAccessForUser } from '@/lib/admin/access'
 import AppHeader from '@/components/app-header'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { validateDeckForFormat } from '@/lib/commander/validate'
+import {
+  SUPPORTED_CURRENCIES,
+  convertDeckValueForCurrency,
+  currencyLabel,
+  formatCurrencyAmount,
+  normalizeSupportedCurrency,
+} from '@/lib/currency'
 import { CARD_CONDITION_DETAILS, CARD_CONDITIONS, getCardConditionMeta, normalizeCardCondition } from '@/lib/decks/conditions'
 import { getDeckFormatLabel, SUPPORTED_DECK_FORMATS, formatSupportsCommanderRules, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
@@ -195,7 +202,27 @@ export default async function ManageDeckPage({
     findNearestSnapshotBeforeDays(snapshots, 60)?.price_total_usd_foil ?? null
   )
   const highestValueCard = gradingCards[0] ?? null
-  const buyNowSuggestion = calculateSuggestedBuyNowPrice(currentPrice)
+  const buyNowCurrency = normalizeSupportedCurrency(
+    (deck as typeof deck & { buy_now_currency?: string | null }).buy_now_currency
+  )
+  const buyNowSuggestionUsd = calculateSuggestedBuyNowPrice(currentPrice)
+  const buyNowSuggestion = {
+    floor: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.floor,
+      eurValue: buyNowSuggestionUsd.floor * 0.92,
+      currency: buyNowCurrency,
+    }),
+    suggested: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.suggested,
+      eurValue: buyNowSuggestionUsd.suggested * 0.92,
+      currency: buyNowCurrency,
+    }),
+    ceiling: convertDeckValueForCurrency({
+      usdValue: buyNowSuggestionUsd.ceiling,
+      eurValue: buyNowSuggestionUsd.ceiling * 0.92,
+      currency: buyNowCurrency,
+    }),
+  }
   const selectedWantedColors = new Set(
     ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
       (value: string) => String(value)
@@ -257,6 +284,9 @@ export default async function ManageDeckPage({
     const tradeListingNotes = String(formData.get('trade_listing_notes') || '').trim() || null
     const tradeWantedProfile = String(formData.get('trade_wanted_profile') || '').trim() || null
     const buyNowPriceUsd = parseCurrencyInput(formData.get('buy_now_price_usd'))
+    const buyNowCurrency = normalizeSupportedCurrency(
+      String(formData.get('buy_now_currency') || 'USD')
+    )
     const buyNowListingNotes = String(formData.get('buy_now_listing_notes') || '').trim() || null
     const wantedColorIdentities = formData
       .getAll('wanted_color_identities')
@@ -324,6 +354,7 @@ export default async function ManageDeckPage({
         trade_listing_notes: tradeListingNotes,
         trade_wanted_profile: tradeWantedProfile,
         buy_now_price_usd: buyNowPriceUsd,
+        buy_now_currency: buyNowPriceUsd != null ? buyNowCurrency : 'USD',
         buy_now_listing_notes: buyNowPriceUsd != null ? buyNowListingNotes : null,
         wanted_color_identities: isListedForTrade ? wantedColorIdentities : [],
         wanted_formats: isListedForTrade ? wantedFormats : [],
@@ -809,24 +840,39 @@ export default async function ManageDeckPage({
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                       <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
                       <div className="mt-2 text-xl font-semibold text-amber-200">
-                        ${buyNowSuggestion.floor.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                       <div className="text-xs uppercase tracking-wide text-zinc-500">Suggested BIN</div>
                       <div className="mt-2 text-xl font-semibold text-white">
-                        ${buyNowSuggestion.suggested.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                       <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Swap ceiling</div>
                       <div className="mt-2 text-xl font-semibold text-sky-200">
-                        ${buyNowSuggestion.ceiling.toFixed(2)}
+                        {formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                    <div>
+                      <label className="mb-2 block text-sm text-zinc-300">Buy it now currency</label>
+                      <select
+                        name="buy_now_currency"
+                        defaultValue={buyNowCurrency}
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                      >
+                        {SUPPORTED_CURRENCIES.map((currency) => (
+                          <option key={currency} value={currency}>
+                            {currency} - {currencyLabel(currency)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div>
                       <label className="mb-2 block text-sm text-zinc-300">Buy it now price</label>
                       <input
@@ -839,7 +885,7 @@ export default async function ManageDeckPage({
                         className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
                       />
                       <p className="mt-2 text-xs text-zinc-400">
-                        Leave blank to keep this deck out of direct-sale mode.
+                        Currency is explicit on the public listing so buyers know whether this is USD, CAD, EUR, or GBP.
                       </p>
                     </div>
 
@@ -852,6 +898,9 @@ export default async function ManageDeckPage({
                         placeholder="Example: Happy to sell outright in Canada/US, deck ships sleeved and boxed, not splitting singles."
                         className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
                       />
+                      <p className="mt-2 text-xs text-zinc-400">
+                        Internal suggestions are approximate reference anchors for the selected currency.
+                      </p>
                     </div>
                   </div>
                 </div>

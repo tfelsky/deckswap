@@ -6,6 +6,7 @@ import {
   verificationStatusTone,
 } from '@/lib/profile-verifications'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import { SUPPORTED_CURRENCIES, currencyLabel, normalizeSupportedCurrency } from '@/lib/currency'
 import {
   formatShipFrom,
   getProfileCompletion,
@@ -134,7 +135,9 @@ export default async function ProfileSettingsPage() {
       bio: String(formData.get('bio') || '').trim(),
       location_country: String(formData.get('location_country') || '').trim(),
       location_region: String(formData.get('location_region') || '').trim(),
-      preferred_currency: String(formData.get('preferred_currency') || 'USD').trim(),
+      preferred_currency: normalizeSupportedCurrency(
+        String(formData.get('preferred_currency') || 'USD')
+      ),
       marketplace_tagline: String(formData.get('marketplace_tagline') || '').trim(),
       website_url: String(formData.get('website_url') || '').trim(),
       instagram_url: String(formData.get('instagram_url') || '').trim(),
@@ -407,7 +410,17 @@ export default async function ProfileSettingsPage() {
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-zinc-400">Preferred currency</label>
-                  <input name="preferred_currency" defaultValue={profile.preferred_currency ?? 'USD'} className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
+                  <select
+                    name="preferred_currency"
+                    defaultValue={normalizeSupportedCurrency(profile.preferred_currency)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 p-3"
+                  >
+                    {SUPPORTED_CURRENCIES.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency} - {currencyLabel(currency)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-zinc-400">Country</label>

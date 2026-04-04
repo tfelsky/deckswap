@@ -1,6 +1,7 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import AppHeader from '@/components/app-header'
+import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
@@ -18,6 +19,7 @@ type Deck = {
   format?: string | null
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
+  buy_now_currency?: string | null
   image_url?: string | null
   is_sleeved?: boolean | null
   is_boxed?: boolean | null
@@ -74,7 +76,7 @@ export default async function MyDecksPage() {
 
   const { data, error } = await supabase
     .from('decks')
-    .select('id, name, commander, format, price_total_usd_foil, buy_now_price_usd, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
+    .select('id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, image_url, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -366,7 +368,10 @@ export default async function MyDecksPage() {
                     </span>
                     {Number(deck.buy_now_price_usd ?? 0) > 0 && (
                       <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
-                        Buy It Now ${Number(deck.buy_now_price_usd).toFixed(2)}
+                        Buy It Now {formatCurrencyAmount(
+                          Number(deck.buy_now_price_usd),
+                          normalizeSupportedCurrency(deck.buy_now_currency)
+                        )}
                       </span>
                     )}
                   </div>

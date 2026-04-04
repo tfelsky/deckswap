@@ -1,5 +1,6 @@
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import {
   HoverCard,
   HoverCardContent,
@@ -23,6 +24,7 @@ type Deck = {
   format?: string | null
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
+  buy_now_currency?: string | null
   image_url?: string | null
   commander_count?: number | null
   mainboard_count?: number | null
@@ -68,7 +70,7 @@ export default async function DecksPage() {
   const { data, error } = await supabase
     .from('decks')
     .select(
-      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
+      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
     )
     .order('id', { ascending: true })
 
@@ -424,7 +426,10 @@ export default async function DecksPage() {
                           Buy It Now
                         </div>
                         <div className="mt-1 text-lg font-semibold text-amber-200">
-                          ${Number(deck.buy_now_price_usd).toFixed(2)}
+                          {formatCurrencyAmount(
+                            Number(deck.buy_now_price_usd),
+                            normalizeSupportedCurrency(deck.buy_now_currency)
+                          )}
                         </div>
                         <div className="mt-1 text-xs text-amber-50/70">
                           Direct-sale fallback after Deck Swap
