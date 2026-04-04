@@ -193,7 +193,7 @@ export default async function MyDecksPage() {
 
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">My Listings</div>
               <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
@@ -214,6 +214,14 @@ export default async function MyDecksPage() {
                 ${Math.round(totalDeckSwapValue)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Value after Deck Swap fee, shipping, and insurance.</div>
+              <div className="mt-3 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wide text-sky-200/80">
+                  Extra vs Buylist
+                </div>
+                <div className="mt-1 text-sm font-medium text-white">
+                  ${Math.round(totalExtraVsBuylist)}
+                </div>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -225,19 +233,12 @@ export default async function MyDecksPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Extra vs Buylist</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                ${Math.round(totalExtraVsBuylist)}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">Estimated additional value kept through Deck Swap.</div>
+              <div className="text-sm text-zinc-400">Live Right Now</div>
+              <div className="mt-2 text-3xl font-semibold text-white">{liveDecks.length}</div>
+              <div className="mt-2 text-xs text-zinc-500">Decks currently visible in the marketplace and available to move.</div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-1 2xl:col-span-1">
-              <div className="text-sm text-zinc-400">Value Ladder</div>
-              <div className="mt-2 text-3xl font-semibold">1-2-3</div>
-              <div className="mt-2 text-xs text-zinc-500">Deck Swap first, Buy It Now second, auction only as the fallback lane.</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-3 2xl:col-span-6">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-3 2xl:col-span-5">
               <div className="text-sm text-zinc-400">Inventory Visibility</div>
               <div className="mt-2 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">

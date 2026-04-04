@@ -10,13 +10,6 @@ import {
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import AppHeader from '@/components/app-header'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import Link from 'next/link'
 import { Suspense, useActionState, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -35,7 +28,6 @@ export default function ImportDeckPage() {
 function ImportDeckPageContent() {
   const [state, formAction, pending] = useActionState(importDeckAction, initialState)
   const [guestDraft, setGuestDraft] = useState<GuestImportDraft | null>(null)
-  const [showTokenReminder, setShowTokenReminder] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -94,78 +86,11 @@ function ImportDeckPageContent() {
     setFormatOverride(fieldFormatOverride)
   }, [fieldFormatOverride])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const hasSeenReminder = window.sessionStorage.getItem('mythivex-import-token-reminder')
-    if (!hasSeenReminder) {
-      setShowTokenReminder(true)
-    }
-  }, [])
-
   const isMoxfield = sourceType === 'moxfield'
   const guestDraftPresent = showGuestBanner || searchParams.get(GUEST_IMPORT_SAVED_QUERY_KEY) === '1'
 
-  function dismissTokenReminder() {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('mythivex-import-token-reminder', '1')
-    }
-    setShowTokenReminder(false)
-  }
-
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
-      <Dialog open={showTokenReminder} onOpenChange={(open) => (!open ? dismissTokenReminder() : setShowTokenReminder(true))}>
-        <DialogContent className="border-white/10 bg-zinc-950 text-white sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold">
-              Did you remember your tokens and emblems?
-            </DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Before you import, make sure the deck list includes the extra pieces that complete the real deck package.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm font-medium text-white">Quick checklist</div>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-                <li>Tokens your deck regularly produces</li>
-                <li>Emblems, Roles, Dungeons, The Monarch, and The City&apos;s Blessing</li>
-                <li>Special helper pieces like poison, speed, initiative, or ring reminders</li>
-                <li>Any showcase or premium tokens that add real presentation value</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
-              <div className="text-sm font-medium text-amber-100">Why this matters</div>
-              <p className="mt-2 text-sm text-amber-50/90">
-                Vintage and harder-to-find tokens can carry surprising collector value on their own.
-                Rare pieces like old promotional tokens or unusual favorites such as the Dominaria badger token
-                can make a deck feel more complete, more memorable, and more valuable to the right buyer or trade partner.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={dismissTokenReminder}
-                className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
-              >
-                I&apos;ll double-check my tokens
-              </button>
-              <button
-                type="button"
-                onClick={dismissTokenReminder}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
-              >
-                Continue to import
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <AppHeader current="import" />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-4xl px-6 py-10">
@@ -386,6 +311,12 @@ function ImportDeckPageContent() {
                   <p className="mt-2 text-sm text-zinc-400">
                     Use this for direct text imports or if you prefer to paste an Archidekt export.
                   </p>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-medium text-white">Tokens and emblems are optional</div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Most players do not include tokens in their exported decklists, so missing them will not block a normal import. If you want the deck package to feel fully play-ready or collector-complete, you can add token, emblem, dungeon, role, initiative, monarch, or other helper lines under a separate <span className="font-medium text-white">Tokens</span> header.
+                    </p>
+                  </div>
                   <div className="mt-4">
                     <label className="mb-2 block text-sm font-medium text-zinc-300">
                       Raw deck list
