@@ -55,7 +55,7 @@ export default function SignInPage() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
@@ -64,6 +64,21 @@ export default function SignInPage() {
       setError(error.message)
       setLoading(false)
       return
+    }
+
+    try {
+      await fetch('/api/admin/new-user-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          userId: data.user?.id ?? null,
+        }),
+      })
+    } catch (notificationError) {
+      console.error('Failed to trigger new-user admin email:', notificationError)
     }
 
     if (getPostAuthRoute() !== '/decks') {
