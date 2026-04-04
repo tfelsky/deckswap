@@ -613,7 +613,7 @@ export default async function ManageDeckPage({
                   : 'border border-white/10 bg-white/5 text-white hover:bg-white/10'
               }`}
             >
-              Overview
+              Deck Details
             </Link>
             <Link
               href={`/my-decks/${deckId}?tab=settings`}
@@ -623,7 +623,7 @@ export default async function ManageDeckPage({
                   : 'border border-white/10 bg-white/5 text-white hover:bg-white/10'
               }`}
             >
-              Deck Settings
+              Listing & Status
             </Link>
           </div>
         </div>
@@ -631,7 +631,10 @@ export default async function ManageDeckPage({
         {activeTab === 'overview' ? (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-              <h2 className="text-2xl font-semibold">Overview</h2>
+              <h2 className="text-2xl font-semibold">Deck Details</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Edit the identity of the deck itself here. Marketplace behavior lives under Listing & Status.
+              </p>
               <form action={updateOverview} className="mt-6 space-y-4">
                 <div>
                   <label className="mb-2 block text-sm text-zinc-400">Deck name</label>
@@ -654,7 +657,7 @@ export default async function ManageDeckPage({
                 </div>
 
                 <button className="w-full rounded-xl bg-emerald-400 py-3 text-black">
-                  Save Overview
+                  Save Deck Details
                 </button>
               </form>
             </div>
@@ -703,26 +706,6 @@ export default async function ManageDeckPage({
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-                <h2 className="text-2xl font-semibold">Listing Presentation</h2>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {getDeckMarketingChips(deck).length > 0 ? (
-                    getDeckMarketingChips(deck).map((chip) => (
-                      <span
-                        key={chip}
-                        className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200"
-                      >
-                        {chip}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="text-sm text-zinc-400">
-                      No packaging details added yet.
-                    </p>
-                  )}
-                </div>
-              </div>
-
               <form action={deleteDeck}>
                 <button className="w-full rounded-xl bg-red-500 py-3">
                   Delete Deck
@@ -735,9 +718,9 @@ export default async function ManageDeckPage({
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_360px] xl:items-start">
             <div className="space-y-6">
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-                <h2 className="text-2xl font-semibold">Deck Settings</h2>
+                <h2 className="text-2xl font-semibold">Listing & Status</h2>
                 <p className="mt-2 max-w-3xl text-sm text-zinc-400">
-                  Shape how this deck appears, which lane is live, and whether it stays private, public, or completed in your inventory.
+                  Control how this deck appears in the marketplace, which lane is active, and whether it stays private, public, or completed in your inventory.
                 </p>
               </div>
 

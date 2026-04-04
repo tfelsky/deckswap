@@ -458,7 +458,7 @@ export default async function MyDecksPage() {
                       href={`/my-decks/${deck.id}`}
                       className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-medium text-white hover:bg-white/10"
                     >
-                      Manage
+                      Edit Deck
                     </Link>
                   </div>
                 </div>
