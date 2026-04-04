@@ -70,6 +70,10 @@ export type ReputationSummary = {
   internal_validation_tier?: string | null
   internal_validation_notes?: string[] | null
   internal_validation_last_calculated_at?: string | null
+  approval_status?: string | null
+  approval_notes?: string | null
+  approved_at?: string | null
+  approved_by?: string | null
 }
 
 export type InternalValidationSummary = {

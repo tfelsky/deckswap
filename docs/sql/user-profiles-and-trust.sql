@@ -84,7 +84,11 @@ alter table public.profile_reputation_summary
   add column if not exists internal_validation_score integer,
   add column if not exists internal_validation_tier text,
   add column if not exists internal_validation_notes text[] not null default '{}',
-  add column if not exists internal_validation_last_calculated_at timestamptz;
+  add column if not exists internal_validation_last_calculated_at timestamptz,
+  add column if not exists approval_status text not null default 'pending',
+  add column if not exists approval_notes text,
+  add column if not exists approved_at timestamptz,
+  add column if not exists approved_by uuid references auth.users(id) on delete set null;
 
 alter table public.profiles enable row level security;
 alter table public.profile_private enable row level security;

@@ -519,6 +519,18 @@ export default async function AdminDashboardPage() {
                   Open the new seller and identity verification review flow.
                 </p>
               </Link>
+              <Link
+                href="/admin/approvals"
+                className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10"
+              >
+                <div className="text-sm text-zinc-400">User Approval Queue</div>
+                <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                  Review New Users
+                </div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Approve or deny new signups with profile, shipping, verification, and activity context.
+                </p>
+              </Link>
             </div>
           </div>
 

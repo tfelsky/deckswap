@@ -1079,7 +1079,52 @@ export default async function DeckDetailPage({
         }
       }
 
-      await syncDeckDerivedState(deckId)
+      const normalizedRebuiltCards = normalizeImportedCommanderOverlap(
+        [...rebuiltDeck.commanders, ...rebuiltDeck.mainboard].map((row) => ({
+          section: row.section,
+          quantity: row.quantity,
+          cardName: row.card_name,
+          foil: row.foil ?? false,
+          setCode: row.set_code ?? undefined,
+          setName: row.set_name ?? undefined,
+          collectorNumber: row.collector_number ?? undefined,
+          isLegendary: row.is_legendary ?? undefined,
+          isBackground: row.is_background ?? undefined,
+          canBeCommander: row.can_be_commander ?? undefined,
+          keywords: row.keywords ?? undefined,
+          partnerWithName: row.partner_with_name ?? undefined,
+          colorIdentity: row.color_identity ?? undefined,
+        }))
+      )
+      const validation = validateDeckForFormat(normalizedRebuiltCards, typedDeck.format)
+      const commanderNames = normalizedRebuiltCards
+        .filter((card) => card.section === 'commander')
+        .map((card) => card.cardName)
+      const leadCommander = rebuiltDeck.commanders[0]
+      const tokenCount = rebuiltDeck.tokens.reduce(
+        (sum, token) => sum + Number(token.quantity ?? 0),
+        0
+      )
+
+      const { error: updateDeckError } = await supabase
+        .from('decks')
+        .update({
+          commander: commanderNames[0] ?? null,
+          commander_count: validation.commanderCount,
+          mainboard_count: validation.mainboardCount,
+          sideboard_count: validation.sideboardCount ?? 0,
+          token_count: tokenCount,
+          commander_mode: validation.commanderMode,
+          commander_names: commanderNames,
+          is_valid: validation.isValid,
+          validation_errors: validation.errors,
+          image_url: leadCommander?.image_url ?? typedDeck.image_url ?? null,
+        })
+        .eq('id', deckId)
+
+      if (updateDeckError) {
+        throw new Error(updateDeckError.message)
+      }
 
       await logDeckImportEvent(supabase, {
         deckId,
@@ -1098,18 +1143,24 @@ export default async function DeckDetailPage({
       redirect(`/decks/${deckId}?deckRepaired=1`)
     } catch (error) {
       console.error('Deck structure repair failed:', error)
+      const message =
+        error instanceof Error && error.message.trim()
+          ? error.message.trim()
+          : 'Deck structure repair failed.'
       await logDeckImportEvent(supabase, {
         deckId,
         actorUserId: user?.id ?? null,
         sourceType: typedDeck.source_type ?? null,
         eventType: 'deck_structure_repair_failed',
         severity: 'warning',
-        message: error instanceof Error ? error.message : 'Deck structure repair failed.',
+        message,
         details: {
           trigger: 'deck_detail_repair_structure',
         },
       })
-      redirect(`/decks/${deckId}?deckRepairFailed=1`)
+      redirect(
+        `/decks/${deckId}?deckRepairFailed=1&retryError=${encodeURIComponent(message)}`
+      )
     }
   }
 
@@ -1382,6 +1433,7 @@ export default async function DeckDetailPage({
               <div className="font-medium text-red-200">Deck repair failed</div>
               <p className="mt-3 text-red-100/90">
                 {latestImportIssue?.message ||
+                  retryErrorMessage ||
                   'Saved rows could not be repaired right now. You can still try a source re-import or standard reprocess.'}
               </p>
             </div>
