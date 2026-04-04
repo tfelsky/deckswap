@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
   calculateAuctionPrototype,
   type AuctionDuration,
@@ -35,6 +36,20 @@ function formatUsd(value: number) {
   return `$${value.toFixed(2)}`
 }
 
+function withAdminAuctionBypass(
+  eligibility: ReturnType<typeof getAuctionEligibility>,
+  isAdmin: boolean
+) {
+  if (!isAdmin) {
+    return eligibility
+  }
+
+  return {
+    eligible: true,
+    reason: 'Admin testing override active. Auction launch is enabled for this account.',
+  }
+}
+
 export default async function AuctionPrototypePage({
   searchParams,
 }: {
@@ -53,6 +68,8 @@ export default async function AuctionPrototypePage({
   if (!user) {
     redirect('/sign-in')
   }
+
+  const access = await getAdminAccessForUser(user)
 
   const [summaryResult, deckResult] = await Promise.all([
     supabase
@@ -95,7 +112,10 @@ export default async function AuctionPrototypePage({
     reservePrice,
     durationDays,
   })
-  const eligibility = getAuctionEligibility(summaryResult.data ?? null)
+  const eligibility = withAdminAuctionBypass(
+    getAuctionEligibility(summaryResult.data ?? null),
+    access.isAdmin
+  )
 
   async function launchAuctionAction(formData: FormData) {
     'use server'
@@ -108,6 +128,8 @@ export default async function AuctionPrototypePage({
     if (!user) {
       redirect('/sign-in')
     }
+
+    const access = await getAdminAccessForUser(user)
 
     const deckId = Number(formData.get('deckId'))
     const auctionType = String(formData.get('format') || 'reserve') === 'no_reserve' ? 'no_reserve' : 'reserve'
@@ -151,7 +173,10 @@ export default async function AuctionPrototypePage({
       redirect(`/auctions/${existingAuctionResult.data.id}?existing=1`)
     }
 
-    const eligibility = getAuctionEligibility(summaryResult.data ?? null)
+    const eligibility = withAdminAuctionBypass(
+      getAuctionEligibility(summaryResult.data ?? null),
+      access.isAdmin
+    )
     if (!eligibility.eligible) {
       redirect(`/auction-prototype?deckId=${deckId}&trust=1`)
     }

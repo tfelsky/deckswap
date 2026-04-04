@@ -58,7 +58,8 @@ function parseCurrencyInput(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) && parsed >= 0 ? Number(parsed.toFixed(2)) : null
 }
 
-const HOLIDAY_PROGRAM_ADDRESS = 'Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario'
+const HOLIDAY_PROGRAM_ADDRESS =
+  'Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario N7T 2X2'
 
 export default async function ManageDeckPage({
   params,
@@ -1140,34 +1141,6 @@ export default async function ManageDeckPage({
                 </div>
               </div>
 
-              <form action={submitHolidayDonation} className="rounded-3xl border border-zinc-500/30 bg-zinc-800/60 p-5">
-                <div className="text-sm font-medium text-zinc-100">Holiday charity donation</div>
-                <p className="mt-2 text-sm text-zinc-300">
-                  Move this deck out of the marketplace and into the Mythiverse Exchange holiday program when you are ready to give it away.
-                </p>
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
-                </div>
-                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input
-                    type="checkbox"
-                    name="confirm_holiday_donation"
-                    className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
-                  />
-                  <span>
-                    I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to Mythiverse Exchange Holiday program, 126 Green St, Sarnia, Ontario.
-                  </span>
-                </label>
-                {holidayDonationAgreedAt && (
-                  <p className="mt-3 text-xs text-zinc-400">
-                    Donation confirmed {formatImportedAt(holidayDonationAgreedAt)}.
-                  </p>
-                )}
-                <button className="mt-4 w-full rounded-xl border border-zinc-500/40 bg-zinc-400/20 py-3 text-sm font-medium text-zinc-100 hover:bg-zinc-400/30">
-                  Submit for Holiday Donation
-                </button>
-              </form>
-
               <form action={deleteDeck}>
                 <button className="w-full rounded-xl bg-red-500 py-3">
                   Delete Deck
@@ -1317,6 +1290,37 @@ export default async function ManageDeckPage({
                 </div>
               </div>
             </div>
+
+            <form
+              action={submitHolidayDonation}
+              className="rounded-3xl border border-zinc-500/30 bg-zinc-900/80 p-6"
+            >
+              <div className="text-sm font-medium text-zinc-100">Holiday charity donation</div>
+              <p className="mt-2 text-sm text-zinc-300">
+                Move this deck out of the marketplace and into the Mythiverse Exchange holiday program when you are ready to give it away.
+              </p>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                Shipping address: {HOLIDAY_PROGRAM_ADDRESS}
+              </div>
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                <input
+                  type="checkbox"
+                  name="confirm_holiday_donation"
+                  className="mt-1 h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
+                />
+                <span>
+                  I understand this will move the deck into <span className="font-medium text-white">Holiday Donation Pending Receipt</span>, turn off trade and Buy It Now availability, and I should ship it to {HOLIDAY_PROGRAM_ADDRESS}.
+                </span>
+              </label>
+              {holidayDonationAgreedAt && (
+                <p className="mt-3 text-xs text-zinc-400">
+                  Donation confirmed {formatImportedAt(holidayDonationAgreedAt)}.
+                </p>
+              )}
+              <button className="mt-4 w-full rounded-xl border border-zinc-500/40 bg-zinc-400/20 py-3 text-sm font-medium text-zinc-100 hover:bg-zinc-400/30">
+                Submit for Holiday Donation
+              </button>
+            </form>
           </div>
         )}
       </div>
