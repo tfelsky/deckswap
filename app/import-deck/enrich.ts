@@ -231,22 +231,27 @@ async function captureDeckPriceSnapshot(
   const supabase = await createClient()
 
   if (snapshotType === 'import') {
-    await supabase.from('deck_price_history').insert({
+    const { error } = await supabase.from('deck_price_history').insert({
       deck_id: deckId,
       snapshot_type: 'import',
       price_total_usd_foil: priceTotalUsdFoil,
       captured_at: new Date().toISOString(),
     })
+    if (error) throw new Error(error.message)
     return
   }
 
-  const { data: latestSnapshot } = await supabase
+  const { data: latestSnapshot, error: latestSnapshotError } = await supabase
     .from('deck_price_history')
     .select('captured_at')
     .eq('deck_id', deckId)
     .order('captured_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  if (latestSnapshotError) {
+    throw new Error(latestSnapshotError.message)
+  }
 
   const today = new Date().toISOString().slice(0, 10)
   const latestDay = latestSnapshot?.captured_at?.slice(0, 10)
@@ -255,12 +260,26 @@ async function captureDeckPriceSnapshot(
     return
   }
 
-  await supabase.from('deck_price_history').insert({
+  const { error } = await supabase.from('deck_price_history').insert({
     deck_id: deckId,
     snapshot_type: 'refresh',
     price_total_usd_foil: priceTotalUsdFoil,
     captured_at: new Date().toISOString(),
   })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+function isDeckPriceHistorySchemaMissing(message?: string | null) {
+  if (!message) return false
+
+  return (
+    message.includes("relation 'public.deck_price_history'") ||
+    message.includes('relation "public.deck_price_history"') ||
+    message.includes("Could not find the relation 'public.deck_price_history'")
+  )
 }
 
 function toImportedDeckCard(card: DerivedStateCardRow): ImportedDeckCard {
@@ -640,5 +659,18 @@ export async function enrichDeckWithScryfall(
 
   await inferCommanderDeckState(deckId)
   await syncDeckDerivedState(deckId)
-  await captureDeckPriceSnapshot(deckId, Number(totalUsdFoil.toFixed(2)), snapshotType)
+
+  try {
+    await captureDeckPriceSnapshot(deckId, Number(totalUsdFoil.toFixed(2)), snapshotType)
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      isDeckPriceHistorySchemaMissing(error.message)
+    ) {
+      console.warn('Skipping deck price snapshot because deck_price_history is missing.')
+      return
+    }
+
+    throw error
+  }
 }

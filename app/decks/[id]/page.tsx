@@ -692,18 +692,20 @@ export default async function DeckDetailPage({
       redirect(`/decks/${deckId}?enrichRetried=1`)
     } catch (error) {
       console.error('Retry enrichment failed:', error)
+      const message =
+        error instanceof Error ? error.message.slice(0, 220) : 'Manual enrichment retry failed.'
       await logDeckImportEvent(supabase, {
         deckId,
         actorUserId: user.id,
         sourceType: typedDeck.source_type ?? null,
         eventType: 'manual_enrichment_retry_failed',
         severity: 'warning',
-        message: error instanceof Error ? error.message : 'Manual enrichment retry failed.',
+        message,
         details: {
           trigger: 'deck_detail_retry_enrichment',
         },
       })
-      redirect(`/decks/${deckId}?enrichRetryFailed=1`)
+      redirect(`/decks/${deckId}?enrichRetryFailed=1&retryError=${encodeURIComponent(message)}`)
     }
   }
 
@@ -1204,6 +1206,8 @@ export default async function DeckDetailPage({
   const showImportEnrichFailed = resolvedSearchParams?.enrich === 'failed'
   const showEnrichRetried = resolvedSearchParams?.enrichRetried === '1'
   const showEnrichRetryFailed = resolvedSearchParams?.enrichRetryFailed === '1'
+  const retryErrorMessage =
+    typeof resolvedSearchParams?.retryError === 'string' ? resolvedSearchParams.retryError : null
   const showReprocessed = resolvedSearchParams?.reprocessed === '1'
   const showReprocessFailed = resolvedSearchParams?.reprocessFailed === '1'
   const showReimported = resolvedSearchParams?.reimported === '1'
@@ -1387,6 +1391,7 @@ export default async function DeckDetailPage({
               <div className="font-medium text-red-200">Enrichment retry failed</div>
               <p className="mt-3 text-red-100/90">
                 {latestImportIssue?.message ||
+                  retryErrorMessage ||
                   'Re-running enrichment failed. Check source coverage, pricing migrations, or try again from admin maintenance.'}
               </p>
             </div>
