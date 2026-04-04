@@ -133,6 +133,41 @@ export default function InfoPage() {
             </div>
           </div>
 
+          <div className="mb-12 rounded-3xl border border-border bg-card p-8">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                Product Roadmap
+              </div>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                What Mythiverse Exchange can grow into next
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                The long-term vision is bigger than single deck listings. Over time, the platform can expand into store inventory, full collection visibility, and premium tools for serious users.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Local game store registration</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Give local game stores a way to register, upload deck inventory, and sell complete decks through the site with a stronger storefront presence.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Full collection listings</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Let users go beyond one deck at a time by importing, organizing, and surfacing their broader collection for discovery, trade, and sale.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                <div className="text-sm font-medium text-foreground">Subscription support</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Offer premium access to special features, deeper inventory tools, and advanced seller capabilities for power users and businesses.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-border bg-card p-8">
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
