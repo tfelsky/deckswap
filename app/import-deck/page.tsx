@@ -58,7 +58,7 @@ function ImportDeckPageContent() {
   const fields = state?.fields ?? guestDraft ?? undefined
   const showGuestBanner = !!guestDraft || searchParams.get('fromGuest') === '1'
   const fieldFormatOverride = state?.fields?.formatOverride ?? 'auto'
-  const [sourceType, setSourceType] = useState(fields?.sourceType ?? 'text')
+  const [sourceType, setSourceType] = useState(fields?.sourceType ?? 'paste')
   const [formatOverride, setFormatOverride] = useState(fieldFormatOverride)
 
   useEffect(() => {
@@ -79,7 +79,7 @@ function ImportDeckPageContent() {
   }, [guestDraft?.draftToken, searchParams, showGuestBanner, state?.fields])
 
   useEffect(() => {
-    setSourceType(fields?.sourceType ?? 'text')
+    setSourceType(fields?.sourceType ?? 'paste')
   }, [fields?.sourceType])
 
   useEffect(() => {
@@ -113,13 +113,21 @@ function ImportDeckPageContent() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Import a deck
+              Add a deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Bring in a Commander or Standard-style deck from text, file, or a public Moxfield
-              link, then let Mythiverse Exchange handle parsing, sideboards, and validation.
+              Start with import for the fastest path, or switch to manual creation if you want to build the listing yourself from scratch.
             </p>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/create-deck"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Create manually instead
+              </Link>
+            </div>
           </div>
 
         </div>
@@ -149,25 +157,25 @@ function ImportDeckPageContent() {
             )}
 
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-              <div className="text-sm font-medium text-white">Import type</div>
+              <div className="text-sm font-medium text-white">How are you adding this deck?</div>
               <p className="mt-2 text-sm text-zinc-400">
-                Start by choosing how you want to bring the deck in.
+                Use these buttons like simple navigation. The importer still works from what you actually provide.
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {[
                   {
-                    value: 'text',
-                    title: 'Paste text',
-                    description: 'Best for copied decklists with commander and token sections.',
+                    value: 'paste',
+                    title: 'Paste list',
+                    description: 'Best for copied decklists and exported text.',
                   },
                   {
-                    value: 'archidekt',
-                    title: 'Upload or paste Archidekt',
-                    description: 'Use an Archidekt export or pasted list.',
+                    value: 'upload',
+                    title: 'Upload file',
+                    description: 'Use a .txt, .csv, or .tsv export.',
                   },
                   {
                     value: 'moxfield',
-                    title: 'Public Moxfield link',
+                    title: 'Use Moxfield URL',
                     description: 'Fastest path when the deck is public and ready to fetch.',
                   },
                 ].map((option) => {
@@ -285,46 +293,45 @@ function ImportDeckPageContent() {
                   </p>
                 </div>
               </div>
-            ) : (
-              <>
-                <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-                  <div className="text-sm font-medium text-white">Upload a file</div>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Upload a `.txt`, `.csv`, or `.tsv` deck export if you do not want to paste the
-                    list manually.
-                  </p>
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-medium text-zinc-300">
-                      Deck file
-                    </label>
-                    <input
-                      name="deck_file"
-                      type="file"
-                      accept=".txt,.csv,.tsv"
-                      className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
-                    />
-                  </div>
+            ) : sourceType === 'upload' ? (
+              <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+                <div className="text-sm font-medium text-white">Upload a file</div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Upload a `.txt`, `.csv`, or `.tsv` deck export if you do not want to paste the
+                  list manually.
+                </p>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-medium text-zinc-300">
+                    Deck file
+                  </label>
+                  <input
+                    name="deck_file"
+                    type="file"
+                    accept=".txt,.csv,.tsv"
+                    className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
+                  />
                 </div>
-
-                <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-                  <div className="text-sm font-medium text-white">Paste deck list</div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
+                <div className="text-sm font-medium text-white">Paste deck list</div>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Use this for direct text imports or pasted exports from sites like Archidekt.
+                </p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-medium text-white">Tokens and emblems are optional</div>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Use this for direct text imports or if you prefer to paste an Archidekt export.
+                    Most players do not include tokens in their exported decklists, so missing them will not block a normal import. If you want the deck package to feel fully play-ready or collector-complete, you can add token, emblem, dungeon, role, initiative, monarch, or other helper lines under a separate <span className="font-medium text-white">Tokens</span> header.
                   </p>
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-sm font-medium text-white">Tokens and emblems are optional</div>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      Most players do not include tokens in their exported decklists, so missing them will not block a normal import. If you want the deck package to feel fully play-ready or collector-complete, you can add token, emblem, dungeon, role, initiative, monarch, or other helper lines under a separate <span className="font-medium text-white">Tokens</span> header.
-                    </p>
-                  </div>
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-medium text-zinc-300">
-                      Raw deck list
-                    </label>
-                    <textarea
-                      name="raw_list"
-                      rows={16}
-                      placeholder={`Commander
+                </div>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-medium text-zinc-300">
+                    Raw deck list
+                  </label>
+                  <textarea
+                    name="raw_list"
+                    rows={16}
+                    placeholder={`Commander
 1 Alela, Artful Provocateur
 
 Mainboard
@@ -336,21 +343,20 @@ Mainboard
 
 Tokens
 1 Faerie Rogue`}
-                      defaultValue={fields?.rawList ?? ''}
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
-                    />
-                    <p className="mt-2 text-xs text-zinc-500">
-                      Commander and Standard-style lists both work here. Sideboard headers are
-                      supported, and you can still fix the format from the deck page later.
-                    </p>
-                  </div>
+                    defaultValue={fields?.rawList ?? ''}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
+                  />
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Commander and Standard-style lists both work here. Sideboard headers are
+                    supported, and you can still fix the format from the deck page later.
+                  </p>
                 </div>
-              </>
+              </div>
             )}
 
-            {!isMoxfield && (
-              <input type="hidden" name="source_url" value={fields?.sourceUrl ?? ''} />
-            )}
+            {!isMoxfield && <input type="hidden" name="source_url" value={fields?.sourceUrl ?? ''} />}
+            {sourceType !== 'upload' && <input type="hidden" name="deck_file" value="" />}
+            {sourceType === 'upload' && <input type="hidden" name="raw_list" value={fields?.rawList ?? ''} />}
 
             {isMoxfield && (
               <>

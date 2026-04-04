@@ -86,7 +86,7 @@ export async function importDeckAction(
   }
 
   const deckName = String(formData.get('deck_name') || '').trim()
-  const sourceType = String(formData.get('source_type') || 'text').trim()
+  const sourceType = String(formData.get('source_type') || 'paste').trim()
   const formatOverride = String(formData.get('format_override') || 'auto').trim().toLowerCase()
   const sourceUrl = String(formData.get('source_url') || '').trim()
   const rawList = String(formData.get('raw_list') || '').trim()
@@ -95,12 +95,13 @@ export async function importDeckAction(
   const deckFile = formData.get('deck_file')
   const hasUploadedFile = deckFile instanceof File && deckFile.size > 0
   const fields = buildActionFields(deckName, sourceType, formatOverride, sourceUrl, rawList)
+  const effectiveSourceType = sourceUrl ? 'moxfield' : sourceType === 'moxfield' ? 'moxfield' : 'text'
 
   let resolvedDeckName = deckName
   let resolvedRawList = rawList
   let sourceFormatHint: string | null = null
   let parsedCards =
-    sourceType.toLowerCase() === 'moxfield' ? [] : parseDeckText(resolvedRawList, sourceType)
+    effectiveSourceType === 'moxfield' ? [] : parseDeckText(resolvedRawList, effectiveSourceType)
 
   if (
     deckFile instanceof File &&
@@ -113,10 +114,10 @@ export async function importDeckAction(
       resolvedDeckName = deckFile.name.replace(/\.[^.]+$/, '').trim()
     }
 
-    parsedCards = parseDeckText(resolvedRawList, sourceType)
+    parsedCards = parseDeckText(resolvedRawList, effectiveSourceType)
   }
 
-  if (sourceType.toLowerCase() === 'moxfield') {
+  if (effectiveSourceType === 'moxfield') {
     if (!sourceUrl) {
       return {
         error: 'Add a Moxfield deck URL to import from a link.',
@@ -159,7 +160,7 @@ export async function importDeckAction(
     if (parsedCards.length === 0) {
       return {
         error: getNoCardsParsedError({
-          sourceType,
+          sourceType: effectiveSourceType,
           usedFileInput: hasUploadedFile,
           hasRawList: !!resolvedRawList,
           hasSourceUrl: !!sourceUrl,
@@ -176,7 +177,7 @@ export async function importDeckAction(
       userId: user.id,
       actorUserId: user.id,
       deckName: resolvedDeckName,
-      sourceType,
+      sourceType: effectiveSourceType,
       sourceUrl,
       parsedCards,
       sourceFormatHint,

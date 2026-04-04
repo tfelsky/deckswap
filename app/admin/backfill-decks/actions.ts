@@ -9,6 +9,19 @@ type BackfillResult = {
   errors: string[]
 }
 
+type ReEnrichQueue = {
+  deckIds: number[]
+  total: number
+}
+
+type ReEnrichBatchResult = {
+  processed: number
+  updated: number
+  skipped: number
+  errors: string[]
+  logs: string[]
+}
+
 export async function backfillDeckCommanderImages(): Promise<BackfillResult> {
   const { supabase } = await requireSuperadmin()
 
@@ -121,5 +134,74 @@ export async function reEnrichAllDecks(): Promise<BackfillResult> {
     updated,
     skipped,
     errors,
+  }
+}
+
+export async function prepareReEnrichDeckQueue(): Promise<ReEnrichQueue> {
+  const { supabase } = await requireSuperadmin()
+
+  const { data: decks, error: decksError } = await supabase
+    .from('decks')
+    .select('id')
+    .order('id', { ascending: true })
+
+  if (decksError) {
+    throw new Error(decksError.message)
+  }
+
+  const deckIds = (decks ?? []).map((deck) => Number(deck.id)).filter(Number.isFinite)
+
+  return {
+    deckIds,
+    total: deckIds.length,
+  }
+}
+
+export async function reEnrichDeckBatch(deckIds: number[]): Promise<ReEnrichBatchResult> {
+  const { supabase } = await requireSuperadmin()
+
+  let processed = 0
+  let updated = 0
+  let skipped = 0
+  const errors: string[] = []
+  const logs: string[] = []
+
+  for (const deckId of deckIds) {
+    processed++
+
+    const { data: deck, error: deckError } = await supabase
+      .from('decks')
+      .select('id, name')
+      .eq('id', deckId)
+      .maybeSingle()
+
+    if (deckError || !deck) {
+      skipped++
+      const message = `Deck ${deckId}: could not load deck before re-enrichment.`
+      errors.push(message)
+      logs.push(message)
+      continue
+    }
+
+    try {
+      await enrichDeckWithScryfall(deckId)
+      updated++
+      logs.push(`Deck ${deckId} (${deck.name || 'Untitled'}): re-enriched successfully.`)
+    } catch (error) {
+      skipped++
+      const message = `Deck ${deckId} (${deck.name || 'Untitled'}): ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+      errors.push(message)
+      logs.push(message)
+    }
+  }
+
+  return {
+    processed,
+    updated,
+    skipped,
+    errors,
+    logs,
   }
 }

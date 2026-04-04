@@ -25,8 +25,7 @@ type MarketplaceNavProps = {
 const ITEMS = [
   { key: 'home', href: '/', label: 'Home' },
   { key: 'decks', href: '/decks', label: 'Marketplace' },
-  { key: 'import', href: '/import-deck', label: 'Import' },
-  { key: 'create', href: '/create-deck', label: 'Create' },
+  { key: 'import', href: '/import-deck', label: 'Add Deck' },
   { key: 'my-decks', href: '/my-decks', label: 'My Decks' },
   { key: 'trade-matches', href: '/trade-matches', label: 'Deck Swap' },
   { key: 'trade-offers', href: '/trade-offers', label: 'Trade Offers' },
@@ -65,7 +64,7 @@ export default function MarketplaceNav({
 
   const visibleItems = ITEMS.filter((item) => {
     if (!detectedSignedIn) {
-      return ['home', 'decks', 'import', 'create'].includes(item.key)
+      return ['home', 'decks', 'import'].includes(item.key)
     }
 
     return true
@@ -76,7 +75,10 @@ export default function MarketplaceNav({
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-1.5">
           {visibleItems.map((item) => {
-            const active = item.key === current
+            const active =
+              item.key === 'import'
+                ? current === 'import' || current === 'create'
+                : item.key === current
             const label =
               item.key === 'trade-offers' && unreadTradeOffers > 0
                 ? `${item.label} (${unreadTradeOffers})`

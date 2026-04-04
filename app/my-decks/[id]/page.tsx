@@ -297,7 +297,7 @@ export default async function ManageDeckPage({
     const { data: refreshedCards, error: refreshedCardsError } = await supabase
       .from('deck_cards')
       .select(
-        'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, price_usd, price_usd_foil, price_eur, price_eur_foil'
+        'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity, price_usd, price_usd_foil'
       )
       .eq('deck_id', deckId)
 
@@ -327,8 +327,6 @@ export default async function ManageDeckPage({
       color_identity?: string[] | null
       price_usd?: number | null
       price_usd_foil?: number | null
-      price_eur?: number | null
-      price_eur_foil?: number | null
     }>
 
     const validation = validateDeckForFormat(
@@ -366,10 +364,6 @@ export default async function ManageDeckPage({
       const unitPrice = Number((card.foil ? card.price_usd_foil : null) ?? card.price_usd ?? 0)
       return sum + unitPrice * Number(card.quantity ?? 0)
     }, 0)
-    const priceTotalEur = typedCards.reduce((sum, card) => {
-      const unitPrice = Number((card.foil ? card.price_eur_foil : null) ?? card.price_eur ?? 0)
-      return sum + unitPrice * Number(card.quantity ?? 0)
-    }, 0)
 
     await supabase
       .from('decks')
@@ -386,7 +380,6 @@ export default async function ManageDeckPage({
         image_url: primaryCommander?.image_url ?? ownedDeck.image_url ?? null,
         price_total_usd: Number(priceTotalUsd.toFixed(2)),
         price_total_usd_foil: Number(priceTotalUsdFoil.toFixed(2)),
-        price_total_eur: Number(priceTotalEur.toFixed(2)),
       })
       .eq('id', deckId)
       .eq('user_id', userId)
