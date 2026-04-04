@@ -41,6 +41,12 @@ export default function InfoPage() {
                   Import a Deck
                 </Link>
                 <Link
+                  href="/import-library"
+                  className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
+                >
+                  Import a Library
+                </Link>
+                <Link
                   href="/checkout-prototype"
                   className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
                 >

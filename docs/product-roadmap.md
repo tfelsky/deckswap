@@ -14,6 +14,7 @@ DeckSwap already has:
 - guest import preview
 - guest preview handoff into authenticated save flow
 - guest draft backup across browser storage plus server-side recovery token flow
+- first-pass public library import for Moxfield and Archidekt
 - Commander validation and bracket estimation
 - Commander color identity validation after enrichment
 - homepage marketplace filters by color identity
@@ -97,6 +98,7 @@ Scope:
 - make guest import drafts resumable and more durable
 - keep guest drafts recoverable from sign-in and import routes even if local browser state drops
 - harden Moxfield, Archidekt, file, and text import reliability
+- expand library import beyond the first-pass Moxfield and Archidekt provider support
 - improve commander inference and post-import repair paths
 - keep deck color identity, counts, pricing snapshots, and validation fully in sync during import and re-enrichment
 - surface better import diagnostics when parsing or schema issues occur

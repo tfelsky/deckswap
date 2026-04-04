@@ -3,6 +3,7 @@ import { getAdminAccessForUser } from '@/lib/admin/access'
 import AppHeader from '@/components/app-header'
 import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
+import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
 import { createClient } from '@/lib/supabase/server'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
@@ -115,6 +116,27 @@ export default async function MyDecksPage() {
     const bracket = getCommanderBracketSummary(cardsByDeck.get(deck.id) ?? [])
     return { ...deck, bracket, format: normalizeDeckFormat(deck.format) }
   })
+  const deckValues = deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
+  const totalDeckValue = deckValues.reduce((sum, value) => sum + value, 0)
+  const totalDeckSwapValue = deckValues.reduce(
+    (sum, value) => sum + calculateDeckTradeValue(value).deckSwapValue,
+    0
+  )
+  const totalBuylistValue = deckValues.reduce(
+    (sum, value) => sum + calculateDeckTradeValue(value).buylistValue,
+    0
+  )
+  const totalExtraVsBuylist = deckValues.reduce(
+    (sum, value) => sum + calculateDeckTradeValue(value).extraVsBuylist,
+    0
+  )
+  const highestValue = Math.max(0, ...deckValues)
+  const averageDeckValue = deckViews.length > 0 ? totalDeckValue / deckViews.length : 0
+  const premiumDeckCount = deckValues.filter((value) => value >= 500).length
+  const tradeReadyValue = deckViews
+    .filter((deck) => !!deck.is_sleeved || !!deck.is_boxed)
+    .reduce((sum, deck) => sum + Number(deck.price_total_usd_foil ?? 0), 0)
+  const auctionCandidateCount = deckValues.filter((value) => value >= 250).length
 
   const ratedDecks = deckViews.filter(
     (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
@@ -159,26 +181,85 @@ export default async function MyDecksPage() {
 
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-10">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">My Listings</div>
               <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
+              <div className="mt-2 text-xs text-zinc-500">Decks currently in your marketplace collection.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Total Deck Value</div>
+              <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                ${totalDeckValue.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">Blended card value across the whole deck inventory.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Deck Swap Value</div>
+              <div className="mt-2 text-3xl font-semibold text-sky-200">
+                ${totalDeckSwapValue.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">Value after Deck Swap fee, shipping, and insurance.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Buylist Estimate</div>
+              <div className="mt-2 text-3xl font-semibold text-amber-200">
+                ${totalBuylistValue.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">Conservative store-style trade-in estimate.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Extra vs Buylist</div>
+              <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                ${totalExtraVsBuylist.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">Estimated additional value kept through Deck Swap.</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Highest Value</div>
               <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                $
-                {Math.max(
-                  0,
-                  ...deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
-                ).toFixed(2)}
+                ${highestValue.toFixed(2)}
               </div>
+              <div className="mt-2 text-xs text-zinc-500">Your most valuable listed deck right now.</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Avg. Deck Value</div>
+              <div className="mt-2 text-3xl font-semibold text-amber-200">
+                ${averageDeckValue.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">A useful midpoint for trade and sale planning.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Trade-Ready Value</div>
+              <div className="mt-2 text-3xl font-semibold text-sky-200">
+                ${tradeReadyValue.toFixed(2)}
+              </div>
+              <div className="mt-2 text-xs text-zinc-500">Sleeved or boxed value ready for faster movement.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Premium Decks</div>
+              <div className="mt-2 text-3xl font-semibold">{premiumDeckCount}</div>
+              <div className="mt-2 text-xs text-zinc-500">$500+ decks with stronger trade leverage.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm text-zinc-400">Auction Candidates</div>
+              <div className="mt-2 text-3xl font-semibold">{auctionCandidateCount}</div>
+              <div className="mt-2 text-xs text-zinc-500">$250+ decks worth considering for auction.</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-4 2xl:col-span-2">
               <div className="text-sm text-zinc-400">Avg. Bracket</div>
               <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
+              <div className="mt-2 text-xs text-zinc-500">Commander-only signal for decks with bracket data.</div>
             </div>
           </div>
         </div>
@@ -203,6 +284,11 @@ export default async function MyDecksPage() {
                 key={deck.id}
                 className="group overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 transition duration-200 hover:border-emerald-400/30 hover:bg-zinc-900"
               >
+                {(() => {
+                  const tradeValue = calculateDeckTradeValue(Number(deck.price_total_usd_foil ?? 0))
+
+                  return (
+                    <>
                 <Link href={`/decks/${deck.id}`} className="block">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
@@ -256,10 +342,40 @@ export default async function MyDecksPage() {
 
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
                       <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
-                        Est. Value
+                        MSRP
                       </div>
                       <div className="text-lg font-semibold text-emerald-300">
-                        ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
+                        ${tradeValue.deckValue.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                        Buylist
+                      </div>
+                      <div className="mt-1 text-lg font-semibold text-amber-200">
+                        ${tradeValue.buylistValue.toFixed(2)}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {(tradeValue.buylistRate * 100).toFixed(0)}% estimate
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                        Deck Swap Value
+                      </div>
+                      <div className="mt-1 text-lg font-semibold text-sky-200">
+                        ${tradeValue.deckSwapValue.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                        Extra Value
+                      </div>
+                      <div className="mt-1 text-sm text-zinc-300">
+                        Fee ${tradeValue.fee.toFixed(2)} · Ship ${tradeValue.shipping.toFixed(2)} · Ins ${tradeValue.insurance.toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -305,6 +421,9 @@ export default async function MyDecksPage() {
                     </Link>
                   </div>
                 </div>
+                    </>
+                  )
+                })()}
               </article>
             ))}
           </div>

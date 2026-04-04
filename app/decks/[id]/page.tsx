@@ -36,6 +36,7 @@ import {
 } from '@/lib/decks/formats'
 import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
+import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
 import { GUEST_IMPORT_SAVED_QUERY_KEY } from '@/lib/guest-import'
 import {
   formatDeckImportEventTimestamp,
@@ -325,6 +326,7 @@ export default async function DeckDetailPage({
   const deckFormat = normalizeDeckFormat(typedDeck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const currentPrice = Number(typedDeck.price_total_usd_foil ?? 0)
+  const tradeValue = calculateDeckTradeValue(currentPrice)
   const marketingChips = getDeckMarketingChips(typedDeck)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
@@ -1681,6 +1683,57 @@ export default async function DeckDetailPage({
                     </p>
                   </div>
                 )}
+
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                  <div className="text-sm text-zinc-400">Estimated Card Pricing</div>
+                  <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                    ${tradeValue.deckValue.toFixed(2)}
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Blended market value across the cards currently stored in this deck.
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                  <div className="text-sm text-zinc-400">Deck Swap Value</div>
+                  <div className="mt-2 text-3xl font-semibold text-sky-200">
+                    ${tradeValue.deckSwapValue.toFixed(2)}
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Practical trade value after fee, shipping, and insurance.
+                  </p>
+                  <div className="mt-3 text-sm text-zinc-300">
+                    {`Fee $${tradeValue.fee.toFixed(2)} · Ship $${tradeValue.shipping.toFixed(2)} · Ins $${tradeValue.insurance.toFixed(2)}`}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
+                  <div className="text-sm text-zinc-400">Buylist Comparison</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        Buylist Estimate
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-amber-200">
+                        ${tradeValue.buylistValue.toFixed(2)}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {(tradeValue.buylistRate * 100).toFixed(0)}% of raw deck value
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        Extra Value Kept
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-emerald-300">
+                        +${tradeValue.extraVsBuylist.toFixed(2)}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        Estimated upside versus a conservative buylist path
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                   <div className="text-sm text-zinc-400">Price Trend</div>

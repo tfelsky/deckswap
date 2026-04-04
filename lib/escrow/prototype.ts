@@ -1,3 +1,9 @@
+import {
+  deckInsuranceForValue,
+  deckShippingForValue,
+  deckSwapFeeForValue,
+} from '@/lib/decks/trade-value'
+
 export type SupportedCountry = 'ca' | 'us'
 
 export type EscrowPrototypeInput = {
@@ -31,30 +37,6 @@ function roundCurrency(value: number) {
   return Number(value.toFixed(2))
 }
 
-function matchingFeeForValue(value: number) {
-  if (value < 150) {
-    return roundCurrency(Math.max(4, value * 0.04))
-  }
-
-  if (value < 500) {
-    return roundCurrency(Math.max(8, value * 0.05))
-  }
-
-  return roundCurrency(Math.max(20, value * 0.05))
-}
-
-function shippingForValue(value: number) {
-  if (value < 150) return 15
-  if (value < 500) return 20
-  return 25
-}
-
-function insuranceForValue(value: number) {
-  if (value < 150) return 3
-  if (value < 500) return 6
-  return 10
-}
-
 function laneLabel(countryA: SupportedCountry, countryB: SupportedCountry) {
   if (countryA === 'ca' && countryB === 'ca') return 'Canada to Canada'
   if (countryA === 'us' && countryB === 'us') return 'USA to USA'
@@ -86,18 +68,18 @@ export function calculateEscrowPrototype(
 
   const deckA: EscrowCheckoutSide = {
     deckValue: roundCurrency(input.deckAValue),
-    shipping: shippingForValue(input.deckAValue),
-    insurance: insuranceForValue(input.deckAValue),
-    matchingFee: matchingFeeForValue(input.deckAValue),
+    shipping: deckShippingForValue(input.deckAValue),
+    insurance: deckInsuranceForValue(input.deckAValue),
+    matchingFee: deckSwapFeeForValue(input.deckAValue),
     equalizationOwed: roundCurrency(equalizationToB),
     amountDue: 0,
   }
 
   const deckB: EscrowCheckoutSide = {
     deckValue: roundCurrency(input.deckBValue),
-    shipping: shippingForValue(input.deckBValue),
-    insurance: insuranceForValue(input.deckBValue),
-    matchingFee: matchingFeeForValue(input.deckBValue),
+    shipping: deckShippingForValue(input.deckBValue),
+    insurance: deckInsuranceForValue(input.deckBValue),
+    matchingFee: deckSwapFeeForValue(input.deckBValue),
     equalizationOwed: roundCurrency(equalizationToA),
     amountDue: 0,
   }
