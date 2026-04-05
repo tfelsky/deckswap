@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   formatTradeOfferStatus,
   formatTradeOfferTimestamp,
+  getTradeOfferSignal,
   isTradeOffersSchemaMissing,
   isUnreadTradeOffer,
   type TradeOfferRow,
@@ -20,6 +21,21 @@ type DeckSummary = {
 
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
+}
+
+function signalClasses(tone: 'emerald' | 'amber' | 'sky' | 'zinc' | 'red') {
+  switch (tone) {
+    case 'emerald':
+      return 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+    case 'amber':
+      return 'border-amber-400/20 bg-amber-400/10 text-amber-100'
+    case 'sky':
+      return 'border-sky-400/20 bg-sky-400/10 text-sky-100'
+    case 'red':
+      return 'border-red-400/20 bg-red-400/10 text-red-100'
+    default:
+      return 'border-white/10 bg-white/5 text-zinc-200'
+  }
 }
 
 export default async function TradeOffersPage() {
@@ -121,6 +137,7 @@ export default async function TradeOffersPage() {
                     const offeredDeck = decks.get(offer.offered_deck_id)
                     const requestedDeck = decks.get(offer.requested_deck_id)
                     const unread = isUnreadTradeOffer(offer, user.id)
+                    const signal = getTradeOfferSignal(offer, user.id)
 
                     return (
                       <Link
@@ -147,7 +164,7 @@ export default async function TradeOffersPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-zinc-300">
+                            <div className="text-sm text-zinc-400">
                               {formatTradeOfferStatus(offer.status)}
                             </div>
                             {unread && (
@@ -159,6 +176,11 @@ export default async function TradeOffersPage() {
                               +{formatUsd(offer.cash_equalization_usd)}
                             </div>
                           </div>
+                        </div>
+
+                        <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${signalClasses(signal.tone)}`}>
+                          <div className="font-medium">{signal.label}</div>
+                          <div className="mt-1 text-xs opacity-90">{signal.description}</div>
                         </div>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -185,6 +207,20 @@ export default async function TradeOffersPage() {
                         <div className="mt-4 text-xs text-zinc-500">
                           Created {formatTradeOfferTimestamp(offer.created_at)}
                         </div>
+
+                        {offer.accepted_trade_transaction_id ? (
+                          <div className="mt-3 text-sm font-medium text-emerald-300">
+                            Open trade draft {'->'}
+                          </div>
+                        ) : offer.superseded_by_offer_id ? (
+                          <div className="mt-3 text-sm font-medium text-amber-200">
+                            Open latest counteroffer {'->'}
+                          </div>
+                        ) : (
+                          <div className="mt-3 text-sm font-medium text-zinc-300">
+                            Open offer {'->'}
+                          </div>
+                        )}
                       </Link>
                     )
                   })

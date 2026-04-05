@@ -10,6 +10,7 @@ import {
 import {
   formatTradeOfferStatus,
   formatTradeOfferTimestamp,
+  getTradeOfferSignal,
   isTradeOffersSchemaMissing,
   isUnreadTradeOffer,
   type TradeOfferRow,
@@ -28,6 +29,32 @@ type DeckSummary = {
 
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
+}
+
+async function findExistingTradeDraftForOffer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  offerId: number
+) {
+  const existingTradeEvent = await supabase
+    .from('escrow_events')
+    .select('transaction_id')
+    .eq('event_type', 'trade_offer_accepted')
+    .contains('event_data', { offerId, source: 'trade_offer' })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existingTradeEvent.error) {
+    if (isEscrowSchemaMissing(existingTradeEvent.error.message)) {
+      return { schemaMissing: true as const, transactionId: null }
+    }
+    return { schemaMissing: false as const, transactionId: null }
+  }
+
+  return {
+    schemaMissing: false as const,
+    transactionId: Number(existingTradeEvent.data?.transaction_id ?? 0) || null,
+  }
 }
 
 export default async function TradeOfferDetailPage({
@@ -117,6 +144,7 @@ export default async function TradeOfferDetailPage({
 
   const offeredDeck = decks.get(offer.offered_deck_id)
   const requestedDeck = decks.get(offer.requested_deck_id)
+  const offerSignal = getTradeOfferSignal(offer, user.id)
   const canRespond = offer.requested_user_id === user.id && offer.status === 'pending'
   const canCancel = offer.offered_by_user_id === user.id && offer.status === 'pending'
   const canCounter =
@@ -153,8 +181,36 @@ export default async function TradeOfferDetailPage({
     }
 
     const currentOffer = currentOfferResult.data as TradeOfferRow
+    if (currentOffer.accepted_trade_transaction_id) {
+      redirect(`/trade-offers/${offerId}?accepted=1`)
+    }
+
     if (currentOffer.requested_user_id !== user.id || currentOffer.status !== 'pending') {
       redirect(`/trade-offers/${offerId}`)
+    }
+
+    const existingTrade = await findExistingTradeDraftForOffer(supabase, offerId)
+    if (existingTrade.schemaMissing) {
+      redirect(`/trade-offers/${offerId}?schemaMissing=1`)
+    }
+
+    if (existingTrade.transactionId) {
+      const repairOfferUpdate = await supabase
+        .from('trade_offers')
+        .update({
+          status: 'accepted',
+          accepted_trade_transaction_id: existingTrade.transactionId,
+          last_action_by_user_id: user.id,
+          requested_user_viewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', offerId)
+
+      if (repairOfferUpdate.error && isTradeOffersSchemaMissing(repairOfferUpdate.error.message)) {
+        redirect(`/trade-offers/${offerId}?schemaMissing=1`)
+      }
+
+      redirect(`/trade-offers/${offerId}?accepted=1`)
     }
 
     const [decksResult, profileResult] = await Promise.all([
@@ -518,6 +574,11 @@ export default async function TradeOfferDetailPage({
             <p className="mt-3 max-w-3xl text-zinc-400">
               Created {formatTradeOfferTimestamp(offer.created_at)}. This is the negotiation step before the trade becomes a draft escrow transaction.
             </p>
+            <div className="mt-4 inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+              <span className="font-medium">{offerSignal.label}</span>
+              <span className="mx-2 text-zinc-500">|</span>
+              <span className="text-zinc-400">{offerSignal.description}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -552,6 +613,17 @@ export default async function TradeOfferDetailPage({
           {error && (
             <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100">
               We couldn&apos;t complete that action right now.
+            </div>
+          )}
+          {offer.accepted_trade_transaction_id && (
+            <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
+              Trade draft #{offer.accepted_trade_transaction_id} is already open for this offer.
+              <Link
+                href={`/trades/${offer.accepted_trade_transaction_id}`}
+                className="ml-2 font-medium text-emerald-300 hover:underline"
+              >
+                Open trade draft
+              </Link>
             </div>
           )}
         </div>

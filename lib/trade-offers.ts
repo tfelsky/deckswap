@@ -19,6 +19,14 @@ export type TradeOfferRow = {
   updated_at?: string | null
 }
 
+export type TradeOfferSignalTone = 'emerald' | 'amber' | 'sky' | 'zinc' | 'red'
+
+export type TradeOfferSignal = {
+  label: string
+  description: string
+  tone: TradeOfferSignalTone
+}
+
 export function isTradeOffersSchemaMissing(message?: string | null) {
   if (!message) return false
 
@@ -55,4 +63,62 @@ export function isUnreadTradeOffer(offer: TradeOfferRow, userId: string) {
     return offer.last_action_by_user_id !== userId && !offer.requested_user_viewed_at
   }
   return false
+}
+
+export function getTradeOfferSignal(offer: TradeOfferRow, userId: string): TradeOfferSignal {
+  const tradeOpened =
+    offer.status === 'accepted' || Number(offer.accepted_trade_transaction_id ?? 0) > 0
+
+  if (tradeOpened) {
+    return {
+      label: 'Trade Opened',
+      description: 'This offer has already been turned into a live trade draft.',
+      tone: 'emerald',
+    }
+  }
+
+  if (offer.status === 'countered') {
+    return {
+      label: 'Countered',
+      description: offer.superseded_by_offer_id
+        ? `A newer counteroffer is active in offer #${offer.superseded_by_offer_id}.`
+        : 'This offer was replaced by a counteroffer.',
+      tone: 'amber',
+    }
+  }
+
+  if (offer.status === 'declined') {
+    return {
+      label: 'Declined',
+      description: 'This negotiation was closed without opening a trade.',
+      tone: 'red',
+    }
+  }
+
+  if (offer.status === 'cancelled') {
+    return {
+      label: 'Cancelled',
+      description: 'The sender cancelled this offer before it moved forward.',
+      tone: 'zinc',
+    }
+  }
+
+  const isYourTurn =
+    offer.status === 'pending' &&
+    ((offer.requested_user_id === userId && offer.last_action_by_user_id !== userId) ||
+      (!offer.last_action_by_user_id && offer.requested_user_id === userId))
+
+  if (isYourTurn) {
+    return {
+      label: 'Waiting On You',
+      description: 'You are the next person who needs to accept, decline, or counter.',
+      tone: 'amber',
+    }
+  }
+
+  return {
+    label: 'Waiting On Them',
+    description: 'The other trader needs to respond before this can move forward.',
+    tone: 'sky',
+  }
 }
