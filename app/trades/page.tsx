@@ -19,6 +19,13 @@ function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
+function formatLaneType(value?: string | null) {
+  if (!value) return 'Trade'
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 export default async function TradesPage() {
   const supabase = await createClient()
   const {
@@ -34,7 +41,9 @@ export default async function TradesPage() {
 
   const { data: offersData } = await supabase
     .from('trade_offers')
-    .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
+    .select(
+      'id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at'
+    )
     .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
 
   const participantRowsResult = access.isAdmin
@@ -116,9 +125,7 @@ export default async function TradesPage() {
     isUnreadTradeOffer(offer, user.id)
   ).length
   const participantByTradeId = new Map(
-    participantRows
-      .filter((row) => row.user_id === user.id)
-      .map((row) => [Number(row.transaction_id), row])
+    participantRows.filter((row) => row.user_id === user.id).map((row) => [Number(row.transaction_id), row])
   )
 
   return (
@@ -132,26 +139,35 @@ export default async function TradesPage() {
             <Link href="/trade-offers" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
               Trade Offers{unreadOffers > 0 ? ` (${unreadOffers})` : ''}
             </Link>
-            <Link href="/checkout-prototype" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
-              New Trade Draft
-            </Link>
+            {access.isAdmin ? (
+              <Link href="/checkout-prototype" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+                Create Internal Draft
+              </Link>
+            ) : null}
           </div>
 
           <div className="mt-8">
-            <div className={`inline-flex rounded-full px-3 py-1 text-xs font-medium tracking-wide ${
-              access.isAdmin
-                ? 'border border-amber-400/20 bg-amber-400/10 text-amber-300'
-                : 'border border-sky-400/20 bg-sky-400/10 text-sky-300'
-            }`}>
-              {access.isAdmin ? 'Admin Trade Review' : 'User Trade Drafts'}
+            <div
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium tracking-wide ${
+                access.isAdmin
+                  ? 'border border-amber-400/20 bg-amber-400/10 text-amber-300'
+                  : 'border border-sky-400/20 bg-sky-400/10 text-sky-300'
+              }`}
+            >
+              {access.isAdmin ? 'Internal Queue' : 'User Workspace'}
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              {access.isAdmin ? 'Trades And Escrows' : 'Your Active Trade Drafts'}
+              {access.isAdmin ? 'Trade Review Queue' : 'Your Trades'}
             </h1>
             <p className="mt-3 max-w-3xl text-zinc-400">
               {access.isAdmin
-                ? 'Internal escrow records for payment readiness, shipment intake, inspection, and release decisions.'
-                : 'Accepted offers land here so you can handle checkout, payment confirmation, and shipment updates without seeing the other trader’s internal costs.'}
+                ? 'Internal trade records for monitoring checkout, shipment intake, inspection, and release.'
+                : 'Accepted offers appear here so you can confirm payment, track shipping, and follow the trade through completion.'}
+            </p>
+            <p className="mt-2 max-w-3xl text-sm text-zinc-500">
+              {access.isAdmin
+                ? 'Open a trade to review both sides, internal costs, and operational notes.'
+                : 'You will only see your own charges and actions. The other trader sees the same view for their side.'}
             </p>
           </div>
         </div>
@@ -160,11 +176,11 @@ export default async function TradesPage() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         {trades.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
-            <h2 className="text-2xl font-semibold">{access.isAdmin ? 'No trade reviews yet' : 'No trade drafts yet'}</h2>
+            <h2 className="text-2xl font-semibold">{access.isAdmin ? 'No trades in review' : 'No active trades yet'}</h2>
             <p className="mt-3 text-zinc-400">
               {access.isAdmin
-                ? 'Accepted offers and prototype checkouts will appear here for review.'
-                : 'Accepted offers will open your trade drafts here once checkout is created.'}
+                ? 'Accepted offers and manually created drafts will appear here for internal review.'
+                : 'Once an offer is accepted, your trade will appear here with checkout and shipping steps.'}
             </p>
           </div>
         ) : (
@@ -177,18 +193,20 @@ export default async function TradesPage() {
                 <Link
                   key={trade.id}
                   href={href}
-                  className="rounded-3xl border border-white/10 bg-zinc-900/80 p-5 hover:bg-zinc-900"
+                  className="rounded-3xl border border-white/10 bg-zinc-900/80 p-5 transition hover:bg-zinc-900"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className={`text-xs uppercase tracking-wide ${
-                        access.isAdmin ? 'text-amber-300/80' : 'text-sky-300/80'
-                      }`}>
+                      <div
+                        className={`text-xs uppercase tracking-wide ${
+                          access.isAdmin ? 'text-amber-300/80' : 'text-sky-300/80'
+                        }`}
+                      >
                         Trade #{trade.id}
                       </div>
-                      <div className="mt-2 text-2xl font-semibold text-white">{trade.lane_type}</div>
+                      <div className="mt-2 text-2xl font-semibold text-white">{formatLaneType(trade.lane_type)}</div>
                       <div className="mt-2 text-sm text-zinc-400">
-                        Created {trade.created_at ? new Date(trade.created_at).toLocaleString('en-CA') : 'recently'}
+                        Opened {trade.created_at ? new Date(trade.created_at).toLocaleString('en-CA') : 'recently'}
                       </div>
                     </div>
 
@@ -196,18 +214,18 @@ export default async function TradesPage() {
                       <div className="grid gap-2 text-right">
                         <div className="text-sm text-zinc-400">{formatTradeStatus(trade.status)}</div>
                         <div className="text-lg font-semibold text-amber-300">{formatUsd(trade.platform_gross_usd)}</div>
-                        <div className="text-xs text-zinc-500">Platform gross before payment rails</div>
+                        <div className="text-xs text-zinc-500">Internal gross</div>
                       </div>
                     ) : (
                       <div className="grid gap-2 text-right">
                         <div className="text-sm text-zinc-400">{formatTradeStatus(trade.status)}</div>
                         <div className="text-sm text-white">
-                          {myParticipant ? `Your total: ${formatUsd(myParticipant.amount_due_usd)}` : 'Open draft'}
+                          {myParticipant ? `Amount due: ${formatUsd(myParticipant.amount_due_usd)}` : 'Trade ready to open'}
                         </div>
                         <div className="text-xs text-zinc-500">
                           {myParticipant
-                            ? `${formatPaymentStatus(myParticipant.payment_status)} payment, ${formatShipmentStatus(myParticipant.shipment_status)} shipment`
-                            : 'Waiting for your participant row'}
+                            ? `${formatPaymentStatus(myParticipant.payment_status)} payment, ${formatShipmentStatus(myParticipant.shipment_status)} shipping`
+                            : 'Waiting for your side to be attached'}
                         </div>
                       </div>
                     )}
