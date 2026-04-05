@@ -92,6 +92,7 @@ export async function importDeckAction(
   const rawList = String(formData.get('raw_list') || '').trim()
   const guestDraftPresent = String(formData.get('guest_draft_present') || '').trim() === '1'
   const guestDraftToken = String(formData.get('guest_draft_token') || '').trim()
+  const nextPath = String(formData.get('next') || '').trim()
   const deckFile = formData.get('deck_file')
   const hasUploadedFile = deckFile instanceof File && deckFile.size > 0
   const fields = buildActionFields(deckName, sourceType, formatOverride, sourceUrl, rawList)
@@ -205,6 +206,16 @@ export async function importDeckAction(
   }
 
   params.set('tab', 'settings')
+
+  if (nextPath.startsWith('/')) {
+    const nextUrl = new URL(nextPath, 'http://deckswap.local')
+    const nextParams = nextUrl.searchParams
+    nextParams.set('importedDeckId', String(importResult.deckId))
+    if (guestDraftPresent) {
+      nextParams.set(GUEST_IMPORT_SAVED_QUERY_KEY, '1')
+    }
+    redirect(`${nextUrl.pathname}?${nextParams.toString()}`)
+  }
 
   redirect(`/my-decks/${importResult.deckId}?${params.toString()}`)
 }

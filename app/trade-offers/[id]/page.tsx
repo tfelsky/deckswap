@@ -32,6 +32,22 @@ function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
+function buildActionErrorHref(
+  offerId: number,
+  step: string,
+  message?: string | null,
+  code?: string | null
+) {
+  const params = new URLSearchParams({ error: '1', step })
+  if (message) {
+    params.set('message', message.slice(0, 240))
+  }
+  if (code) {
+    params.set('code', code)
+  }
+  return `/trade-offers/${offerId}?${params.toString()}`
+}
+
 async function findExistingTradeDraftForOffer(
   supabase: Awaited<ReturnType<typeof createClient>>,
   offerId: number
@@ -178,7 +194,14 @@ export default async function TradeOfferDetailPage({
       .single()
 
     if (currentOfferResult.error || !currentOfferResult.data) {
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(
+        buildActionErrorHref(
+          offerId,
+          'load_offer',
+          currentOfferResult.error?.message ?? 'Unable to load current offer.',
+          currentOfferResult.error?.code
+        )
+      )
     }
 
     const currentOffer = currentOfferResult.data as TradeOfferRow
@@ -242,7 +265,7 @@ export default async function TradeOfferDetailPage({
     const requestedDeck = deckMap.get(currentOffer.requested_deck_id)
 
     if (!offeredDeck || !requestedDeck) {
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(buildActionErrorHref(offerId, 'load_decks', 'Offer decks could not be loaded.'))
     }
 
     const rows = buildTradeDraftRows(
@@ -269,7 +292,14 @@ export default async function TradeOfferDetailPage({
       if (isEscrowSchemaMissing(transactionInsert.error?.message)) {
         redirect(`/trade-offers/${offerId}?schemaMissing=1`)
       }
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(
+        buildActionErrorHref(
+          offerId,
+          'transaction_insert',
+          transactionInsert.error?.message ?? 'Trade transaction insert failed.',
+          transactionInsert.error?.code
+        )
+      )
     }
 
     const transactionId = transactionInsert.data.id
@@ -293,7 +323,14 @@ export default async function TradeOfferDetailPage({
       if (isEscrowSchemaMissing(participantInsert.error.message)) {
         redirect(`/trade-offers/${offerId}?schemaMissing=1`)
       }
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(
+        buildActionErrorHref(
+          offerId,
+          'participant_insert',
+          participantInsert.error.message,
+          participantInsert.error.code
+        )
+      )
     }
 
     const eventInsert = await supabase.from('escrow_events').insert({
@@ -310,7 +347,14 @@ export default async function TradeOfferDetailPage({
       if (isEscrowSchemaMissing(eventInsert.error.message)) {
         redirect(`/trade-offers/${offerId}?schemaMissing=1`)
       }
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(
+        buildActionErrorHref(
+          offerId,
+          'event_insert',
+          eventInsert.error.message,
+          eventInsert.error.code
+        )
+      )
     }
 
     const offerUpdate = await supabase
@@ -328,7 +372,14 @@ export default async function TradeOfferDetailPage({
       if (isTradeOffersSchemaMissing(offerUpdate.error.message)) {
         redirect(`/trade-offers/${offerId}?schemaMissing=1`)
       }
-      redirect(`/trade-offers/${offerId}?error=1`)
+      redirect(
+        buildActionErrorHref(
+          offerId,
+          'offer_update',
+          offerUpdate.error.message,
+          offerUpdate.error.code
+        )
+      )
     }
 
     await createNotification(supabase, {
@@ -551,6 +602,12 @@ export default async function TradeOfferDetailPage({
   const countered = resolvedSearchParams.countered === '1'
   const error = resolvedSearchParams.error === '1'
   const schemaMissing = resolvedSearchParams.schemaMissing === '1'
+  const errorStep =
+    typeof resolvedSearchParams.step === 'string' ? resolvedSearchParams.step : null
+  const errorMessage =
+    typeof resolvedSearchParams.message === 'string' ? resolvedSearchParams.message : null
+  const errorCode =
+    typeof resolvedSearchParams.code === 'string' ? resolvedSearchParams.code : null
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -614,6 +671,13 @@ export default async function TradeOfferDetailPage({
           {error && (
             <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100">
               We couldn&apos;t complete that action right now.
+              {errorStep ? (
+                <div className="mt-2 text-xs uppercase tracking-[0.18em] text-red-200/80">
+                  Step: {errorStep.replace(/_/g, ' ')}
+                </div>
+              ) : null}
+              {errorCode ? <div className="mt-2 text-xs text-red-100/80">Code: {errorCode}</div> : null}
+              {errorMessage ? <div className="mt-2 text-xs text-red-100/80">{errorMessage}</div> : null}
             </div>
           )}
           {offer.accepted_trade_transaction_id && (

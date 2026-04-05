@@ -23,6 +23,7 @@ import {
 } from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
+import { getTradeGoalLabel, normalizeTradeGoal, TRADE_GOALS } from '@/lib/decks/trade-challenge'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
 import { calculateGuaranteedBuyNowOffer, calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
@@ -287,6 +288,9 @@ export default async function ManageDeckPage({
       String(value)
     )
   )
+  const selectedTradeGoal = normalizeTradeGoal(
+    (deck as typeof deck & { trade_goal?: string | null }).trade_goal
+  )
   const inventoryStatus = normalizeInventoryStatus(
     (deck as typeof deck & { inventory_status?: string | null }).inventory_status
   )
@@ -468,6 +472,8 @@ export default async function ManageDeckPage({
   const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
     const tradeListingNotes = String(formData.get('trade_listing_notes') || '').trim() || null
     const tradeWantedProfile = String(formData.get('trade_wanted_profile') || '').trim() || null
+    const tradeGoal = normalizeTradeGoal(String(formData.get('trade_goal') || ''))
+    const shareHeadline = String(formData.get('share_headline') || '').trim() || null
     const buyNowPriceUsd = parseCurrencyInput(formData.get('buy_now_price_usd'))
     const buyNowCurrency = normalizeSupportedCurrency(
       String(formData.get('buy_now_currency') || 'USD')
@@ -543,6 +549,8 @@ export default async function ManageDeckPage({
         is_listed_for_trade: isListedForTrade,
         trade_listing_notes: tradeListingNotes,
         trade_wanted_profile: tradeWantedProfile,
+        trade_goal: isListedForTrade ? tradeGoal : null,
+        share_headline: isListedForTrade ? shareHeadline : null,
         buy_now_price_usd: buyNowPriceUsd,
         buy_now_currency: buyNowPriceUsd != null ? buyNowCurrency : 'USD',
         buy_now_listing_notes: buyNowPriceUsd != null ? buyNowListingNotes : null,
@@ -1436,6 +1444,35 @@ export default async function ManageDeckPage({
                     </div>
 
                     <div className="space-y-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">Share headline</label>
+                        <input
+                          name="share_headline"
+                          defaultValue={(deck as typeof deck & { share_headline?: string | null }).share_headline ?? ''}
+                          placeholder="Example: Would you trade into this token-powered value engine?"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                        />
+                        <p className="mt-2 text-xs text-zinc-500">
+                          Optional. This is the headline shown on the public trade challenge card.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-zinc-300">Trade goal</label>
+                        <select
+                          name="trade_goal"
+                          defaultValue={selectedTradeGoal ?? ''}
+                          className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
+                        >
+                          <option value="">Open to offers</option>
+                          {TRADE_GOALS.map((goal) => (
+                            <option key={goal} value={goal}>
+                              {getTradeGoalLabel(goal)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div>
                         <label className="mb-2 block text-sm text-zinc-300">What are you looking for?</label>
                         <textarea

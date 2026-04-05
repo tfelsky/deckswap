@@ -19,9 +19,12 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [guestDraftToken, setGuestDraftToken] = useState('')
+  const [nextPath, setNextPath] = useState('')
 
   useEffect(() => {
-    setGuestDraftToken(new URLSearchParams(window.location.search).get('guestDraft')?.trim() ?? '')
+    const params = new URLSearchParams(window.location.search)
+    setGuestDraftToken(params.get('guestDraft')?.trim() ?? '')
+    setNextPath(params.get('next')?.trim() ?? '')
   }, [])
 
   useEffect(() => {
@@ -68,6 +71,10 @@ export default function SignInPage() {
       return guestDraftToken
         ? `/import-deck?fromGuest=1&guestDraft=${encodeURIComponent(guestDraftToken)}`
         : '/import-deck?fromGuest=1'
+    }
+
+    if (nextPath.startsWith('/')) {
+      return nextPath
     }
 
     return '/decks'

@@ -1,4 +1,5 @@
 import DeckCardViews from '@/components/deck-card-views'
+import DeckTradeChallengeCard from '@/components/deck-trade-challenge-card'
 import FormActionButton from '@/components/form-action-button'
 import GuestDraftCleanup from '@/components/guest-draft-cleanup'
 import AppHeader from '@/components/app-header'
@@ -53,6 +54,7 @@ import {
 } from '@/lib/decks/inventory-status'
 import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
+import { buildTradeMatchesHref } from '@/lib/decks/trade-challenge'
 import {
   calculateDeckTradeValue,
   calculateGuaranteedBuyNowOffer,
@@ -111,6 +113,8 @@ type Deck = {
   is_listed_for_trade?: boolean | null
   trade_listing_notes?: string | null
   trade_wanted_profile?: string | null
+  trade_goal?: string | null
+  share_headline?: string | null
   buy_now_price_usd?: number | null
   buy_now_currency?: string | null
   buy_now_listing_notes?: string | null
@@ -243,7 +247,7 @@ export default async function DeckDetailPage({
   const { data: deck, error: deckError } = await supabase
     .from('decks')
     .select(
-      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, buy_now_price_usd, buy_now_currency, buy_now_listing_notes, inventory_status, holiday_donation_submitted_at, wanted_color_identities, wanted_formats, box_type'
+      'id, user_id, source_type, source_url, name, commander, power_level, price_estimate, image_url, is_valid, validation_errors, commander_mode, format, imported_at, price_total_usd, price_total_usd_foil, price_total_eur, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, trade_listing_notes, trade_wanted_profile, trade_goal, share_headline, buy_now_price_usd, buy_now_currency, buy_now_listing_notes, inventory_status, holiday_donation_submitted_at, wanted_color_identities, wanted_formats, box_type'
     )
     .eq('id', deckId)
     .single()
@@ -377,6 +381,15 @@ export default async function DeckDetailPage({
   const inventoryStatus = normalizeInventoryStatus(typedDeck.inventory_status)
   const inventoryStatusLocked = isInventoryStatusLocked(inventoryStatus)
   const marketingChips = getDeckMarketingChips(typedDeck)
+  const compareHref = buildTradeMatchesHref(deckId)
+  const compareCallToAction = !user
+    ? 'Sign in to compare'
+    : isOwner
+      ? 'Preview compare flow'
+      : 'Import your deck to see your match score'
+  const compareEntryHref = !user
+    ? `/sign-in?next=${encodeURIComponent(compareHref)}`
+    : compareHref
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
     currentPrice,
@@ -1382,6 +1395,31 @@ export default async function DeckDetailPage({
               </span>
             )}
           </div>
+
+          {typedDeck.is_listed_for_trade && (
+            <div className="mt-6">
+              <DeckTradeChallengeCard
+                deckId={deckId}
+                deckName={typedDeck.name}
+                commander={typedDeck.commander}
+                format={deckFormat}
+                valueUsd={typedDeck.price_total_usd_foil}
+                bracketLabel={isCommanderDeck ? bracketSummary.label : getDeckFormatLabel(deckFormat)}
+                shareHeadline={typedDeck.share_headline}
+                tradeGoal={typedDeck.trade_goal}
+                wantedProfile={typedDeck.trade_wanted_profile}
+                wantedColors={typedDeck.wanted_color_identities}
+                wantedFormats={typedDeck.wanted_formats}
+                ownerDisplayName={sellerProfile?.display_name ?? null}
+                ownerUsername={sellerProfile?.username ?? null}
+                completedTradesCount={sellerSummary?.completed_trades_count ?? null}
+                successfulShipmentsCount={sellerSummary?.successful_shipments_count ?? null}
+                trustBadges={sellerBadges}
+                compareHref={compareEntryHref}
+                compareLabel={compareCallToAction}
+              />
+            </div>
+          )}
 
           {inventoryStatusLocked && (
             <div className="mt-6 rounded-2xl border border-zinc-600/40 bg-zinc-800/70 p-4 text-sm text-zinc-200">
