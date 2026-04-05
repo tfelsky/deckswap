@@ -11,6 +11,15 @@ export type NotificationRow = {
   created_at?: string | null
 }
 
+export type NotificationGroup = 'escrow' | 'offers' | 'comments' | 'system'
+
+export type NotificationPresentation = {
+  group: NotificationGroup
+  groupLabel: string
+  typeLabel: string
+  actionLabel: string
+}
+
 type CreateNotificationArgs = {
   userId: string
   actorUserId?: string | null
@@ -77,4 +86,86 @@ export function formatNotificationTimestamp(value?: string | null) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+export function getNotificationPresentation(type: string): NotificationPresentation {
+  if (type.startsWith('trade_offer_')) {
+    return {
+      group: 'offers',
+      groupLabel: 'Trade offers',
+      typeLabel: formatNotificationType(type),
+      actionLabel: 'Open offer',
+    }
+  }
+
+  if (
+    type.startsWith('trade_payment_') ||
+    type.startsWith('trade_shipment_') ||
+    type === 'trade_ready_to_ship' ||
+    type === 'trade_both_shipments_confirmed' ||
+    type === 'trade_ready_to_release' ||
+    type === 'trade_completed' ||
+    type === 'trade_disputed' ||
+    type === 'trade_draft_created'
+  ) {
+    return {
+      group: 'escrow',
+      groupLabel: 'Trade and escrow',
+      typeLabel: formatNotificationType(type),
+      actionLabel: 'Open trade',
+    }
+  }
+
+  if (type === 'deck_comment_added') {
+    return {
+      group: 'comments',
+      groupLabel: 'Comments',
+      typeLabel: 'Deck comment',
+      actionLabel: 'Open discussion',
+    }
+  }
+
+  return {
+    group: 'system',
+    groupLabel: 'System updates',
+    typeLabel: formatNotificationType(type),
+    actionLabel: 'Open',
+  }
+}
+
+export function formatNotificationType(type: string) {
+  switch (type) {
+    case 'trade_payment_requested':
+      return 'Payment requested'
+    case 'trade_payment_marked_paid':
+      return 'Payment confirmed'
+    case 'trade_ready_to_ship':
+      return 'Ready to ship'
+    case 'trade_shipment_marked_sent':
+      return 'Shipment confirmed'
+    case 'trade_both_shipments_confirmed':
+      return 'Both shipments confirmed'
+    case 'trade_shipment_received_at_escrow':
+      return 'Received at escrow hub'
+    case 'trade_ready_to_release':
+      return 'Ready to release'
+    case 'trade_completed':
+      return 'Trade completed'
+    case 'trade_disputed':
+      return 'Trade under review'
+    case 'trade_offer_created':
+      return 'Offer received'
+    case 'trade_offer_countered':
+      return 'Counteroffer received'
+    case 'trade_offer_accepted':
+      return 'Offer accepted'
+    case 'trade_offer_declined':
+      return 'Offer declined'
+    case 'trade_offer_cancelled':
+      return 'Offer cancelled'
+    case 'deck_comment_added':
+      return 'Deck comment'
+    default:
+      return type.replace(/_/g, ' ')
+  }
 }

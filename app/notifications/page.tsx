@@ -2,6 +2,7 @@ import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatNotificationTimestamp,
+  getNotificationPresentation,
   getUnreadNotificationsCount,
   isNotificationsSchemaMissing,
   type NotificationRow,
@@ -11,6 +12,29 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
+
+const GROUP_STYLES = {
+  escrow: {
+    card: 'border-sky-400/20 bg-sky-400/10',
+    pill: 'border-sky-400/20 bg-sky-400/10 text-sky-100',
+    count: 'text-sky-200',
+  },
+  offers: {
+    card: 'border-emerald-400/20 bg-emerald-400/10',
+    pill: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-100',
+    count: 'text-emerald-200',
+  },
+  comments: {
+    card: 'border-amber-400/20 bg-amber-400/10',
+    pill: 'border-amber-400/20 bg-amber-400/10 text-amber-100',
+    count: 'text-amber-100',
+  },
+  system: {
+    card: 'border-white/10 bg-white/5',
+    pill: 'border-white/10 bg-white/5 text-zinc-300',
+    count: 'text-zinc-100',
+  },
+} as const
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -103,6 +127,28 @@ export default async function NotificationsPage() {
   }
 
   const notifications = (notificationsResult.data ?? []) as NotificationRow[]
+  const notificationsByGroup = {
+    escrow: [] as NotificationRow[],
+    offers: [] as NotificationRow[],
+    comments: [] as NotificationRow[],
+    system: [] as NotificationRow[],
+  }
+
+  for (const notification of notifications) {
+    const presentation = getNotificationPresentation(notification.type)
+    notificationsByGroup[presentation.group].push(notification)
+  }
+
+  const notificationSections = (Object.entries(notificationsByGroup) as Array<
+    [keyof typeof notificationsByGroup, NotificationRow[]]
+  >)
+    .filter(([, items]) => items.length > 0)
+    .map(([group, items]) => ({
+      group,
+      items,
+      unread: items.filter((item) => !item.read_at).length,
+      label: getNotificationPresentation(items[0].type).groupLabel,
+    }))
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
@@ -161,58 +207,98 @@ export default async function NotificationsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {notifications.map((notification) => {
-              const unread = !notification.read_at
+          <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-4">
+              {notificationSections.map((section) => {
+                const styles = GROUP_STYLES[section.group]
+                return (
+                  <div key={section.group} className={`rounded-3xl border p-5 ${styles.card}`}>
+                    <div className="text-sm text-zinc-300">{section.label}</div>
+                    <div className={`mt-2 text-3xl font-semibold ${styles.count}`}>{section.items.length}</div>
+                    <div className="mt-2 text-xs text-zinc-400">
+                      {section.unread > 0 ? `${section.unread} unread` : 'All caught up'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {notificationSections.map((section) => {
+              const styles = GROUP_STYLES[section.group]
 
               return (
-                <div
-                  key={notification.id}
-                  className={`rounded-3xl border p-5 ${
-                    unread
-                      ? 'border-emerald-400/25 bg-emerald-400/10'
-                      : 'border-white/10 bg-white/5'
-                  }`}
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {unread && (
-                          <span className="rounded-full bg-emerald-400/20 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-emerald-200">
-                            New
-                          </span>
-                        )}
-                        <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] uppercase tracking-wide text-zinc-400">
-                          {notification.type.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <h2 className="mt-3 text-lg font-semibold text-white">{notification.title}</h2>
-                      {notification.body && (
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">{notification.body}</p>
-                      )}
-                      <div className="mt-3 text-xs text-zinc-500">
-                        {formatNotificationTimestamp(notification.created_at)}
-                      </div>
+                <div key={section.group}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-white">{section.label}</h2>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {section.unread > 0
+                          ? `${section.unread} unread items need attention.`
+                          : 'Recent activity and completed updates.'}
+                      </p>
                     </div>
+                    <div className={`rounded-full border px-3 py-1 text-xs ${styles.pill}`}>
+                      {section.items.length} items
+                    </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-3">
-                      {notification.href && (
-                        <Link
-                          href={notification.href}
-                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                  <div className="space-y-4">
+                    {section.items.map((notification) => {
+                      const unread = !notification.read_at
+                      const presentation = getNotificationPresentation(notification.type)
+
+                      return (
+                        <div
+                          key={notification.id}
+                          className={`rounded-3xl border p-5 ${
+                            unread
+                              ? 'border-emerald-400/25 bg-emerald-400/10'
+                              : 'border-white/10 bg-white/5'
+                          }`}
                         >
-                          Open
-                        </Link>
-                      )}
-                      {unread && (
-                        <form action={markReadAction}>
-                          <input type="hidden" name="notification_id" value={notification.id} />
-                          <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-200 hover:bg-black/30">
-                            Mark read
-                          </button>
-                        </form>
-                      )}
-                    </div>
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {unread && (
+                                  <span className="rounded-full bg-emerald-400/20 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-emerald-200">
+                                    New
+                                  </span>
+                                )}
+                                <span className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-wide ${styles.pill}`}>
+                                  {presentation.typeLabel}
+                                </span>
+                              </div>
+                              <h3 className="mt-3 text-lg font-semibold text-white">{notification.title}</h3>
+                              {notification.body && (
+                                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">{notification.body}</p>
+                              )}
+                              <div className="mt-3 text-xs text-zinc-500">
+                                {formatNotificationTimestamp(notification.created_at)}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-3">
+                              {notification.href && (
+                                <Link
+                                  href={notification.href}
+                                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                                >
+                                  {presentation.actionLabel}
+                                </Link>
+                              )}
+                              {unread && (
+                                <form action={markReadAction}>
+                                  <input type="hidden" name="notification_id" value={notification.id} />
+                                  <button className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-200 hover:bg-black/30">
+                                    Mark read
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
