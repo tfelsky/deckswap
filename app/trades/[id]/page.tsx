@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createNotification } from '@/lib/notifications'
@@ -37,6 +38,10 @@ function formatTimestamp(value?: string | null) {
   })
 }
 
+function participantLabel(participant: TradeParticipantRow, userId: string) {
+  return participant.user_id === userId ? 'You' : sideLabel(participant.side)
+}
+
 export default async function TradeDetailPage({
   params,
 }: {
@@ -65,19 +70,20 @@ export default async function TradeDetailPage({
   }
 
   const access = await getAdminAccessForUser(user)
+  const adminSupabase = createAdminClient()
 
   const [tradeResult, participantResult, eventResult] = await Promise.all([
-    supabase
+    adminSupabase
       .from('trade_transactions')
       .select('*')
       .eq('id', tradeId)
       .maybeSingle(),
-    supabase
+    adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
       .order('side', { ascending: true }),
-    supabase
+    adminSupabase
       .from('escrow_events')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -107,6 +113,9 @@ export default async function TradeDetailPage({
   const isCreator = trade.created_by === user.id
   const isParticipant = participants.some((participant) => participant.user_id === user.id)
   const canManageTrade = access.isAdmin || isCreator
+  const currentUserParticipant = participants.find((participant) => participant.user_id === user.id) ?? null
+  const paymentsComplete = participants.length > 0 && participants.every((participant) => participant.payment_status === 'paid')
+  const shipmentsComplete = participants.length > 0 && participants.every((participant) => participant.shipment_status === 'shipped')
 
   if (!isParticipant && !canManageTrade) {
     redirect('/trades')
@@ -116,6 +125,7 @@ export default async function TradeDetailPage({
     'use server'
 
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -123,8 +133,8 @@ export default async function TradeDetailPage({
     if (!user) redirect('/sign-in')
 
     const access = await getAdminAccessForUser(user)
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
-    const participantResult = await supabase
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const participantResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -139,7 +149,7 @@ export default async function TradeDetailPage({
     const now = new Date().toISOString()
     const nextStatus = 'awaiting_payment'
 
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: nextStatus,
@@ -148,7 +158,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'payment_requested',
@@ -158,13 +168,13 @@ export default async function TradeDetailPage({
     })
 
     for (const participant of participants) {
-      if (!participant.user_id || participant.user_id === user.id) continue
+      if (!participant.user_id) continue
       await createNotification(supabase, {
         userId: participant.user_id,
         actorUserId: user.id,
         type: 'trade_payment_requested',
         title: 'Trade payment requested',
-        body: `Your side of Trade #${tradeId} is ready for payment confirmation.`,
+        body: `Trade #${tradeId} is ready for checkout. Review your amount due, decide whether you want the $20 box kit, and confirm payment.`,
         href: `/trades/${tradeId}`,
         metadata: { tradeId, side: participant.side },
       })
@@ -178,20 +188,21 @@ export default async function TradeDetailPage({
 
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) redirect('/sign-in')
     const access = await getAdminAccessForUser(user)
 
-    const participantResult = await supabase
+    const participantResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
       .eq('side', side)
       .maybeSingle()
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
-    const allParticipantsResult = await supabase
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const allParticipantsResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -207,7 +218,7 @@ export default async function TradeDetailPage({
 
     const now = new Date().toISOString()
 
-    await supabase
+    await adminSupabase
       .from('trade_transaction_participants')
       .update({
         payment_status: 'paid',
@@ -222,7 +233,7 @@ export default async function TradeDetailPage({
     )
     const nextStatus = deriveTradeStatus(trade, refreshedParticipants)
 
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: nextStatus,
@@ -230,7 +241,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'payment_marked_paid',
@@ -250,6 +261,21 @@ export default async function TradeDetailPage({
       })
     }
 
+    if (refreshedParticipants.every((row) => row.payment_status === 'paid')) {
+      for (const participantRow of refreshedParticipants) {
+        if (!participantRow.user_id) continue
+        await createNotification(supabase, {
+          userId: participantRow.user_id,
+          actorUserId: user.id,
+          type: 'trade_ready_to_ship',
+          title: 'Both payments are in',
+          body: 'Both sides have paid. Pack your deck, confirm shipment, and add tracking when it heads to the escrow hub.',
+          href: `/trades/${tradeId}`,
+          metadata: { tradeId },
+        })
+      }
+    }
+
     redirect(`/trades/${tradeId}`)
   }
 
@@ -259,20 +285,21 @@ export default async function TradeDetailPage({
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const trackingCode = String(formData.get('tracking_code') || '').trim() || null
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) redirect('/sign-in')
     const access = await getAdminAccessForUser(user)
 
-    const participantResult = await supabase
+    const participantResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
       .eq('side', side)
       .maybeSingle()
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
-    const allParticipantsResult = await supabase
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const allParticipantsResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -287,7 +314,7 @@ export default async function TradeDetailPage({
 
     const now = new Date().toISOString()
 
-    await supabase
+    await adminSupabase
       .from('trade_transaction_participants')
       .update({
         shipment_status: 'shipped',
@@ -303,7 +330,7 @@ export default async function TradeDetailPage({
     )
     const nextStatus = deriveTradeStatus(trade, refreshedParticipants)
 
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: nextStatus,
@@ -311,12 +338,40 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'shipment_marked_sent',
       event_data: { side, trackingCode, shippedAt: now },
     })
+
+    for (const other of refreshedParticipants) {
+      if (!other.user_id || other.user_id === user.id) continue
+      await createNotification(supabase, {
+        userId: other.user_id,
+        actorUserId: user.id,
+        type: 'trade_shipment_marked_sent',
+        title: 'Shipment confirmed',
+        body: `${sideLabel(side)} marked their deck as shipped${trackingCode ? ` with tracking ${trackingCode}` : ''}.`,
+        href: `/trades/${tradeId}`,
+        metadata: { tradeId, side, trackingCode },
+      })
+    }
+
+    if (refreshedParticipants.every((row) => row.shipment_status === 'shipped')) {
+      for (const participantRow of refreshedParticipants) {
+        if (!participantRow.user_id) continue
+        await createNotification(supabase, {
+          userId: participantRow.user_id,
+          actorUserId: user.id,
+          type: 'trade_both_shipments_confirmed',
+          title: 'Both decks are in transit',
+          body: 'Both traders have confirmed shipment. The next checkpoint is receipt at the hub.',
+          href: `/trades/${tradeId}`,
+          metadata: { tradeId },
+        })
+      }
+    }
 
     redirect(`/trades/${tradeId}`)
   }
@@ -326,6 +381,7 @@ export default async function TradeDetailPage({
 
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -333,8 +389,8 @@ export default async function TradeDetailPage({
     const access = await getAdminAccessForUser(user)
     if (!access.isAdmin) redirect(`/trades/${tradeId}`)
 
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
-    const allParticipantsResult = await supabase
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const allParticipantsResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -345,7 +401,7 @@ export default async function TradeDetailPage({
 
     const now = new Date().toISOString()
 
-    await supabase
+    await adminSupabase
       .from('trade_transaction_participants')
       .update({
         shipment_status: 'received',
@@ -360,7 +416,7 @@ export default async function TradeDetailPage({
     )
     const nextStatus = deriveTradeStatus(trade, refreshedParticipants)
 
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: nextStatus,
@@ -368,7 +424,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'shipment_received_at_escrow',
@@ -385,6 +441,7 @@ export default async function TradeDetailPage({
     const inspectionStatus = String(formData.get('inspection_status') || 'passed') as 'passed' | 'failed'
     const inspectionNotes = String(formData.get('inspection_notes') || '').trim() || null
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -392,8 +449,8 @@ export default async function TradeDetailPage({
     const access = await getAdminAccessForUser(user)
     if (!access.isAdmin) redirect(`/trades/${tradeId}`)
 
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
-    const allParticipantsResult = await supabase
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const allParticipantsResult = await adminSupabase
       .from('trade_transaction_participants')
       .select('*')
       .eq('transaction_id', tradeId)
@@ -403,7 +460,7 @@ export default async function TradeDetailPage({
     if (!trade) redirect(`/trades/${tradeId}`)
 
     const now = new Date().toISOString()
-    await supabase
+    await adminSupabase
       .from('trade_transaction_participants')
       .update({
         inspection_status: inspectionStatus,
@@ -418,7 +475,7 @@ export default async function TradeDetailPage({
     )
     const nextStatus = inspectionStatus === 'failed' ? 'disputed' : deriveTradeStatus(trade, refreshedParticipants)
 
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: nextStatus,
@@ -428,7 +485,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: inspectionStatus === 'failed' ? 'inspection_failed' : 'inspection_passed',
@@ -442,20 +499,21 @@ export default async function TradeDetailPage({
     'use server'
 
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) redirect('/sign-in')
     const access = await getAdminAccessForUser(user)
 
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
     const trade = tradeResult.data as TradeTransactionRow | null
     if (!trade || (!access.isAdmin && trade.created_by !== user.id)) {
       redirect(`/trades/${tradeId}`)
     }
 
     const now = new Date().toISOString()
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: 'completed',
@@ -464,7 +522,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'trade_completed',
@@ -492,12 +550,13 @@ export default async function TradeDetailPage({
 
     const disputeReason = String(formData.get('dispute_reason') || '').trim() || 'Trade manually flagged for dispute.'
     const supabase = await createClient()
+    const adminSupabase = createAdminClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) redirect('/sign-in')
     const access = await getAdminAccessForUser(user)
-    const tradeResult = await supabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
+    const tradeResult = await adminSupabase.from('trade_transactions').select('*').eq('id', tradeId).maybeSingle()
     const trade = tradeResult.data as TradeTransactionRow | null
     if (!trade) redirect(`/trades/${tradeId}`)
     if (!access.isAdmin && trade.created_by !== user.id && !participants.some((p) => p.user_id === user.id)) {
@@ -505,7 +564,7 @@ export default async function TradeDetailPage({
     }
 
     const now = new Date().toISOString()
-    await supabase
+    await adminSupabase
       .from('trade_transactions')
       .update({
         status: 'disputed',
@@ -514,7 +573,7 @@ export default async function TradeDetailPage({
       })
       .eq('id', tradeId)
 
-    await supabase.from('escrow_events').insert({
+    await adminSupabase.from('escrow_events').insert({
       transaction_id: tradeId,
       actor_user_id: user.id,
       event_type: 'trade_disputed',
@@ -551,6 +610,19 @@ export default async function TradeDetailPage({
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="text-sm text-zinc-400">Status</div>
               <div className="mt-2 text-3xl font-semibold text-white">{formatTradeStatus(currentStatus)}</div>
+              <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4 text-sm text-emerald-50/90">
+                {currentStatus === 'awaiting_payment' || currentStatus === 'draft'
+                  ? 'Next step: both traders review checkout details, decide on the optional flat box + label add-on, and confirm payment.'
+                  : currentStatus === 'awaiting_shipments'
+                    ? 'Next step: both traders should pack their decks and confirm shipment to the escrow hub.'
+                    : currentStatus === 'in_transit'
+                      ? 'Next step: DeckSwap waits for both shipments to arrive at the hub for receipt and inspection.'
+                      : currentStatus === 'in_inspection'
+                        ? 'Next step: the hub team inspects both decks against the agreed trade record before release.'
+                        : currentStatus === 'ready_to_release'
+                          ? 'Next step: both decks cleared inspection and the trade can be completed and released.'
+                          : 'This trade is active and being tracked through escrow.'}
+              </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-wide text-zinc-500">Equalization</div>
@@ -606,6 +678,10 @@ export default async function TradeDetailPage({
                         <span>{formatUsd(participant.insurance_usd)}</span>
                       </div>
                       <div className="flex items-center justify-between">
+                        <span>Flat box + label</span>
+                        <span>{formatUsd(participant.packaging_addon_usd)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
                         <span>Equalization owed</span>
                         <span>{formatUsd(participant.equalization_owed_usd)}</span>
                       </div>
@@ -621,6 +697,9 @@ export default async function TradeDetailPage({
                         {participant.tracking_code && (
                           <div className="mt-1 text-xs text-zinc-500">Tracking: {participant.tracking_code}</div>
                         )}
+                        {participant.label_box_requested ? (
+                          <div className="mt-1 text-xs text-zinc-500">Prepaid flat box kit requested</div>
+                        ) : null}
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
                         <div className="text-xs uppercase tracking-wide text-zinc-500">Inspection</div>
@@ -724,15 +803,45 @@ export default async function TradeDetailPage({
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Next Steps</h2>
+              {currentUserParticipant ? (
+                <div className="mt-4 space-y-3 text-sm text-zinc-300">
+                  {(currentStatus === 'draft' || currentStatus === 'awaiting_payment') && (
+                    <>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        {participantLabel(currentUserParticipant, user.id)} should review the amount due and decide whether the $20 flat folded box + label add-on is needed for safer outbound packing.
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        After payment is confirmed, this trade automatically moves into shipment readiness and prompts both sides to send decks to the hub.
+                      </div>
+                    </>
+                  )}
+                  {currentStatus === 'awaiting_shipments' && (
+                    <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sky-100">
+                      Payment is complete. Pack your deck, attach tracking if you have it, and confirm shipment to the escrow hub.
+                    </div>
+                  )}
+                  {currentStatus === 'in_transit' && (
+                    <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sky-100">
+                      Both sides have shipped. We are waiting for the hub to confirm receipt.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-zinc-400">This trade is visible, but no participant-specific next step could be resolved.</p>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Actions</h2>
               <div className="mt-4 flex flex-wrap gap-3">
                 {canManageTrade && currentStatus === 'draft' && (
                   <form action={requestPaymentAction}>
                     <FormActionButton
-                      pendingLabel="Saving..."
+                      pendingLabel="Opening checkout..."
                       className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Request payment
+                      Open payment for both sides
                     </FormActionButton>
                   </form>
                 )}

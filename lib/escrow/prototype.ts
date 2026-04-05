@@ -11,6 +11,8 @@ export type EscrowPrototypeInput = {
   deckBValue: number
   countryA: SupportedCountry
   countryB: SupportedCountry
+  boxKitA?: boolean
+  boxKitB?: boolean
 }
 
 export type EscrowCheckoutSide = {
@@ -18,6 +20,7 @@ export type EscrowCheckoutSide = {
   shipping: number
   insurance: number
   matchingFee: number
+  packaging: number
   equalizationOwed: number
   amountDue: number
 }
@@ -36,6 +39,8 @@ export type EscrowPrototypeResult = {
 function roundCurrency(value: number) {
   return Number(value.toFixed(2))
 }
+
+const BOX_KIT_PRICE = 20
 
 function laneLabel(countryA: SupportedCountry, countryB: SupportedCountry) {
   if (countryA === 'ca' && countryB === 'ca') return 'Canada to Canada'
@@ -63,6 +68,10 @@ export function calculateEscrowPrototype(
     notes.push('Higher-value trades should require mandatory insurance and stronger inspection.')
   }
 
+  if (input.boxKitA || input.boxKitB) {
+    notes.push('Prepaid flat box kits add $20 per side and include a folded box plus a shipping label.')
+  }
+
   const equalizationToA = Math.max(0, input.deckAValue - input.deckBValue)
   const equalizationToB = Math.max(0, input.deckBValue - input.deckAValue)
 
@@ -71,6 +80,7 @@ export function calculateEscrowPrototype(
     shipping: deckShippingForValue(input.deckAValue),
     insurance: deckInsuranceForValue(input.deckAValue),
     matchingFee: deckSwapFeeForValue(input.deckAValue),
+    packaging: input.boxKitA ? BOX_KIT_PRICE : 0,
     equalizationOwed: roundCurrency(equalizationToB),
     amountDue: 0,
   }
@@ -80,15 +90,16 @@ export function calculateEscrowPrototype(
     shipping: deckShippingForValue(input.deckBValue),
     insurance: deckInsuranceForValue(input.deckBValue),
     matchingFee: deckSwapFeeForValue(input.deckBValue),
+    packaging: input.boxKitB ? BOX_KIT_PRICE : 0,
     equalizationOwed: roundCurrency(equalizationToA),
     amountDue: 0,
   }
 
   deckA.amountDue = roundCurrency(
-    deckA.shipping + deckA.insurance + deckA.matchingFee + deckA.equalizationOwed
+    deckA.shipping + deckA.insurance + deckA.matchingFee + deckA.packaging + deckA.equalizationOwed
   )
   deckB.amountDue = roundCurrency(
-    deckB.shipping + deckB.insurance + deckB.matchingFee + deckB.equalizationOwed
+    deckB.shipping + deckB.insurance + deckB.matchingFee + deckB.packaging + deckB.equalizationOwed
   )
 
   return {
@@ -104,9 +115,11 @@ export function calculateEscrowPrototype(
       deckA.shipping +
         deckA.insurance +
         deckA.matchingFee +
+        deckA.packaging +
         deckB.shipping +
         deckB.insurance +
-        deckB.matchingFee
+        deckB.matchingFee +
+        deckB.packaging
     ),
   }
 }

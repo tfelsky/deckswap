@@ -70,6 +70,8 @@ alter table public.trade_transaction_participants
   add column if not exists payment_marked_at timestamptz,
   add column if not exists shipment_status text not null default 'not_shipped',
   add column if not exists tracking_code text,
+  add column if not exists packaging_addon_usd numeric not null default 0,
+  add column if not exists label_box_requested boolean not null default false,
   add column if not exists shipped_at timestamptz,
   add column if not exists received_at timestamptz,
   add column if not exists inspection_status text not null default 'pending',
@@ -93,6 +95,9 @@ alter table public.trade_transactions enable row level security;
 alter table public.trade_transaction_participants enable row level security;
 alter table public.escrow_events enable row level security;
 
+drop policy if exists "users read their own trades"
+  on public.trade_transactions;
+
 create policy "users read their own trades"
   on public.trade_transactions
   for select
@@ -112,25 +117,28 @@ create policy "users create trade drafts"
   for insert
   with check (created_by = auth.uid());
 
+drop policy if exists "trade creator and admin update trades"
+  on public.trade_transactions;
+
 create policy "trade creator and admin update trades"
   on public.trade_transactions
   for update
   using (created_by = auth.uid() or auth.jwt() ->> 'email' = 'tim.felsky@gmail.com')
   with check (created_by = auth.uid() or auth.jwt() ->> 'email' = 'tim.felsky@gmail.com');
 
+drop policy if exists "users read participant rows for their trades"
+  on public.trade_transaction_participants;
+
 create policy "users read participant rows for their trades"
   on public.trade_transaction_participants
   for select
   using (
     user_id = auth.uid()
-    or exists (
-      select 1
-      from public.trade_transactions t
-      where t.id = transaction_id
-        and (t.created_by = auth.uid() or auth.jwt() ->> 'email' = 'tim.felsky@gmail.com')
-    )
     or auth.jwt() ->> 'email' = 'tim.felsky@gmail.com'
   );
+
+drop policy if exists "trade creator inserts participant rows"
+  on public.trade_transaction_participants;
 
 create policy "trade creator inserts participant rows"
   on public.trade_transaction_participants
@@ -143,6 +151,9 @@ create policy "trade creator inserts participant rows"
         and t.created_by = auth.uid()
     )
   );
+
+drop policy if exists "trade creator and admin update participant rows"
+  on public.trade_transaction_participants;
 
 create policy "trade creator and admin update participant rows"
   on public.trade_transaction_participants
@@ -164,6 +175,9 @@ create policy "trade creator and admin update participant rows"
     )
   );
 
+drop policy if exists "users read events for their trades"
+  on public.escrow_events;
+
 create policy "users read events for their trades"
   on public.escrow_events
   for select
@@ -184,6 +198,9 @@ create policy "users read events for their trades"
         )
     )
   );
+
+drop policy if exists "trade creator inserts events"
+  on public.escrow_events;
 
 create policy "trade creator inserts events"
   on public.escrow_events

@@ -48,6 +48,8 @@ export type TradeParticipantRow = {
   shipping_usd: number
   insurance_usd: number
   matching_fee_usd: number
+  packaging_addon_usd?: number | null
+  label_box_requested?: boolean | null
   equalization_owed_usd: number
   amount_due_usd: number
   payment_status?: PaymentStatus | null
@@ -98,6 +100,8 @@ export function isEscrowSchemaMissing(message?: string | null) {
     message.includes("Could not find the 'tracking_code' column of 'trade_transaction_participants'") ||
     message.includes("Could not find the 'shipped_at' column of 'trade_transaction_participants'") ||
     message.includes("Could not find the 'received_at' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'packaging_addon_usd' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'label_box_requested' column of 'trade_transaction_participants'") ||
     message.includes("Could not find the 'inspection_status' column of 'trade_transaction_participants'") ||
     message.includes("Could not find the 'inspection_notes' column of 'trade_transaction_participants'")
   )
@@ -133,6 +137,8 @@ export function buildTradeDraftRows(
         shipping_usd: result.deckA.shipping,
         insurance_usd: result.deckA.insurance,
         matching_fee_usd: result.deckA.matchingFee,
+        packaging_addon_usd: result.deckA.packaging,
+        label_box_requested: result.deckA.packaging > 0,
         equalization_owed_usd: result.deckA.equalizationOwed,
         amount_due_usd: result.deckA.amountDue,
         payment_status: 'unpaid',
@@ -147,6 +153,8 @@ export function buildTradeDraftRows(
         shipping_usd: result.deckB.shipping,
         insurance_usd: result.deckB.insurance,
         matching_fee_usd: result.deckB.matchingFee,
+        packaging_addon_usd: result.deckB.packaging,
+        label_box_requested: result.deckB.packaging > 0,
         equalization_owed_usd: result.deckB.equalizationOwed,
         amount_due_usd: result.deckB.amountDue,
         payment_status: 'unpaid',

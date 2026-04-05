@@ -27,6 +27,11 @@ function parseCountry(
   return candidate === 'ca' || candidate === 'us' ? candidate : fallback
 }
 
+function parseBoolean(value: string | string[] | undefined) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return candidate === '1' || candidate === 'true' || candidate === 'on'
+}
+
 function sideLabel(code: SupportedCountry) {
   return code === 'ca' ? 'Canada' : 'USA'
 }
@@ -46,6 +51,8 @@ export default async function CheckoutPrototypePage({
   const deckBValue = parseMoney(params.deckBValue, 1000)
   const countryA = parseCountry(params.countryA, 'ca')
   const countryB = parseCountry(params.countryB, 'ca')
+  const boxKitA = parseBoolean(params.boxKitA)
+  const boxKitB = parseBoolean(params.boxKitB)
   const schemaMissing = params.schemaMissing === '1'
   const saveError = params.saveError === '1'
 
@@ -54,6 +61,8 @@ export default async function CheckoutPrototypePage({
     deckBValue,
     countryA,
     countryB,
+    boxKitA,
+    boxKitB,
   })
 
   return (
@@ -132,6 +141,10 @@ export default async function CheckoutPrototypePage({
                         </option>
                       </select>
                     </div>
+                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+                      <input type="checkbox" name="boxKitA" value="1" defaultChecked={boxKitA} className="mt-1" />
+                      <span>Courier me a flat folded box with a prepaid label for this side (+$20)</span>
+                    </label>
                   </div>
                 </div>
 
@@ -163,6 +176,10 @@ export default async function CheckoutPrototypePage({
                         </option>
                       </select>
                     </div>
+                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+                      <input type="checkbox" name="boxKitB" value="1" defaultChecked={boxKitB} className="mt-1" />
+                      <span>Courier me a flat folded box with a prepaid label for this side (+$20)</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -245,6 +262,10 @@ export default async function CheckoutPrototypePage({
                       <span>{formatUsd(result.deckA.insurance)}</span>
                     </div>
                     <div className="flex items-center justify-between">
+                      <span>Box kit + label</span>
+                      <span>{formatUsd(result.deckA.packaging)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span>Equalization owed</span>
                       <span>{formatUsd(result.deckA.equalizationOwed)}</span>
                     </div>
@@ -274,6 +295,10 @@ export default async function CheckoutPrototypePage({
                     <div className="flex items-center justify-between">
                       <span>Insurance</span>
                       <span>{formatUsd(result.deckB.insurance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Box kit + label</span>
+                      <span>{formatUsd(result.deckB.packaging)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Equalization owed</span>
@@ -389,6 +414,8 @@ export default async function CheckoutPrototypePage({
                 <input type="hidden" name="deckBValue" value={deckBValue} />
                 <input type="hidden" name="countryA" value={countryA} />
                 <input type="hidden" name="countryB" value={countryB} />
+                <input type="hidden" name="boxKitA" value={boxKitA ? '1' : '0'} />
+                <input type="hidden" name="boxKitB" value={boxKitB ? '1' : '0'} />
                 <button
                   className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
                 >

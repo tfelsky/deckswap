@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import {
@@ -14,6 +15,7 @@ import {
   getTradeOfferSignal,
   isTradeOffersSchemaMissing,
   isUnreadTradeOffer,
+  type TradeOfferSignalTone,
   type TradeOfferRow,
 } from '@/lib/trade-offers'
 
@@ -30,6 +32,47 @@ type DeckSummary = {
 
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
+}
+
+function getSignalToneClasses(tone: TradeOfferSignalTone) {
+  switch (tone) {
+    case 'emerald':
+      return {
+        badge: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+        panel: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-100',
+        emphasis: 'text-emerald-200',
+        muted: 'text-emerald-100/75',
+      }
+    case 'amber':
+      return {
+        badge: 'border-amber-400/20 bg-amber-400/10 text-amber-200',
+        panel: 'border-amber-400/20 bg-amber-400/10 text-amber-100',
+        emphasis: 'text-amber-100',
+        muted: 'text-amber-100/75',
+      }
+    case 'sky':
+      return {
+        badge: 'border-sky-400/20 bg-sky-400/10 text-sky-200',
+        panel: 'border-sky-400/20 bg-sky-400/10 text-sky-100',
+        emphasis: 'text-sky-100',
+        muted: 'text-sky-100/75',
+      }
+    case 'red':
+      return {
+        badge: 'border-red-400/20 bg-red-400/10 text-red-200',
+        panel: 'border-red-400/20 bg-red-400/10 text-red-100',
+        emphasis: 'text-red-100',
+        muted: 'text-red-100/75',
+      }
+    case 'zinc':
+    default:
+      return {
+        badge: 'border-white/10 bg-white/5 text-zinc-300',
+        panel: 'border-white/10 bg-white/5 text-zinc-200',
+        emphasis: 'text-zinc-100',
+        muted: 'text-zinc-400',
+      }
+  }
 }
 
 function buildActionErrorHref(
@@ -49,7 +92,7 @@ function buildActionErrorHref(
 }
 
 async function findExistingTradeDraftForOffer(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient>,
   offerId: number
 ) {
   const existingTradeEvent = await supabase
@@ -162,6 +205,7 @@ export default async function TradeOfferDetailPage({
   const offeredDeck = decks.get(offer.offered_deck_id)
   const requestedDeck = decks.get(offer.requested_deck_id)
   const offerSignal = getTradeOfferSignal(offer, user.id)
+  const signalTone = getSignalToneClasses(offerSignal.tone)
   const canRespond = offer.requested_user_id === user.id && offer.status === 'pending'
   const canCancel = offer.offered_by_user_id === user.id && offer.status === 'pending'
   const canCounter =
@@ -213,13 +257,14 @@ export default async function TradeOfferDetailPage({
       redirect(`/trade-offers/${offerId}`)
     }
 
-    const existingTrade = await findExistingTradeDraftForOffer(supabase, offerId)
+    const adminSupabase = createAdminClient()
+    const existingTrade = await findExistingTradeDraftForOffer(adminSupabase, offerId)
     if (existingTrade.schemaMissing) {
       redirect(`/trade-offers/${offerId}?schemaMissing=1`)
     }
 
     if (existingTrade.transactionId) {
-      const repairOfferUpdate = await supabase
+      const repairOfferUpdate = await adminSupabase
         .from('trade_offers')
         .update({
           status: 'accepted',
@@ -268,6 +313,7 @@ export default async function TradeOfferDetailPage({
       redirect(buildActionErrorHref(offerId, 'load_decks', 'Offer decks could not be loaded.'))
     }
 
+    const now = new Date().toISOString()
     const rows = buildTradeDraftRows(
       {
         deckAValue: Number(offeredDeck.price_total_usd_foil ?? 0) + Number(currentOffer.cash_equalization_usd ?? 0),
@@ -281,8 +327,10 @@ export default async function TradeOfferDetailPage({
       },
       user.id
     )
+    rows.transaction.status = 'awaiting_payment'
+    rows.transaction.payment_requested_at = now
 
-    const transactionInsert = await supabase
+    const transactionInsert = await adminSupabase
       .from('trade_transactions')
       .insert(rows.transaction)
       .select('id')
@@ -304,7 +352,7 @@ export default async function TradeOfferDetailPage({
 
     const transactionId = transactionInsert.data.id
 
-    const participantInsert = await supabase.from('trade_transaction_participants').insert([
+    const participantInsert = await adminSupabase.from('trade_transaction_participants').insert([
       {
         ...rows.participants[0],
         transaction_id: transactionId,
@@ -333,7 +381,7 @@ export default async function TradeOfferDetailPage({
       )
     }
 
-    const eventInsert = await supabase.from('escrow_events').insert({
+    const eventInsert = await adminSupabase.from('escrow_events').insert({
       ...rows.initialEvent,
       transaction_id: transactionId,
       event_type: 'trade_offer_accepted',
@@ -357,7 +405,17 @@ export default async function TradeOfferDetailPage({
       )
     }
 
-    const offerUpdate = await supabase
+    await adminSupabase.from('escrow_events').insert({
+      transaction_id: transactionId,
+      actor_user_id: user.id,
+      event_type: 'payment_requested',
+      event_data: {
+        requestedAt: now,
+        source: 'trade_offer_acceptance',
+      },
+    })
+
+    const offerUpdate = await adminSupabase
       .from('trade_offers')
       .update({
         status: 'accepted',
@@ -387,7 +445,7 @@ export default async function TradeOfferDetailPage({
       actorUserId: user.id,
       type: 'trade_offer_accepted',
       title: 'Your trade offer was accepted',
-      body: 'Your accepted offer has been turned into a draft trade transaction.',
+      body: 'Your accepted offer is live. Review the trade draft, choose any shipping add-ons, and pay your side to move into shipment.',
       href: `/trades/${transactionId}`,
       metadata: {
         offerId,
@@ -399,8 +457,8 @@ export default async function TradeOfferDetailPage({
       userId: currentOffer.requested_user_id,
       actorUserId: user.id,
       type: 'trade_draft_created',
-      title: 'Trade draft created',
-      body: 'Your accepted trade offer is now in the escrow draft workspace.',
+      title: 'Trade accepted and payment opened',
+      body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
       href: `/trades/${transactionId}`,
       metadata: {
         offerId,
@@ -625,17 +683,20 @@ export default async function TradeOfferDetailPage({
           </div>
 
           <div className="mt-8">
-            <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-              Trade Offer
+            <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium tracking-wide ${signalTone.badge}`}>
+              {offerSignal.label}
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">Offer #{offer.id}</h1>
             <p className="mt-3 max-w-3xl text-zinc-400">
               Created {formatTradeOfferTimestamp(offer.created_at)}. This is the negotiation step before the trade becomes a draft escrow transaction.
             </p>
-            <div className="mt-4 inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
-              <span className="font-medium">{offerSignal.label}</span>
-              <span className="mx-2 text-zinc-500">|</span>
-              <span className="text-zinc-400">{offerSignal.description}</span>
+            <div className={`mt-4 rounded-2xl border px-4 py-4 text-sm ${signalTone.panel}`}>
+              <div className={`text-sm font-semibold uppercase tracking-[0.16em] ${signalTone.emphasis}`}>
+                {offerSignal.label}
+              </div>
+              <p className={`mt-2 max-w-2xl leading-6 ${signalTone.muted}`}>
+                {offerSignal.description}
+              </p>
             </div>
           </div>
         </div>
@@ -645,7 +706,7 @@ export default async function TradeOfferDetailPage({
         <div className="space-y-4">
           {accepted && (
             <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-sm text-emerald-200">
-              Offer accepted. The trade has been handed off into the escrow transaction foundation.
+              Offer accepted. Payment is now open for both sides, and the trade has been handed off into the escrow transaction foundation.
             </div>
           )}
           {declined && (
@@ -698,7 +759,7 @@ export default async function TradeOfferDetailPage({
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-2xl font-semibold">Offer Status</h2>
-                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300">
+                <div className={`rounded-full border px-3 py-1 text-sm ${signalTone.badge}`}>
                   {formatTradeOfferStatus(offer.status)}
                 </div>
               </div>

@@ -1,10 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getAdminAccessForUser } from '@/lib/admin/access'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatTradeStatus,
   isEscrowSchemaMissing,
   type TradeTransactionRow,
+  type TradeParticipantRow,
 } from '@/lib/escrow/foundation'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
@@ -20,15 +23,65 @@ export default async function TradesPage() {
     redirect('/sign-in')
   }
 
+  const access = await getAdminAccessForUser(user)
+  const adminSupabase = createAdminClient()
+
   const { data: offersData } = await supabase
     .from('trade_offers')
     .select('id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, status, message, accepted_trade_transaction_id, last_action_by_user_id, offered_by_viewed_at, requested_user_viewed_at, created_at, updated_at')
     .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
 
-  const { data, error } = await supabase
-    .from('trade_transactions')
-    .select('id, created_by, status, lane_type, supported, equalization_amount_usd, platform_gross_usd, created_at')
-    .order('created_at', { ascending: false })
+  const participantRowsResult = access.isAdmin
+    ? await adminSupabase.from('trade_transaction_participants').select('transaction_id')
+    : await adminSupabase
+        .from('trade_transaction_participants')
+        .select('transaction_id')
+        .eq('user_id', user.id)
+
+  const participantRows = (participantRowsResult.data ?? []) as Array<Pick<TradeParticipantRow, 'transaction_id'>>
+  const participantTransactionIds = Array.from(
+    new Set(participantRows.map((row) => Number(row.transaction_id)).filter((value) => Number.isFinite(value)))
+  )
+
+  let data: TradeTransactionRow[] | null = null
+  let error: { message: string } | null = null
+
+  if (access.isAdmin) {
+    const result = await adminSupabase
+      .from('trade_transactions')
+      .select('id, created_by, status, lane_type, supported, equalization_amount_usd, platform_gross_usd, created_at')
+      .order('created_at', { ascending: false })
+
+    data = (result.data ?? []) as TradeTransactionRow[]
+    error = result.error ? { message: result.error.message } : null
+  } else {
+    const ownedResult = await adminSupabase
+      .from('trade_transactions')
+      .select('id, created_by, status, lane_type, supported, equalization_amount_usd, platform_gross_usd, created_at')
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
+
+    const participantResult =
+      participantTransactionIds.length > 0
+        ? await adminSupabase
+            .from('trade_transactions')
+            .select('id, created_by, status, lane_type, supported, equalization_amount_usd, platform_gross_usd, created_at')
+            .in('id', participantTransactionIds)
+            .order('created_at', { ascending: false })
+        : { data: [], error: null as { message: string } | null }
+
+    const combined = new Map<number, TradeTransactionRow>()
+    ;((ownedResult.data ?? []) as TradeTransactionRow[]).forEach((trade) => combined.set(trade.id, trade))
+    ;((participantResult.data ?? []) as TradeTransactionRow[]).forEach((trade) => combined.set(trade.id, trade))
+    data = Array.from(combined.values()).sort(
+      (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+    )
+    error = ownedResult.error
+      ? { message: ownedResult.error.message }
+      : participantResult.error
+        ? { message: participantResult.error.message }
+        : null
+  }
 
   if (error) {
     return (

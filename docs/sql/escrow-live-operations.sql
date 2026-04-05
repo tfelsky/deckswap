@@ -8,6 +8,8 @@ alter table public.trade_transaction_participants
   add column if not exists payment_marked_at timestamptz,
   add column if not exists shipment_status text not null default 'not_shipped',
   add column if not exists tracking_code text,
+  add column if not exists packaging_addon_usd numeric not null default 0,
+  add column if not exists label_box_requested boolean not null default false,
   add column if not exists shipped_at timestamptz,
   add column if not exists received_at timestamptz,
   add column if not exists inspection_status text not null default 'pending',

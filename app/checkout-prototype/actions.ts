@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildTradeDraftRows,
@@ -18,8 +19,14 @@ function parseCountry(value: FormDataEntryValue | null, fallback: SupportedCount
   return candidate === 'ca' || candidate === 'us' ? candidate : fallback
 }
 
+function parseBoolean(value: FormDataEntryValue | null) {
+  const candidate = String(value ?? '').toLowerCase()
+  return candidate === '1' || candidate === 'true' || candidate === 'on'
+}
+
 export async function createTradeDraftAction(formData: FormData) {
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -33,11 +40,13 @@ export async function createTradeDraftAction(formData: FormData) {
     deckBValue: parseMoney(formData.get('deckBValue'), 1000),
     countryA: parseCountry(formData.get('countryA'), 'ca'),
     countryB: parseCountry(formData.get('countryB'), 'ca'),
+    boxKitA: parseBoolean(formData.get('boxKitA')),
+    boxKitB: parseBoolean(formData.get('boxKitB')),
   }
 
   const rows = buildTradeDraftRows(input, user.id)
 
-  const transactionInsert = await supabase
+  const transactionInsert = await adminSupabase
     .from('trade_transactions')
     .insert(rows.transaction)
     .select('id')
@@ -53,7 +62,7 @@ export async function createTradeDraftAction(formData: FormData) {
 
   const transactionId = transactionInsert.data.id
 
-  const participantInsert = await supabase.from('trade_transaction_participants').insert(
+  const participantInsert = await adminSupabase.from('trade_transaction_participants').insert(
     rows.participants.map((participant) => ({
       ...participant,
       transaction_id: transactionId,
@@ -67,7 +76,7 @@ export async function createTradeDraftAction(formData: FormData) {
     redirect('/checkout-prototype?saveError=1')
   }
 
-  const eventInsert = await supabase.from('escrow_events').insert({
+  const eventInsert = await adminSupabase.from('escrow_events').insert({
     ...rows.initialEvent,
     transaction_id: transactionId,
   })
