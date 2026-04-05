@@ -440,10 +440,10 @@ export default async function ManageDeckPage({
     const nextFormat = normalizeDeckFormat(String(formData.get('format') || 'unknown'))
     const isSleeved = formData.get('is_sleeved') === 'on'
     const isBoxed = formData.get('is_boxed') === 'on'
-    const isSealed = formData.get('is_sealed') === 'on'
-    const isCompletePrecon = formData.get('is_complete_precon') === 'on'
-    const isListedForTrade = formData.get('is_listed_for_trade') === 'on'
-    const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
+  const isSealed = formData.get('is_sealed') === 'on'
+  const isCompletePrecon = formData.get('is_complete_precon') === 'on'
+  const isListedForTrade = formData.get('is_listed_for_trade') === 'on'
+  const boxType = isBoxed ? normalizeBoxType(String(formData.get('box_type') || '')) : null
     const tradeListingNotes = String(formData.get('trade_listing_notes') || '').trim() || null
     const tradeWantedProfile = String(formData.get('trade_wanted_profile') || '').trim() || null
     const buyNowPriceUsd = parseCurrencyInput(formData.get('buy_now_price_usd'))

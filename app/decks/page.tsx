@@ -19,8 +19,10 @@ import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
+import { isUserDeckPassesSchemaMissing, type UserDeckPassRow } from '@/lib/user-deck-passes'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,6 +77,52 @@ export default async function DecksPage() {
     : 0
   const unreadNotifications = user ? await getUnreadNotificationsCount(supabase, user.id) : 0
 
+  async function passDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    if (!Number.isFinite(deckId)) redirect('/decks')
+
+    await supabase.from('user_deck_passes').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+      },
+      { onConflict: 'user_id,deck_id' }
+    )
+
+    redirect('/decks')
+  }
+
+  async function restorePassedDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    if (!Number.isFinite(deckId)) redirect('/decks')
+
+    await supabase
+      .from('user_deck_passes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
+    redirect('/decks')
+  }
+
   const { data, error } = await supabase
     .from('decks')
     .select(
@@ -92,6 +140,15 @@ export default async function DecksPage() {
 
   const allDecks = (data ?? []) as Deck[]
   const decks = allDecks.filter((deck) => isInventoryStatusPublic(deck.inventory_status))
+  const passedDecksResult = user
+    ? await supabase
+        .from('user_deck_passes')
+        .select('id, user_id, deck_id, created_at, reason')
+        .eq('user_id', user.id)
+    : { data: [] as UserDeckPassRow[], error: null }
+  const passesSchemaMissing = isUserDeckPassesSchemaMissing(passedDecksResult.error?.message)
+  const passedDeckRows = passesSchemaMissing ? [] : ((passedDecksResult.data ?? []) as UserDeckPassRow[])
+  const passedDeckIds = new Set(passedDeckRows.map((row) => row.deck_id))
   const completedDeckCount = allDecks.filter((deck) => isInventoryStatusCompleted(deck.inventory_status)).length
   const deckIds = decks.map((deck) => deck.id)
 
@@ -115,8 +172,14 @@ export default async function DecksPage() {
     const format = normalizeDeckFormat(deck.format)
     return { ...deck, bracket, format }
   })
+  const availableDeckViews = user
+    ? deckViews.filter((deck) => !passedDeckIds.has(deck.id))
+    : deckViews
+  const passedDeckViews = user
+    ? deckViews.filter((deck) => passedDeckIds.has(deck.id))
+    : []
 
-  const ratedDecks = deckViews.filter(
+  const ratedDecks = availableDeckViews.filter(
     (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
   )
   const averageBracket =
@@ -128,10 +191,10 @@ export default async function DecksPage() {
           ) / ratedDecks.length
         ).toFixed(1)
       : '0.0'
-  const topValueDeck = [...deckViews].sort(
+  const topValueDeck = [...availableDeckViews].sort(
     (a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
   )[0]
-  const mostCardsDeck = [...deckViews].sort(
+  const mostCardsDeck = [...availableDeckViews].sort(
     (a, b) =>
       Number((b.commander_count ?? 0) + (b.mainboard_count ?? 0) + (b.token_count ?? 0)) -
       Number((a.commander_count ?? 0) + (a.mainboard_count ?? 0) + (a.token_count ?? 0))
@@ -151,7 +214,7 @@ export default async function DecksPage() {
 
   const dominantBracketEntry =
     [...bracketCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
-  const tokenReadyDecks = deckViews.filter((deck) => Number(deck.token_count ?? 0) > 0).length
+  const tokenReadyDecks = availableDeckViews.filter((deck) => Number(deck.token_count ?? 0) > 0).length
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
@@ -191,7 +254,7 @@ export default async function DecksPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Live Decks</div>
-              <div className="mt-2 text-3xl font-semibold">{deckViews.length}</div>
+              <div className="mt-2 text-3xl font-semibold">{availableDeckViews.length}</div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -224,7 +287,7 @@ export default async function DecksPage() {
                 $
                 {Math.max(
                   0,
-                  ...deckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
+                  ...availableDeckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
                 ).toFixed(2)}
               </div>
             </div>
@@ -239,6 +302,7 @@ export default async function DecksPage() {
               <div className="text-sm text-zinc-400">Visibility Rules</div>
               <div className="mt-2 text-sm text-zinc-300">
                 Only decks in public live statuses appear here. Staged, donation, checkout, and escrow-management statuses stay out of the live marketplace.
+                {user && passedDeckViews.length > 0 ? ` You have passed on ${passedDeckViews.length} deck${passedDeckViews.length === 1 ? '' : 's'}, so they are hidden from your available list.` : ''}
                 {completedDeckCount > 0 ? ` ${completedDeckCount} deck${completedDeckCount === 1 ? ' has' : 's have'} already moved into completed status.` : ''}
               </div>
             </div>
@@ -359,7 +423,7 @@ export default async function DecksPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="text-xs uppercase tracking-wide text-zinc-500">Bracket Coverage</div>
               <div className="mt-1 text-sm font-medium text-white">
-                {ratedDecks.length}/{deckViews.length} rated
+                {ratedDecks.length}/{availableDeckViews.length} rated
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
@@ -373,24 +437,27 @@ export default async function DecksPage() {
           </div>
         </div>
 
-        {deckViews.length === 0 ? (
+        {availableDeckViews.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
-            <h3 className="text-xl font-semibold">No decks yet</h3>
+            <h3 className="text-xl font-semibold">No available decks right now</h3>
             <p className="mt-2 text-zinc-400">
-              Your connection works. Now seed the table with more decks and metadata.
+              {user && passedDeckViews.length > 0
+                ? 'Everything currently visible has been moved into your Pass list. You can restore any of them below.'
+                : 'Your connection works. Now seed the table with more decks and metadata.'}
             </p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {deckViews.map((deck) => (
-              <Link key={deck.id} href={`/decks/${deck.id}`}>
-                <article
-                  className={`group cursor-pointer overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
-                    isInventoryStatusLocked(deck.inventory_status)
-                      ? 'border-zinc-700/80 opacity-80'
-                      : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
-                  }`}
-                >
+            {availableDeckViews.map((deck) => (
+              <article
+                key={deck.id}
+                className={`group overflow-hidden rounded-3xl border bg-zinc-900/80 transition duration-200 ${
+                  isInventoryStatusLocked(deck.inventory_status)
+                    ? 'border-zinc-700/80 opacity-80'
+                    : 'border-white/10 hover:border-emerald-400/30 hover:bg-zinc-900'
+                }`}
+              >
+                <Link href={`/decks/${deck.id}`} className="block">
                   <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
                     {deck.image_url ? (
                       <>
@@ -445,9 +512,9 @@ export default async function DecksPage() {
                         </p>
                       </div>
 
-                    <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
-                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
-                        Value
+                      <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
+                        <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">
+                          Value
                         </div>
                         <div className="text-lg font-semibold text-emerald-300">
                           ${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}
@@ -512,11 +579,88 @@ export default async function DecksPage() {
                       ))}
                     </div>
                   </div>
-                </article>
-              </Link>
+                </Link>
+
+                {user && !passesSchemaMissing ? (
+                  <div className="border-t border-white/10 px-5 py-4">
+                    <form action={passDeckAction}>
+                      <input type="hidden" name="deck_id" value={deck.id} />
+                      <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
+                        Pass for now
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </article>
             ))}
           </div>
         )}
+
+        {user && passesSchemaMissing ? (
+          <div className="mt-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
+            Run <code>docs/sql/user-deck-passes.sql</code> to enable the per-user Pass list.
+          </div>
+        ) : null}
+
+        {user && passedDeckViews.length > 0 ? (
+          <div className="mt-12">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">Pass</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Decks you have hidden from your available list. Restore them if you passed by mistake or review them later for rejection trends.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                {passedDeckViews.length} passed deck{passedDeckViews.length === 1 ? '' : 's'}
+              </div>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {passedDeckViews.map((deck) => (
+                <article key={deck.id} className="overflow-hidden rounded-3xl border border-rose-400/20 bg-zinc-900/80">
+                  <Link href={`/decks/${deck.id}`} className="block">
+                    <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                      {deck.image_url ? (
+                        <img
+                          src={deck.image_url}
+                          alt={deck.name}
+                          className="h-full w-full object-cover object-top opacity-80"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-5">
+                        <div className="text-xs uppercase tracking-[0.2em] text-rose-200/80">
+                          Passed
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-white">
+                          {deck.commander || deck.name}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-xl font-semibold tracking-tight text-white">{deck.name}</h3>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {formatSupportsCommanderRules(deck.format)
+                          ? `Commander: ${deck.commander || 'Not set'}`
+                          : `Format: ${getDeckFormatLabel(deck.format)}`}
+                      </p>
+                    </div>
+                  </Link>
+
+                  <div className="border-t border-white/10 px-5 py-4">
+                    <form action={restorePassedDeckAction}>
+                      <input type="hidden" name="deck_id" value={deck.id} />
+                      <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15">
+                        Restore to available list
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   )
