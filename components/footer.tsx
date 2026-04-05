@@ -24,6 +24,7 @@ const footerLinks = {
   company: [
     { name: "About Mythiverse Exchange", href: "/" },
     { name: "Compliance", href: "/compliance" },
+    { name: "Cookies and Consent", href: "/cookies" },
     { name: "Sustainability", href: "/sustainability" },
     { name: "Accessibility", href: "/accessibility" },
     { name: "Privacy Policy", href: "/privacy" },
@@ -133,6 +134,9 @@ export function Footer() {
             </Link>
             <Link href="/compliance" className="text-sm text-muted-foreground hover:text-foreground">
               Compliance
+            </Link>
+            <Link href="/cookies" className="text-sm text-muted-foreground hover:text-foreground">
+              Cookies
             </Link>
             <Link href="/sustainability" className="text-sm text-muted-foreground hover:text-foreground">
               Sustainability

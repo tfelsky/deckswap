@@ -50,6 +50,13 @@ export default function PrivacyPage() {
                 visitor opts in through the privacy choices prompt. Visitors can change that choice
                 later from the privacy controls available on the site.
               </p>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                The current implementation stores an accepted or declined analytics preference in a
+                first-party cookie and matching browser local storage entry named
+                `deckswap_analytics_consent`. The consent cookie is currently retained for up to
+                180 days. See the Cookies and Consent page for the operational details that support
+                this policy language.
+              </p>
             </section>
 
             <section>
@@ -116,6 +123,10 @@ export default function PrivacyPage() {
                 DeckSwap may retain account, listing, and operational data for as long as
                 reasonably needed to run the service, resolve disputes, meet legal obligations, or
                 improve the platform. A more specific retention schedule can be added later.
+              </p>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                Until formal retention schedules are adopted, product teams should avoid promising
+                deletion timing or archival periods that are not yet implemented operationally.
               </p>
             </section>
 

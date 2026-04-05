@@ -6,6 +6,13 @@ import { Header } from '@/components/header'
 
 const compliancePages = [
   {
+    title: 'Cookies and Consent',
+    href: '/cookies',
+    badge: 'Cookies',
+    body:
+      'Documents the live consent flow, authentication cookie usage, optional analytics behavior, and the current retention of analytics preference choices.',
+  },
+  {
     title: 'Sustainability',
     href: '/sustainability',
     badge: 'Sustainability',
@@ -76,7 +83,7 @@ export default function CompliancePage() {
         </section>
 
         <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
             {compliancePages.map((page) => (
               <Link
                 key={page.href}

@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 const links = [
   { href: '/compliance', label: 'Compliance Center' },
+  { href: '/cookies', label: 'Cookies and Consent' },
   { href: '/sustainability', label: 'Sustainability' },
   { href: '/accessibility', label: 'Accessibility' },
   { href: '/privacy', label: 'Privacy' },
