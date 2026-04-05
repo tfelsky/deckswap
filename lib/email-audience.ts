@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 type MarketingContactRow = {
   user_id: string
   support_email?: string | null
+  legal_first_name?: string | null
+  legal_last_name?: string | null
   shipping_country?: string | null
   marketing_opt_in_email?: boolean | null
 }
@@ -69,7 +71,9 @@ export async function getMarketingAudienceSnapshot() {
   const [privateProfilesResult, profilesResult] = await Promise.all([
     supabase
       .from('profile_private')
-      .select('user_id, support_email, shipping_country, marketing_opt_in_email'),
+      .select(
+        'user_id, support_email, legal_first_name, legal_last_name, shipping_country, marketing_opt_in_email'
+      ),
     supabase.from('profiles').select('user_id, display_name, username'),
   ])
 
@@ -143,4 +147,58 @@ export async function getMarketingAudienceSnapshot() {
     topCountries,
     audiencePreview,
   }
+}
+
+export async function getMarketingAudienceContacts() {
+  const supabase = createAdminClient()
+
+  const [privateProfilesResult, profilesResult] = await Promise.all([
+    supabase
+      .from('profile_private')
+      .select(
+        'user_id, support_email, legal_first_name, legal_last_name, shipping_country, marketing_opt_in_email'
+      ),
+    supabase.from('profiles').select('user_id, display_name, username'),
+  ])
+
+  const privateProfiles = ((privateProfilesResult.data ?? []) as MarketingContactRow[]) ?? []
+  const profiles = ((profilesResult.data ?? []) as PublicProfileRow[]) ?? []
+  const profilesByUser = new Map<string, PublicProfileRow>(
+    profiles.map((profile) => [profile.user_id, profile])
+  )
+  const authUsersById = await listAuthUsersById()
+
+  return privateProfiles
+    .filter((row) => row.marketing_opt_in_email === true)
+    .map((row) => {
+      const authEmail = normalizeEmail(authUsersById.get(row.user_id)?.email)
+      const supportEmail = normalizeEmail(row.support_email)
+      const profile = profilesByUser.get(row.user_id)
+      const email = supportEmail || authEmail
+
+      if (!email) return null
+
+      return {
+        userId: row.user_id,
+        email,
+        firstName:
+          row.legal_first_name?.trim() ||
+          profile?.display_name?.trim() ||
+          profile?.username?.trim() ||
+          undefined,
+        lastName: row.legal_last_name?.trim() || undefined,
+        displayLabel:
+          profile?.display_name?.trim() ||
+          (profile?.username?.trim() ? `@${profile.username.trim()}` : row.user_id),
+        shipFromCountry: row.shipping_country?.trim() || null,
+      }
+    })
+    .filter(Boolean) as Array<{
+    userId: string
+    email: string
+    firstName?: string
+    lastName?: string
+    displayLabel: string
+    shipFromCountry: string | null
+  }>
 }

@@ -1,3 +1,5 @@
+import { getResendClient } from '@/lib/resend'
+
 const DEFAULT_SUPERADMIN_EMAIL = 'tim.felsky@gmail.com'
 const DEFAULT_APP_BASE_URL = 'https://mythivex.com'
 const DEFAULT_TRANSACTIONAL_FROM = 'Mythiverse Exchange <notifications@mythivex.com>'
@@ -158,41 +160,35 @@ function resolveFromAddress(purpose: EmailPurpose, inputFrom?: string) {
 }
 
 async function sendEmail(input: SendEmailInput) {
-  const apiKey = process.env.RESEND_API_KEY?.trim()
-
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured.')
-  }
-
   const purpose = input.purpose ?? 'transactional'
   const from = resolveFromAddress(purpose, input.from)
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      ...(input.idempotencyKey?.trim()
-        ? { 'Idempotency-Key': input.idempotencyKey.trim() }
-        : {}),
-    },
-    body: JSON.stringify({
+  const resend = getResendClient()
+  const response = await resend.emails.send(
+    {
       from,
       to: Array.isArray(input.to) ? input.to : [input.to],
       subject: input.subject,
       text: input.text,
       html: input.html,
-    }),
-  })
+      tags: [
+        { name: 'purpose', value: purposeLabel(purpose) },
+      ],
+    },
+    {
+      idempotencyKey: input.idempotencyKey?.trim() || undefined,
+    }
+  )
 
-  if (!response.ok) {
-    const body = await response.text()
+  if (response.error) {
     throw new Error(
-      `Resend ${purposeLabel(purpose)} email failed: ${response.status} ${body}`.slice(0, 400)
+      `Resend ${purposeLabel(purpose)} email failed: ${response.error.statusCode ?? 'unknown'} ${response.error.message}`.slice(
+        0,
+        400
+      )
     )
   }
 
-  return response.json()
+  return response.data
 }
 
 export async function sendTransactionalEmail(
