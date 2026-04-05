@@ -33,7 +33,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        {children}
+        <a
+          href="#main-content"
+          className="skip-link sr-only fixed left-4 top-4 z-[100] rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground focus:not-sr-only focus:outline-none focus:ring-4 focus:ring-ring/60"
+        >
+          Skip to main content
+        </a>
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <AnalyticsConsentGate />
       </body>
     </html>

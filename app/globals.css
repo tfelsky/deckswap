@@ -120,6 +120,9 @@
     @apply border-border outline-ring/50;
   }
   html {
+    scroll-behavior: smooth;
+  }
+  html {
     color-scheme: dark;
   }
   body {
@@ -133,6 +136,38 @@
   ::selection {
     background: color-mix(in oklab, var(--color-primary) 35%, transparent);
     color: var(--color-foreground);
+  }
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible,
+  [role='button']:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--color-ring) 85%, white 15%);
+    outline-offset: 3px;
+  }
+  #main-content:focus {
+    outline: none;
+  }
+  .skip-link:focus {
+    clip: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
