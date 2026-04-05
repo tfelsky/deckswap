@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import FormActionButton from '@/components/form-action-button'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import {
@@ -255,7 +256,7 @@ export default async function TradeOfferDetailPage({
           profileMap.get(currentOffer.requested_user_id)?.shipping_country
         ),
       },
-      currentOffer.offered_by_user_id
+      user.id
     )
 
     const transactionInsert = await supabase
@@ -702,14 +703,20 @@ export default async function TradeOfferDetailPage({
                 </p>
                 <div className="mt-5 grid gap-3">
                   <form action={acceptOfferAction}>
-                    <button className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
+                    <FormActionButton
+                      pendingLabel="Creating trade draft..."
+                      className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-wait disabled:opacity-80"
+                    >
                       Accept and Create Trade Draft
-                    </button>
+                    </FormActionButton>
                   </form>
                   <form action={declineOfferAction}>
-                    <button className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10">
+                    <FormActionButton
+                      pendingLabel="Declining..."
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-80"
+                    >
                       Decline Offer
-                    </button>
+                    </FormActionButton>
                   </form>
                 </div>
               </div>
@@ -722,9 +729,12 @@ export default async function TradeOfferDetailPage({
                   This offer is still pending. You can cancel it before the other user responds.
                 </p>
                 <form action={cancelOfferAction} className="mt-5">
-                  <button className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10">
+                  <FormActionButton
+                    pendingLabel="Cancelling..."
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-80"
+                  >
                     Cancel Offer
-                  </button>
+                  </FormActionButton>
                 </form>
               </div>
             )}
@@ -773,9 +783,12 @@ export default async function TradeOfferDetailPage({
                       />
                     </div>
 
-                    <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-300 hover:bg-emerald-400/15">
+                    <FormActionButton
+                      pendingLabel="Sending counteroffer..."
+                      className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-wait disabled:opacity-80"
+                    >
                       Send Counteroffer
-                    </button>
+                    </FormActionButton>
                   </form>
                 ) : (
                   <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-sm text-zinc-400">

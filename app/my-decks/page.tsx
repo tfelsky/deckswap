@@ -20,6 +20,7 @@ import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
+const DECKS_PER_PAGE = 9
 
 type Deck = {
   id: number
@@ -48,7 +49,31 @@ type DeckCardForBracket = {
   mana_cost?: string | null
 }
 
-export default async function MyDecksPage() {
+function parseSectionPage(value: string | string[] | undefined) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  const parsed = Number(candidate)
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.trunc(parsed) : 1
+}
+
+function paginateDecks<T>(items: T[], page: number) {
+  const totalPages = Math.max(1, Math.ceil(items.length / DECKS_PER_PAGE))
+  const currentPage = Math.min(page, totalPages)
+  const startIndex = (currentPage - 1) * DECKS_PER_PAGE
+
+  return {
+    page: currentPage,
+    totalPages,
+    items: items.slice(startIndex, startIndex + DECKS_PER_PAGE),
+    startIndex,
+  }
+}
+
+export default async function MyDecksPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = searchParams ? await searchParams : {}
   const supabase = await createClient()
 
   const {
@@ -164,6 +189,26 @@ export default async function MyDecksPage() {
       : '0.0'
   const access = await getAdminAccessForUser(user)
   const isAdmin = access.isAdmin
+  const livePagination = paginateDecks(liveDecks, parseSectionPage(params.livePage))
+  const privatePagination = paginateDecks(privateDecks, parseSectionPage(params.privatePage))
+  const completedPagination = paginateDecks(completedDecks, parseSectionPage(params.completedPage))
+
+  function sectionHref(sectionKey: 'livePage' | 'privatePage' | 'completedPage', page: number) {
+    const nextParams = new URLSearchParams()
+    const nextEntries: Array<[string, string | string[] | undefined]> = Object.entries(params)
+
+    for (const [key, value] of nextEntries) {
+      if (key === sectionKey || value == null) continue
+      if (Array.isArray(value)) {
+        if (value[0]) nextParams.set(key, value[0])
+        continue
+      }
+      nextParams.set(key, value)
+    }
+
+    nextParams.set(sectionKey, String(page))
+    return `/my-decks?${nextParams.toString()}`
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
@@ -206,6 +251,9 @@ export default async function MyDecksPage() {
                 ${Math.round(totalDeckValue)}
               </div>
               <div className="mt-2 text-xs text-zinc-500">Blended card value across the whole deck inventory.</div>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-400">
+                Blended value means the current saved card rows rolled into one deck total using the available pricing on each row.
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -221,6 +269,9 @@ export default async function MyDecksPage() {
                 <div className="mt-1 text-sm font-medium text-white">
                   ${Math.round(totalExtraVsBuylist)}
                 </div>
+              </div>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-400">
+                Extra vs Buylist shows the rough gap between Deck Swap net value and a conservative store-style buylist outcome.
               </div>
             </div>
 
@@ -258,6 +309,21 @@ export default async function MyDecksPage() {
                 </div>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-3 2xl:col-span-5">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-sm text-zinc-400">Browsing Model</div>
+                  <div className="mt-2 text-xl font-semibold text-white">Decks now paginate after {DECKS_PER_PAGE} cards per section</div>
+                  <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+                    Live, private, and completed sections each use explicit pages now instead of growing forever, so larger collections stay easier to scan.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                  Average bracket {averageBracket}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -277,15 +343,44 @@ export default async function MyDecksPage() {
         ) : (
           <div className="space-y-10">
             {[
-              { title: 'Live Inventory', description: 'Public decks currently available for discovery.', decks: liveDecks },
-              { title: 'Private Inventory', description: 'Hidden decks in staging, escrow, donation, or internal operational states.', decks: privateDecks },
-              { title: 'Completed Deck Moves', description: 'Closed-out deck movements that are no longer active inventory.', decks: completedDecks },
+              {
+                title: 'Live Inventory',
+                description: 'Public decks currently available for discovery.',
+                decks: livePagination.items,
+                totalDecks: liveDecks.length,
+                page: livePagination.page,
+                totalPages: livePagination.totalPages,
+                pageKey: 'livePage' as const,
+              },
+              {
+                title: 'Private Inventory',
+                description: 'Hidden decks in staging, escrow, donation, or internal operational states.',
+                decks: privatePagination.items,
+                totalDecks: privateDecks.length,
+                page: privatePagination.page,
+                totalPages: privatePagination.totalPages,
+                pageKey: 'privatePage' as const,
+              },
+              {
+                title: 'Completed Deck Moves',
+                description: 'Closed-out deck movements that are no longer active inventory.',
+                decks: completedPagination.items,
+                totalDecks: completedDecks.length,
+                page: completedPagination.page,
+                totalPages: completedPagination.totalPages,
+                pageKey: 'completedPage' as const,
+              },
             ].map((section) =>
               section.decks.length > 0 ? (
                 <div key={section.title}>
-                  <div className="mb-5">
+                  <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
                     <h2 className="text-2xl font-semibold">{section.title}</h2>
                     <p className="mt-1 text-sm text-zinc-400">{section.description}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+                      Page {section.page} of {section.totalPages} • {section.totalDecks} deck{section.totalDecks === 1 ? '' : 's'}
+                    </div>
                   </div>
                   <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                     {section.decks.map((deck) => (
@@ -471,9 +566,30 @@ export default async function MyDecksPage() {
                     </>
                   )
                 })()}
-              </article>
+                    </article>
                     ))}
                   </div>
+
+                  {section.totalPages > 1 && (
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      {section.page > 1 && (
+                        <Link
+                          href={sectionHref(section.pageKey, section.page - 1)}
+                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+                        >
+                          {'<-'} Previous page
+                        </Link>
+                      )}
+                      {section.page < section.totalPages && (
+                        <Link
+                          href={sectionHref(section.pageKey, section.page + 1)}
+                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+                        >
+                          Next page {'->'}
+                        </Link>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : null
             )}

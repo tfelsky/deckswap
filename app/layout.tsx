@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
+import { ActionFeedback } from '@/components/action-feedback'
 import { AnalyticsConsentGate } from '@/components/analytics-consent'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -42,6 +44,8 @@ export default function RootLayout({
         <div id="main-content" tabIndex={-1}>
           {children}
         </div>
+        <ActionFeedback />
+        <Toaster richColors position="top-right" />
         <AnalyticsConsentGate />
       </body>
     </html>

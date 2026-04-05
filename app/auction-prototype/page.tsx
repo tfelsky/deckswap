@@ -14,6 +14,7 @@ import {
   getAuctionEligibility,
   isAuctionSchemaMissing,
 } from '@/lib/auction/foundation'
+import FormActionButton from '@/components/form-action-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -332,11 +333,14 @@ export default async function AuctionPrototypePage({
                   <p className="mt-2 text-sm text-zinc-400">{deckCommander}</p>
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="text-sm text-zinc-400">Blended Value</div>
                       <div className="mt-2 text-2xl font-semibold text-emerald-300">
                         {formatUsd(result.deckValue)}
                       </div>
+                      <p className="mt-3 text-xs text-zinc-400">
+                        Based on the deck&apos;s current saved card rows. It&apos;s a pricing anchor, not a promise of the winning bid.
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="text-sm text-zinc-400">Auction Type</div>
@@ -363,13 +367,12 @@ export default async function AuctionPrototypePage({
                     Choose the sale shape, then launch a real listing if your seller trust threshold is met.
                   </p>
                 </div>
-                <button
-                  type="submit"
-                  disabled={!eligibility.eligible}
+                <FormActionButton
+                  pendingLabel="Launching auction..."
                   className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Launch Auction
-                </button>
+                </FormActionButton>
               </div>
 
               {Number.isFinite(deckId) && <input type="hidden" name="deckId" value={deckId} />}
@@ -430,6 +433,13 @@ export default async function AuctionPrototypePage({
                   <p className="mt-2">{eligibility.reason}</p>
                 </div>
               ) : null}
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                <div className="font-medium text-white">What the trust score means</div>
+                <p className="mt-2">
+                  The internal validation score is an internal seller-readiness signal based on activity, reply speed, location consistency, and transaction history. A 70+ score means the account cleared the current auction trust threshold, not that a sale is guaranteed.
+                </p>
+              </div>
             </form>
           </div>
 

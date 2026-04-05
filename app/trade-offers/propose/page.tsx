@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import { isTradeOffersSchemaMissing } from '@/lib/trade-offers'
+import FormActionButton from '@/components/form-action-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -233,6 +234,9 @@ export default async function ProposeTradeOfferPage({
               <div className="mt-2 text-3xl font-semibold text-emerald-300">
                 {formatUsd(requestedDeck.price_total_usd_foil)}
               </div>
+              <p className="mt-3 text-sm text-emerald-50/85">
+                Blended value is the saved deck total from its current card rows, not a guaranteed sale price.
+              </p>
             </div>
           </div>
 
@@ -315,9 +319,16 @@ export default async function ProposeTradeOfferPage({
                   If this offer is accepted, DeckSwap can turn it into a draft escrow transaction with both decks and the value difference already attached.
                 </div>
 
-                <button className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                  Pick the deck that is actually closest in value and play pattern. You can still leave a note if your deck has unusual condition, accessories, or upgrades that are not obvious from the total alone.
+                </div>
+
+                <FormActionButton
+                  pendingLabel="Sending trade offer..."
+                  className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
                   Send Trade Offer
-                </button>
+                </FormActionButton>
               </form>
             )}
           </div>

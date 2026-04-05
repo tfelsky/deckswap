@@ -133,6 +133,23 @@
       linear-gradient(180deg, color-mix(in oklab, var(--color-background) 90%, black), var(--color-background));
     background-attachment: fixed;
   }
+  button,
+  input[type='submit'],
+  input[type='button'],
+  [role='button'] {
+    transition:
+      transform 160ms ease,
+      filter 180ms ease,
+      box-shadow 220ms ease,
+      opacity 180ms ease;
+  }
+  button[data-pressed='true'],
+  input[type='submit'][data-pressed='true'],
+  input[type='button'][data-pressed='true'],
+  [role='button'][data-pressed='true'] {
+    transform: translateY(1px) scale(0.985);
+    filter: brightness(1.08);
+  }
   ::selection {
     background: color-mix(in oklab, var(--color-primary) 35%, transparent);
     color: var(--color-foreground);

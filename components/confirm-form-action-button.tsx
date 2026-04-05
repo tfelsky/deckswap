@@ -1,6 +1,7 @@
 'use client'
 
 import { useFormStatus } from 'react-dom'
+import { LoaderCircle } from 'lucide-react'
 
 type ConfirmFormActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children: React.ReactNode
@@ -23,6 +24,7 @@ export default function ConfirmFormActionButton({
       type="submit"
       disabled={pending}
       aria-busy={pending}
+      data-interactive-feedback="true"
       onClick={(event) => {
         if (pending) return
         if (!window.confirm(confirmMessage)) {
@@ -34,7 +36,10 @@ export default function ConfirmFormActionButton({
       className={className}
       {...props}
     >
-      {pending ? pendingLabel : children}
+      <span className="inline-flex items-center justify-center gap-2">
+        {pending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+        <span>{pending ? pendingLabel : children}</span>
+      </span>
     </button>
   )
 }

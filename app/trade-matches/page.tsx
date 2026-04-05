@@ -288,10 +288,10 @@ export default async function TradeMatchesPage() {
                   </p>
                 </div>
                 <Link
-                  href={`/decks/${myDeck.id}`}
+                  href={`/my-decks/${myDeck.id}?tab=settings`}
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white hover:bg-white/10"
                 >
-                  View my deck
+                  Deck details
                 </Link>
               </div>
 

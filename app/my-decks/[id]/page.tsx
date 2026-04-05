@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import AppHeader from '@/components/app-header'
-import { getCommanderBracketSummary } from '@/lib/commander/brackets'
+import { COMMANDER_BRACKETS, getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import {
   SUPPORTED_CURRENCIES,
@@ -59,6 +59,16 @@ function parseCurrencyInput(value: FormDataEntryValue | null) {
 
   const parsed = Number(raw)
   return Number.isFinite(parsed) && parsed >= 0 ? Number(parsed.toFixed(2)) : null
+}
+
+function parseSetCodeInput(value: FormDataEntryValue | null) {
+  const raw = String(value ?? '')
+    .trim()
+    .toLowerCase()
+
+  if (!raw) return null
+  if (!/^[a-z0-9]{2,12}$/i.test(raw)) return 'invalid'
+  return raw
 }
 
 const HOLIDAY_PROGRAM_ADDRESS =
@@ -208,6 +218,7 @@ export default async function ManageDeckPage({
     section: 'commander' | 'mainboard' | 'sideboard'
     quantity: number
     set_code?: string | null
+    set_name?: string | null
     collector_number?: string | null
     condition?: string | null
     condition_source?: string | null
@@ -291,6 +302,19 @@ export default async function ManageDeckPage({
   const holidayDonationAgreedAt = (
     deck as typeof deck & { holiday_donation_agreed_at?: string | null }
   ).holiday_donation_agreed_at
+  const knownSetPrints = Array.from(
+    new Map(
+      gradingCards
+        .filter((card) => card.set_code || card.set_name)
+        .map((card) => [
+          `${String(card.set_code ?? '').toLowerCase()}::${String(card.set_name ?? '')}`,
+          {
+            code: String(card.set_code ?? '').toLowerCase(),
+            name: String(card.set_name ?? '').trim(),
+          },
+        ])
+    ).values()
+  ).sort((left, right) => left.code.localeCompare(right.code))
 
   async function syncDeckAfterCardMutation(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
     const { data: ownedDeck, error: ownedDeckError } = await supabase
@@ -670,10 +694,7 @@ export default async function ManageDeckPage({
     const nextQuantity = Number(formData.get('quantity'))
     const nextSectionRaw = String(formData.get('section') || 'mainboard')
     const nextCondition = normalizeCardCondition(String(formData.get('condition') || 'near_mint'))
-    const nextSetCode = String(formData.get('set_code') || '')
-      .trim()
-      .toLowerCase()
-      .slice(0, 12)
+    const parsedSetCode = parseSetCodeInput(formData.get('set_code'))
     const nextCollectorNumber = String(formData.get('collector_number') || '')
       .trim()
       .slice(0, 32)
@@ -684,6 +705,9 @@ export default async function ManageDeckPage({
     if (!Number.isFinite(cardId) || !Number.isFinite(nextQuantity) || nextQuantity < 1 || nextQuantity > 99) {
       redirect(`/my-decks/${deckId}?tab=settings`)
     }
+    if (parsedSetCode === 'invalid') {
+      redirect(`/my-decks/${deckId}?tab=settings&saved=invalid-set-code#card-management`)
+    }
 
     await supabase
       .from('deck_cards')
@@ -692,7 +716,7 @@ export default async function ManageDeckPage({
         section: nextSection,
         condition: nextCondition,
         condition_source: 'manual',
-        set_code: nextSetCode || null,
+        set_code: parsedSetCode || null,
         collector_number: nextCollectorNumber || null,
         foil: nextFoil,
       })
@@ -702,6 +726,53 @@ export default async function ManageDeckPage({
     await syncDeckAfterCardMutation(supabase, user.id)
 
     redirect(`/my-decks/${deckId}?tab=settings&saved=card`)
+  }
+
+  async function addDeckCard(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const cardName = String(formData.get('card_name') || '').trim()
+    const nextQuantity = Number(formData.get('quantity'))
+    const nextCondition = normalizeCardCondition(String(formData.get('condition') || 'near_mint'))
+    const parsedSetCode = parseSetCodeInput(formData.get('set_code'))
+    const nextCollectorNumber = String(formData.get('collector_number') || '').trim().slice(0, 32)
+    const nextFoil = formData.get('foil') === 'on'
+    const nextSectionRaw = String(formData.get('section') || 'mainboard')
+    const nextSection =
+      nextSectionRaw === 'commander' || nextSectionRaw === 'sideboard' ? nextSectionRaw : 'mainboard'
+
+    if (!cardName || !Number.isFinite(nextQuantity) || nextQuantity < 1 || nextQuantity > 99) {
+      redirect(`/my-decks/${deckId}?tab=settings&saved=add-card-invalid#card-management`)
+    }
+    if (parsedSetCode === 'invalid') {
+      redirect(`/my-decks/${deckId}?tab=settings&saved=invalid-set-code#card-management`)
+    }
+
+    await supabase.from('deck_cards').insert({
+      deck_id: deckId,
+      section: nextSection,
+      quantity: Math.trunc(nextQuantity),
+      card_name: cardName,
+      condition: nextCondition,
+      condition_source: 'manual',
+      set_code: parsedSetCode || null,
+      collector_number: nextCollectorNumber || null,
+      foil: nextFoil,
+      sort_order: gradingCards.length + 1,
+    })
+
+    await syncDeckAfterCardMutation(supabase, user.id)
+
+    redirect(`/my-decks/${deckId}?tab=settings&saved=card-added#card-management`)
   }
 
   async function deleteDeckCard(formData: FormData) {
@@ -831,6 +902,24 @@ export default async function ManageDeckPage({
           {saveStatus === 'card-deleted' && (
             <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
               Card removed and deck totals were recalculated.
+            </div>
+          )}
+
+          {saveStatus === 'card-added' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Card added and deck totals were recalculated.
+            </div>
+          )}
+
+          {saveStatus === 'invalid-set-code' && (
+            <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Set code must use 2 to 12 letters or numbers only. If you are not sure, leave it blank or pick from the known print suggestions.
+            </div>
+          )}
+
+          {saveStatus === 'add-card-invalid' && (
+            <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Add a card name and a valid quantity before saving a new row.
             </div>
           )}
 
@@ -1006,9 +1095,12 @@ export default async function ManageDeckPage({
                   />
                 </div>
 
-                <button className="w-full rounded-xl bg-emerald-400 py-3 text-black">
+                <FormActionButton
+                  pendingLabel="Saving deck details..."
+                  className="w-full rounded-xl bg-emerald-400 py-3 text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
                   Save Deck Details
-                </button>
+                </FormActionButton>
               </form>
             </div>
 
@@ -1021,6 +1113,19 @@ export default async function ManageDeckPage({
                   <>
                     <div className="mt-3 text-xl font-semibold">{bracketSummary.label}</div>
                     <p className="mt-2 text-sm text-zinc-400">{bracketSummary.description}</p>
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                      Brackets are calculated automatically from the saved card rows. You do not set the bracket directly. If you change cards, commanders, or the format, the bracket and Game Changer count update after save.
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
+                        {bracketSummary.gameChangerCount} Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'}
+                      </span>
+                      {bracketSummary.notes.slice(0, 2).map((note) => (
+                        <span key={note} className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
+                          {note}
+                        </span>
+                      ))}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -1047,12 +1152,20 @@ export default async function ManageDeckPage({
                 </div>
 
                 <div className="mt-5">
-                  <Link
-                    href={`/auction-prototype?deckId=${deckId}`}
-                    className="inline-flex rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/15"
-                  >
-                    Try auction launch flow
-                  </Link>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="#card-management"
+                      className="inline-flex rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-400/15"
+                    >
+                      Review card management
+                    </a>
+                    <Link
+                      href={`/auction-prototype?deckId=${deckId}`}
+                      className="inline-flex rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/15"
+                    >
+                      Try auction launch flow
+                    </Link>
+                  </div>
                 </div>
               </div>
 
@@ -1187,6 +1300,24 @@ export default async function ManageDeckPage({
                         Saving with Buy It Now set promotes the deck to <span className="text-amber-200">Buy It Now Live</span>. Saving with Deck Swap enabled but no BIN promotes it to <span className="text-emerald-200">DeckSwap Live</span>. If neither lane is active, it falls back to <span className="text-zinc-200">Staged</span>.
                       </p>
                     </div>
+
+                    {isCommanderDeck && (
+                      <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                        <div className="text-xs uppercase tracking-wide text-emerald-200">Bracket guide</div>
+                        <div className="mt-3 space-y-2 text-sm text-emerald-50/90">
+                          {(Object.entries(COMMANDER_BRACKETS) as Array<[string, (typeof COMMANDER_BRACKETS)[keyof typeof COMMANDER_BRACKETS]]>).map(([key, bracket]) => (
+                            <p key={key}>
+                              Bracket {key}: {bracket.label}. {bracket.shortDescription}
+                            </p>
+                          ))}
+                        </div>
+                        {bracketSummary.gameChangerCount > 0 && (
+                          <div className="mt-3 rounded-2xl border border-amber-400/20 bg-black/20 px-4 py-3 text-sm text-amber-100">
+                            This deck currently shows {bracketSummary.gameChangerCount} Game Changer{bracketSummary.gameChangerCount === 1 ? '' : 's'}, which is one of the signals pushing the current bracket estimate.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1563,6 +1694,97 @@ export default async function ManageDeckPage({
                 </div>
               </div>
 
+              <datalist id="known-set-codes">
+                {knownSetPrints.map((print) => (
+                  <option
+                    key={`${print.code}-${print.name}`}
+                    value={print.code}
+                    label={print.name ? `${print.code.toUpperCase()} - ${print.name}` : print.code.toUpperCase()}
+                  />
+                ))}
+              </datalist>
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-white">Add a card row</div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Use this when an import missed a card or when you want to manually add a missing row before listing the deck.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-zinc-300">
+                    Leave set code blank if you do not know it yet
+                  </div>
+                </div>
+
+                <form action={addDeckCard} className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_150px_150px_160px_160px_120px_auto]">
+                  <input
+                    name="card_name"
+                    placeholder="Card name"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  />
+                  <select
+                    name="section"
+                    defaultValue="mainboard"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  >
+                    <option value="commander">Commander</option>
+                    <option value="mainboard">Mainboard</option>
+                    <option value="sideboard">Sideboard</option>
+                  </select>
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    max="99"
+                    defaultValue="1"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  />
+                  <input
+                    name="set_code"
+                    list="known-set-codes"
+                    placeholder="Set code"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  />
+                  <input
+                    name="collector_number"
+                    placeholder="Collector #"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  />
+                  <select
+                    name="condition"
+                    defaultValue="near_mint"
+                    className="rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
+                  >
+                    {CARD_CONDITIONS.map((condition) => (
+                      <option key={condition} value={condition}>
+                        {CARD_CONDITION_DETAILS[condition].label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-sm text-zinc-200">
+                      <input
+                        name="foil"
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-white/20 bg-zinc-950 text-emerald-400"
+                      />
+                      Foil
+                    </label>
+                    <FormActionButton
+                      pendingLabel="Adding..."
+                      className="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Add Card
+                    </FormActionButton>
+                  </div>
+                </form>
+
+                <p className="mt-3 text-xs text-zinc-500">
+                  Set code validation only checks the format of the code here. If you do not know the exact printing yet, save the row first and refine it later.
+                </p>
+              </div>
+
               <div className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
@@ -1703,6 +1925,7 @@ export default async function ManageDeckPage({
                               <input
                                 name="set_code"
                                 type="text"
+                                list="known-set-codes"
                                 defaultValue={card.set_code ?? ''}
                                 placeholder="mh3"
                                 className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-white"
@@ -1738,6 +1961,9 @@ export default async function ManageDeckPage({
                             </select>
                             <p className="mt-2 text-xs text-zinc-500">
                               {getCardConditionMeta(card.condition).description}
+                            </p>
+                            <p className="mt-2 text-xs text-zinc-500">
+                              Unknown set code? Leave it blank or use one of the suggested print codes from this deck.
                             </p>
                             {card.condition_source !== 'manual' && (
                               <p className="mt-2 text-xs text-amber-300/80">
