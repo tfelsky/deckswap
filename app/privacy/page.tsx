@@ -44,6 +44,16 @@ export default function PrivacyPage() {
             </section>
 
             <section>
+              <h2 className="text-2xl font-semibold text-foreground">Cookies and Analytics Choices</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                DeckSwap uses essential cookies needed for authentication and account access.
+                Optional analytics and performance measurement tools are disabled by default until a
+                visitor opts in through the privacy choices prompt. Visitors can change that choice
+                later from the privacy controls available on the site.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-2xl font-semibold text-foreground">How We Use Information</h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
                 DeckSwap may use collected information to operate the marketplace, support imports,
