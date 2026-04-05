@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AdminOnlyCallout } from '@/components/admin-only-callout'
+import FormActionButton from '@/components/form-action-button'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatVerificationStatus,
@@ -46,7 +47,12 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)))
 }
 
-export default async function ProfileSettingsPage() {
+export default async function ProfileSettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {}
   const supabase = await createClient()
   const {
     data: { user },
@@ -234,7 +240,7 @@ export default async function ProfileSettingsPage() {
     }
 
     await supabase.from('profiles').upsert(payload, { onConflict: 'user_id' })
-    redirect('/settings/profile')
+    redirect('/settings/profile?saved=public')
   }
 
   async function savePrivateProfile(formData: FormData) {
@@ -264,7 +270,7 @@ export default async function ProfileSettingsPage() {
     }
 
     await supabase.from('profile_private').upsert(payload, { onConflict: 'user_id' })
-    redirect('/settings/profile')
+    redirect('/settings/profile?saved=private')
   }
 
   async function submitTrustIntent(formData: FormData) {
@@ -382,7 +388,7 @@ export default async function ProfileSettingsPage() {
       .from('profile_reputation_summary')
       .upsert({ user_id: user.id }, { onConflict: 'user_id' })
 
-    redirect('/settings/profile')
+    redirect('/settings/profile?saved=verification')
   }
 
   return (
@@ -456,6 +462,24 @@ export default async function ProfileSettingsPage() {
               </div>
             </div>
           </div>
+
+          {resolvedSearchParams.saved === 'public' && (
+            <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100">
+              Public profile saved. Your seller-facing details are updated.
+            </div>
+          )}
+
+          {resolvedSearchParams.saved === 'private' && (
+            <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100">
+              Private profile saved. Shipping and support details are updated.
+            </div>
+          )}
+
+          {resolvedSearchParams.saved === 'verification' && (
+            <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100">
+              Verification request saved. The trust review queue now reflects your latest request.
+            </div>
+          )}
 
           {access.isAdmin ? (
             <AdminOnlyCallout
@@ -660,7 +684,12 @@ export default async function ProfileSettingsPage() {
                 </label>
               </div>
 
-              <button className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">Save Public Profile</button>
+              <FormActionButton
+                pendingLabel="Saving public profile..."
+                className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Save Public Profile
+              </FormActionButton>
             </form>
 
             <form action={savePrivateProfile} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
@@ -721,7 +750,12 @@ export default async function ProfileSettingsPage() {
                 Email me marketplace updates and feature launches
               </label>
 
-              <button className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">Save Private Profile</button>
+              <FormActionButton
+                pendingLabel="Saving private profile..."
+                className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Save Private Profile
+              </FormActionButton>
             </form>
           </div>
 
@@ -745,6 +779,14 @@ export default async function ProfileSettingsPage() {
               </div>
 
               <div className="mt-6 space-y-4 text-sm text-zinc-300">
+                <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm text-sky-50/90">
+                  A verification request is a manual trust review request for your profile. DeckSwap staff or admins review the request status, and verified checks can add trust signals to your seller card without exposing private profile fields publicly.
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                  This page does not upload or store a government ID image directly. The private profile currently stores an internal intake reference only, so you should not paste sensitive ID numbers into these notes.
+                </div>
+
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <label className="flex items-start gap-3">
@@ -812,7 +854,12 @@ export default async function ProfileSettingsPage() {
                 </div>
               </div>
 
-              <button className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950">Submit Verification Requests</button>
+              <FormActionButton
+                pendingLabel="Submitting verification requests..."
+                className="mt-6 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Submit Verification Requests
+              </FormActionButton>
             </form>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">

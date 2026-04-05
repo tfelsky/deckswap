@@ -30,6 +30,7 @@ import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
+import FormActionButton from '@/components/form-action-button'
 import { BuyNowQuoteGate } from '@/components/buy-now-quote-gate'
 
 export const dynamic = 'force-dynamic'
@@ -196,6 +197,8 @@ export default async function ManageDeckPage({
   const isAdmin = access.isAdmin
   const activeTab =
     resolvedSearchParams?.tab === 'settings' ? 'settings' : 'overview'
+  const saveStatus = String(resolvedSearchParams?.saved ?? '').trim()
+  const holidayStatus = String(resolvedSearchParams?.holiday ?? '').trim()
   const deckFormat = normalizeDeckFormat(deck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
   const snapshots = (priceHistory ?? []) as DeckPriceSnapshot[]
@@ -417,7 +420,7 @@ export default async function ManageDeckPage({
       .eq('id', deckId)
       .eq('user_id', user.id)
 
-    redirect(`/my-decks/${deckId}`)
+    redirect(`/my-decks/${deckId}?saved=overview`)
   }
 
   async function updateSettings(formData: FormData) {
@@ -527,7 +530,7 @@ export default async function ManageDeckPage({
       .eq('id', deckId)
       .eq('user_id', user.id)
 
-    redirect(`/my-decks/${deckId}?tab=settings`)
+    redirect(`/my-decks/${deckId}?tab=settings&saved=settings`)
   }
 
   async function submitHolidayDonation(formData: FormData) {
@@ -648,7 +651,7 @@ export default async function ManageDeckPage({
       .eq('id', cardId)
       .eq('deck_id', deckId)
 
-    redirect(`/my-decks/${deckId}?tab=settings`)
+    redirect(`/my-decks/${deckId}?tab=settings&saved=card`)
   }
 
   async function updateDeckCard(formData: FormData) {
@@ -698,7 +701,7 @@ export default async function ManageDeckPage({
 
     await syncDeckAfterCardMutation(supabase, user.id)
 
-    redirect(`/my-decks/${deckId}?tab=settings`)
+    redirect(`/my-decks/${deckId}?tab=settings&saved=card`)
   }
 
   async function deleteDeckCard(formData: FormData) {
@@ -727,7 +730,7 @@ export default async function ManageDeckPage({
 
     await syncDeckAfterCardMutation(supabase, user.id)
 
-    redirect(`/my-decks/${deckId}?tab=settings`)
+    redirect(`/my-decks/${deckId}?tab=settings&saved=card-deleted`)
   }
 
   return (
@@ -795,6 +798,60 @@ export default async function ManageDeckPage({
         </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-zinc-900 p-6">
+          {resolvedSearchParams.imported === '1' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Deck imported. Review card rows, commander structure, bracket, and listing settings here before sending it live.
+            </div>
+          )}
+
+          {resolvedSearchParams.enrich === 'failed' && (
+            <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Import completed, but card enrichment did not fully finish. You can still review and fix the saved deck here.
+            </div>
+          )}
+
+          {saveStatus === 'overview' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Deck overview saved.
+            </div>
+          )}
+
+          {saveStatus === 'settings' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Deck settings saved. Marketplace lanes and deck rules are updated.
+            </div>
+          )}
+
+          {saveStatus === 'card' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Card changes saved and deck totals were recalculated.
+            </div>
+          )}
+
+          {saveStatus === 'card-deleted' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Card removed and deck totals were recalculated.
+            </div>
+          )}
+
+          {holidayStatus === 'confirm' && (
+            <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Confirm the holiday donation checkbox before submitting.
+            </div>
+          )}
+
+          {holidayStatus === 'submitted' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Holiday donation submitted. The deck has been moved out of active marketplace lanes.
+            </div>
+          )}
+
+          {holidayStatus === 'undone' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Holiday donation was undone and the deck is back in your staged inventory.
+            </div>
+          )}
+
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-300">
@@ -1394,9 +1451,12 @@ export default async function ManageDeckPage({
                   </div>
                 </div>
 
-                <button className="w-full rounded-xl bg-emerald-400 py-3 text-black">
+                <FormActionButton
+                  pendingLabel="Saving settings..."
+                  className="w-full rounded-xl bg-emerald-400 py-3 text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
                   Save Settings
-                </button>
+                </FormActionButton>
               </form>
             </div>
 
@@ -1490,7 +1550,7 @@ export default async function ManageDeckPage({
             </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <div id="card-management" className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold">Card Management</h2>
@@ -1688,9 +1748,12 @@ export default async function ManageDeckPage({
                         </div>
 
                         <div className="flex flex-col justify-end gap-3">
-                          <button className="w-full rounded-xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950">
+                          <FormActionButton
+                            pendingLabel="Saving card..."
+                            className="w-full rounded-xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
                             Save Card
-                          </button>
+                          </FormActionButton>
                           <ConfirmFormActionButton
                             formAction={deleteDeckCard}
                             confirmMessage="Delete this card from the deck? This changes the saved list immediately."

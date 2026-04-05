@@ -193,9 +193,7 @@ export async function importDeckAction(
   }
 
   const params = new URLSearchParams()
-  if (!importResult.validation.isValid) {
-    params.set('imported', '1')
-  }
+  params.set('imported', '1')
   if (guestDraftPresent) {
     params.set(GUEST_IMPORT_SAVED_QUERY_KEY, '1')
   }
@@ -206,5 +204,7 @@ export async function importDeckAction(
     params.set('enrich', 'failed')
   }
 
-  redirect(`/decks/${importResult.deckId}${params.size > 0 ? `?${params.toString()}` : ''}`)
+  params.set('tab', 'settings')
+
+  redirect(`/my-decks/${importResult.deckId}?${params.toString()}`)
 }

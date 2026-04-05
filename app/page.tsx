@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
+import AuthCodeExchange from "@/components/auth-code-exchange"
 import { Header } from "@/components/header"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturedDeckShelf, FeaturedDecks } from "@/components/featured-decks"
@@ -612,6 +613,7 @@ export default async function HomePage({
     <div className="min-h-screen">
       <Header />
       <main>
+        <AuthCodeExchange />
         <HeroSection inventory={inventory} />
         <Suspense fallback={<HomePageSkeleton />}>
           <DeferredHomeSections selectedColor={selectedColor} />
