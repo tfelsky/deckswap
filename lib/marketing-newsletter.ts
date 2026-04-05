@@ -1,8 +1,11 @@
 import { getTrendWatcherReport, type TrendItem } from '@/lib/admin/trend-watcher'
 import { formatDirectSaleOrderStatus, formatDirectSaleOrderType } from '@/lib/direct-sales'
-import { getEmailConfigSnapshot } from '@/lib/email'
 import { getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
-import { isInventoryStatusCompleted, isInventoryStatusPublic } from '@/lib/decks/inventory-status'
+import { getEmailConfigSnapshot } from '@/lib/email'
+import {
+  isInventoryStatusCompleted,
+  isInventoryStatusPublic,
+} from '@/lib/decks/inventory-status'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 type DeckListingRow = {
@@ -12,7 +15,6 @@ type DeckListingRow = {
   format?: string | null
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
-  buy_now_currency?: string | null
   inventory_status?: string | null
   image_url?: string | null
 }
@@ -117,7 +119,11 @@ function matchesFilters(item: TrendItem, filters: string[]) {
   return filters.some((filter) => haystack.includes(filter))
 }
 
-function toNewsletterDeck(deck: DeckListingRow, appBaseUrl: string, listingLabel: string): NewsletterDeck {
+function toNewsletterDeck(
+  deck: DeckListingRow,
+  appBaseUrl: string,
+  listingLabel: string
+): NewsletterDeck {
   const commander = deck.commander?.trim() || null
   const buyNow = Number(deck.buy_now_price_usd ?? 0)
   const trackedValue = Number(deck.price_total_usd_foil ?? 0)
@@ -131,7 +137,7 @@ function toNewsletterDeck(deck: DeckListingRow, appBaseUrl: string, listingLabel
     priceLabel: buyNow > 0 ? formatUsd(buyNow) : formatUsd(trackedValue),
     detailLabel:
       buyNow > 0
-        ? `Buy It Now live${trackedValue > 0 ? ` · Value ${formatUsd(trackedValue)}` : ''}`
+        ? `Buy It Now live${trackedValue > 0 ? ` | Value ${formatUsd(trackedValue)}` : ''}`
         : `Tracked value ${formatUsd(trackedValue)}`,
     imageUrl: deck.image_url?.trim() || null,
     url: `${appBaseUrl}/decks/${deck.id}`,
@@ -165,7 +171,7 @@ function renderSaleItem(sale: NewsletterSale) {
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #1f2937;color:#f9fafb;font-size:14px;">
         <a href="${escapeHtml(sale.url)}" style="color:#f9fafb;text-decoration:none;font-weight:600;">${escapeHtml(sale.deckName)}</a>
-        <div style="margin-top:4px;color:#9ca3af;font-size:12px;">${escapeHtml(sale.orderTypeLabel)} · ${escapeHtml(sale.statusLabel)}</div>
+        <div style="margin-top:4px;color:#9ca3af;font-size:12px;">${escapeHtml(sale.orderTypeLabel)} | ${escapeHtml(sale.statusLabel)}</div>
       </td>
       <td style="padding:12px 0;border-bottom:1px solid #1f2937;color:#fbbf24;font-size:14px;text-align:right;white-space:nowrap;">${escapeHtml(sale.totalLabel)}</td>
       <td style="padding:12px 0 12px 14px;border-bottom:1px solid #1f2937;color:#9ca3af;font-size:12px;text-align:right;white-space:nowrap;">${escapeHtml(sale.happenedLabel)}</td>
@@ -202,7 +208,7 @@ function renderDeckListText(title: string, decks: NewsletterDeck[]) {
   return [
     title,
     ...decks.map(
-      (deck) => `- ${deck.name} (${deck.commander || deck.formatLabel}) · ${deck.priceLabel} · ${deck.url}`
+      (deck) => `- ${deck.name} (${deck.commander || deck.formatLabel}) | ${deck.priceLabel} | ${deck.url}`
     ),
   ].join('\n')
 }
@@ -216,7 +222,7 @@ function renderSalesText(title: string, sales: NewsletterSale[]) {
     title,
     ...sales.map(
       (sale) =>
-        `- ${sale.deckName} · ${sale.orderTypeLabel} · ${sale.totalLabel} · ${sale.statusLabel} · ${sale.url}`
+        `- ${sale.deckName} | ${sale.orderTypeLabel} | ${sale.totalLabel} | ${sale.statusLabel} | ${sale.url}`
     ),
   ].join('\n')
 }
@@ -226,7 +232,9 @@ function renderTrendText(title: string, items: TrendItem[]) {
     return `${title}\n- Nothing fresh yet.`
   }
 
-  return [title, ...items.map((item) => `- ${item.source}: ${item.title} · ${item.url}`)].join('\n')
+  return [title, ...items.map((item) => `- ${item.source}: ${item.title} | ${item.url}`)].join(
+    '\n'
+  )
 }
 
 async function loadNewsletterMarketplaceData(appBaseUrl: string) {
@@ -236,7 +244,7 @@ async function loadNewsletterMarketplaceData(appBaseUrl: string) {
     supabase
       .from('decks')
       .select(
-        'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, inventory_status, image_url'
+        'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, inventory_status, image_url'
       )
       .order('id', { ascending: false })
       .limit(60),
@@ -289,7 +297,9 @@ async function loadNewsletterMarketplaceData(appBaseUrl: string) {
     return {
       id: sale.id,
       deckName: deck?.name || `Deck #${sale.deck_id}`,
-      totalLabel: formatUsd(Number(sale.price_usd ?? 0) + Number(sale.shipping_label_addon_usd ?? 0)),
+      totalLabel: formatUsd(
+        Number(sale.price_usd ?? 0) + Number(sale.shipping_label_addon_usd ?? 0)
+      ),
       statusLabel: formatDirectSaleOrderStatus(sale.status),
       orderTypeLabel: formatDirectSaleOrderType(sale.order_type),
       happenedLabel: formatShortDate(saleMoment),
@@ -312,8 +322,13 @@ export async function buildMarketplaceNewsletterDraft(
   const emailConfig = getEmailConfigSnapshot()
   const appBaseUrl = emailConfig.appBaseUrl.replace(/\/$/, '')
   const filters = normalizeFilters(input.creatorFilters)
-  const { trendReport, bestDecksForSale, latestDecksForSale, latestSales, completedDeckMoves } =
-    await loadNewsletterMarketplaceData(appBaseUrl)
+  const {
+    trendReport,
+    bestDecksForSale,
+    latestDecksForSale,
+    latestSales,
+    completedDeckMoves,
+  } = await loadNewsletterMarketplaceData(appBaseUrl)
 
   const officialHeadlines = trendReport.official.slice(0, 3)
   const creatorSpotlights = trendReport.marketplace
@@ -324,9 +339,7 @@ export async function buildMarketplaceNewsletterDraft(
     creatorSpotlights.length > 0 ? creatorSpotlights : trendReport.marketplace.slice(0, 4)
 
   const upcomingSetName =
-    input.upcomingSetName?.trim() ||
-    officialHeadlines[0]?.title ||
-    'Upcoming set watch'
+    input.upcomingSetName?.trim() || officialHeadlines[0]?.title || 'Upcoming set watch'
   const subject = `DeckSwap weekly: ${upcomingSetName}, fresh creator picks, and live deck movement`
   const previewText =
     bestDecksForSale[0] != null
@@ -457,7 +470,7 @@ export async function buildMarketplaceNewsletterDraft(
   return {
     subject,
     previewText,
-    name: `DeckSwap newsletter · ${formatShortDate(new Date().toISOString())}`,
+    name: `DeckSwap newsletter | ${formatShortDate(new Date().toISOString())}`,
     body,
     html,
     text,

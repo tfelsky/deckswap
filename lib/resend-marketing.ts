@@ -3,6 +3,7 @@ import { getEmailConfigSnapshot } from '@/lib/email'
 import { getResendClient } from '@/lib/resend'
 
 const MARKETING_SEGMENT_NAME = 'deckswap-marketing-opt-in'
+const MARKETING_TOPIC_ID = process.env.RESEND_MARKETING_TOPIC_ID?.trim() || ''
 
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -69,7 +70,6 @@ export async function syncResendMarketingAudience() {
         id: existing.data.id,
         firstName: contact.firstName || null,
         lastName: contact.lastName || null,
-        unsubscribed: false,
       })
 
       if (updateResult.error) {
@@ -97,7 +97,6 @@ export async function syncResendMarketingAudience() {
       email: contact.email,
       firstName: contact.firstName,
       lastName: contact.lastName,
-      unsubscribed: false,
       segments: [{ id: segmentId }],
     })
 
@@ -142,6 +141,7 @@ export async function createMarketingBroadcast(input: {
 
   const createResult = await resend.broadcasts.create({
     segmentId: audience.segmentId,
+    topicId: MARKETING_TOPIC_ID || undefined,
     from: emailConfig.marketingFromEmail,
     subject: input.subject,
     previewText: input.previewText || undefined,

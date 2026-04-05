@@ -21,6 +21,7 @@ export type EmailConfigSnapshot = {
   appBaseUrl: string
   resendApiKeyConfigured: boolean
   resendApiKeyPrefix: string | null
+  resendMarketingTopicConfigured: boolean
   defaultFromEmail: string
   transactionalFromEmail: string
   marketingFromEmail: string
@@ -83,11 +84,13 @@ export function getEmailConfigSnapshot(): EmailConfigSnapshot {
   )
   const superadminNotificationEmail = getSuperadminNotificationEmail()
   const apiKey = process.env.RESEND_API_KEY?.trim() || ''
+  const marketingTopicId = process.env.RESEND_MARKETING_TOPIC_ID?.trim() || ''
 
   return {
     appBaseUrl: getAppBaseUrl(),
     resendApiKeyConfigured: apiKey.length > 0,
     resendApiKeyPrefix: apiKey ? apiKey.slice(0, 3) : null,
+    resendMarketingTopicConfigured: marketingTopicId.length > 0,
     defaultFromEmail,
     transactionalFromEmail,
     marketingFromEmail,
@@ -125,6 +128,12 @@ export function getEmailHealthReport() {
   if (transactionalDomain && marketingDomain && transactionalDomain === marketingDomain) {
     recommendations.push(
       'Consider separate subdomains for transactional and marketing mail if your volume grows, for example notifications.yourdomain.com and updates.yourdomain.com.'
+    )
+  }
+
+  if (!config.resendMarketingTopicConfigured) {
+    recommendations.push(
+      'Set RESEND_MARKETING_TOPIC_ID so broadcasts use a Resend Topic for preference management and unsubscribe scoping.'
     )
   }
 
