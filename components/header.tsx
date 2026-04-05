@@ -9,16 +9,16 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-            <span className="text-sm font-bold text-primary-foreground">ME</span>
-          </div>
           <Image
             src="/mythiverse-shield.png"
             alt="Mythiverse Exchange shield logo"
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
           />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+            <span className="text-sm font-bold text-primary-foreground">ME</span>
+          </div>
           <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
         </Link>
 
