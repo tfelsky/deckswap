@@ -6,6 +6,13 @@ import { Header } from '@/components/header'
 
 const compliancePages = [
   {
+    title: 'Sustainability',
+    href: '/sustainability',
+    badge: 'Sustainability',
+    body:
+      'Covers land acknowledgement, material sustainability topics, waste reduction, supply-chain human rights, and the most relevant UN Sustainable Development Goals.',
+  },
+  {
     title: 'Accessibility Statement',
     href: '/accessibility',
     badge: 'AODA and WCAG',
@@ -32,6 +39,7 @@ const nextSteps = [
   'Add a public contact method for privacy and accessibility requests before launch.',
   'Replace placeholder policy language with counsel-reviewed production text.',
   'Document cookie, analytics, retention, and consent behavior so site behavior matches the public policies.',
+  'Define supplier due diligence and training expectations for forced labour and child labour risk management.',
   'Review new product flows against accessibility, privacy, and terms impacts before release.',
 ]
 
@@ -68,7 +76,7 @@ export default function CompliancePage() {
         </section>
 
         <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {compliancePages.map((page) => (
               <Link
                 key={page.href}
