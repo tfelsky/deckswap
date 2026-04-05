@@ -149,7 +149,7 @@ export default function SignInPage() {
     }
 
     try {
-      await fetch('/api/admin/new-user-alert', {
+      const notificationResponse = await fetch('/api/admin/new-user-alert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,6 +160,17 @@ export default function SignInPage() {
           nextDeckCommander: normalizedCommanderName,
         }),
       })
+
+      if (!notificationResponse.ok) {
+        const payload = (await notificationResponse.json().catch(() => null)) as
+          | { error?: string }
+          | null
+
+        console.error('Failed to trigger new-user admin email:', {
+          status: notificationResponse.status,
+          error: payload?.error ?? 'Unknown error',
+        })
+      }
     } catch (notificationError) {
       console.error('Failed to trigger new-user admin email:', notificationError)
     }
