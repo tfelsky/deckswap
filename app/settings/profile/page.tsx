@@ -394,7 +394,7 @@ export default async function ProfileSettingsPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
-        <div className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6">
           <div className="flex flex-wrap gap-3">
             <Link
               href="/my-decks"
@@ -410,22 +410,24 @@ export default async function ProfileSettingsPage({
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
               <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
                 Profile And Trust
               </div>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight">Build your trader identity</h1>
-              <p className="mt-3 max-w-2xl text-zinc-400">
-                Add public profile details, shipping readiness, and trust references so buyers and trading partners can understand who you are before they commit.
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Build your trader identity
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-7 text-zinc-400">
+                Add the public details, shipping readiness, and trust signals that help other people feel comfortable trading with you.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm text-zinc-400">Profile Completion</div>
-                  <div className="mt-2 text-3xl font-semibold text-emerald-300">{profileCompletion}%</div>
+                  <div className="mt-1 text-2xl font-semibold text-emerald-300">{profileCompletion}%</div>
                 </div>
                 <div className="text-right text-sm text-zinc-400">
                   Ship from {formatShipFrom(profile)}
@@ -439,7 +441,7 @@ export default async function ProfileSettingsPage({
                 />
               </div>
 
-              <div className="mt-5 space-y-2 text-sm text-zinc-300">
+              <div className="mt-4 space-y-2 text-sm text-zinc-300">
                 {profileHints.length > 0 ? (
                   profileHints.map((hint) => <p key={hint}>{hint}</p>)
                 ) : (
@@ -447,7 +449,7 @@ export default async function ProfileSettingsPage({
                 )}
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {trustBadges.length > 0 ? (
                   trustBadges.map((badge) => (
                     <span key={badge} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200">
@@ -484,54 +486,52 @@ export default async function ProfileSettingsPage({
           {access.isAdmin ? (
             <AdminOnlyCallout
               className="mt-6"
-              title="Marketplace progress and next-step prompts"
-              description="This guidance block is hidden from non-admin users because it contains internal discovery sequencing and testing-oriented product nudges."
+              title="Admin progress view"
+              description="Internal guidance and sequencing only. Hidden from public users."
             >
-              <div className="rounded-3xl border border-sky-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(24,24,27,0.9))] p-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="max-w-3xl">
-                    <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium tracking-wide text-sky-200">
+              <div className="rounded-[1.25rem] border border-sky-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.1),rgba(24,24,27,0.92))] p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-2xl">
+                    <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-[11px] font-medium tracking-wide text-sky-200">
                       Marketplace Progress
                     </div>
-                    <h2 className="mt-4 text-3xl font-semibold tracking-tight">
-                      Discover the next feature by finishing the next step
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+                      Compact next-step view
                     </h2>
-                    <p className="mt-3 text-sm text-zinc-300">
-                      The simplest path is: complete your profile, add a deck, try Deck Swap first,
-                      then Buy It Now, and only lean on auctions if the first two lanes do not move the
-                      deck.
+                    <p className="mt-2 text-sm leading-6 text-zinc-300">
+                      Encourage profile completion first, then deck import, Deck Swap, Buy It Now, and finally auctions.
                     </p>
                   </div>
 
-                  <div className="rounded-3xl border border-white/10 bg-black/20 px-5 py-4 text-center">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center">
                     <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">Discovery</div>
-                    <div className="mt-2 text-3xl font-semibold text-white">{discoveryPercent}%</div>
-                    <div className="mt-1 text-sm text-zinc-400">
+                    <div className="mt-1 text-2xl font-semibold text-white">{discoveryPercent}%</div>
+                    <div className="mt-1 text-xs text-zinc-400">
                       {completedDiscoverySteps} of {discoveryChecklist.length} steps done
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full rounded-full bg-sky-400 transition-all"
                     style={{ width: `${discoveryPercent}%` }}
                   />
                 </div>
 
-                <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                  <div className="space-y-3">
+                <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                  <div className="space-y-2.5">
                     {discoveryChecklist.map((step) => (
                       <div
                         key={step.label}
-                        className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                        className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-3"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <div className="text-sm font-medium text-white">
                               {step.done ? 'Complete' : 'Next'}: {step.label}
                             </div>
-                            <p className="mt-1 text-sm text-zinc-400">{step.help}</p>
+                            <p className="mt-1 text-sm leading-6 text-zinc-400">{step.help}</p>
                           </div>
                           <Link
                             href={step.href}
@@ -548,36 +548,36 @@ export default async function ProfileSettingsPage({
                     ))}
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Decks Added</div>
-                      <div className="mt-2 text-2xl font-semibold text-white">{deckCount}</div>
-                      <div className="mt-1 text-sm text-zinc-400">
+                      <div className="mt-1.5 text-xl font-semibold text-white">{deckCount}</div>
+                      <div className="mt-1 text-xs text-zinc-400">
                         Imported or manually created inventory
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Deck Swap Live</div>
-                      <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                      <div className="mt-1.5 text-xl font-semibold text-emerald-300">
                         {listedDeckCount}
                       </div>
-                      <div className="mt-1 text-sm text-zinc-400">
+                      <div className="mt-1 text-xs text-zinc-400">
                         Highest-value lane before direct sale or auction
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Buy It Now Live</div>
-                      <div className="mt-2 text-2xl font-semibold text-amber-200">
+                      <div className="mt-1.5 text-xl font-semibold text-amber-200">
                         {buyNowDeckCount}
                       </div>
-                      <div className="mt-1 text-sm text-zinc-400">
+                      <div className="mt-1 text-xs text-zinc-400">
                         Direct-sale fallback listings
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Offer Activity</div>
-                      <div className="mt-2 text-2xl font-semibold text-sky-200">{offerCount}</div>
-                      <div className="mt-1 text-sm text-zinc-400">
+                      <div className="mt-1.5 text-xl font-semibold text-sky-200">{offerCount}</div>
+                      <div className="mt-1 text-xs text-zinc-400">
                         Total offers sent or received so far
                       </div>
                     </div>
@@ -595,7 +595,7 @@ export default async function ProfileSettingsPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
+      <section className="mx-auto max-w-6xl px-5 py-10 sm:px-6">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
             <form id="public-profile" action={savePublicProfile} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
