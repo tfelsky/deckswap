@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import MarketplaceNav from '@/components/marketplace-nav'
 
 type AppHeaderProps = {
@@ -35,6 +36,13 @@ export default function AppHeader({
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
               ME
             </div>
+            <Image
+              src="/mythiverse-shield.png"
+              alt="Mythiverse Exchange shield logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-xl object-cover shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
+            />
             <div>
               <div className="text-base font-semibold text-foreground">Mythiverse Exchange</div>
               <div className="text-xs text-muted-foreground">Marketplace app</div>

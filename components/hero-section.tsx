@@ -1,5 +1,3 @@
-"use client"
-
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react"
@@ -32,7 +30,6 @@ type HeroSectionProps = {
     liveDecks: number
     tokenReadyDecks: number
     topValue: number
-    averageBracket: string
     totalTrackedCards: number
     tradeOffers: number
     deckComments: number
@@ -107,9 +104,9 @@ export function HeroSection({ inventory }: HeroSectionProps) {
             <div className="h-12 w-px bg-border" />
             <div className="text-center">
               <p className="text-3xl font-bold text-foreground sm:text-4xl">
-                Bracket {inventory.averageBracket}
+                {inventory.tradeOffers}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">Average marketplace bracket</p>
+              <p className="mt-1 text-sm text-muted-foreground">Open trade opportunities</p>
             </div>
           </div>
         </div>
