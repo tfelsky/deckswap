@@ -458,6 +458,29 @@ export async function markTradeReceivedAction(formData: FormData) {
     event_data: { side, receivedAt: now },
   })
 
+  for (const participant of refreshedParticipants) {
+    if (!participant.user_id) continue
+    await createNotification(context.supabase, {
+      userId: participant.user_id,
+      actorUserId: context.user.id,
+      type: 'trade_shipment_received_at_escrow',
+      title: 'Deck received at the escrow hub',
+      body: `${sideLabel(side)}'s shipment for Trade #${tradeId} has been received at the hub and moved into intake review.`,
+      href: getDraftHref(tradeId),
+      metadata: { tradeId, side },
+    })
+
+    await sendTradeEmail({
+      userId: participant.user_id,
+      subject: 'Deck received at the escrow hub',
+      body: `${sideLabel(side)}'s shipment for Trade #${tradeId} has been received at the hub and moved into intake review.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'Review trade status',
+      idempotencyKey: `trade-received-at-hub:${tradeId}:${side}:${participant.user_id}`,
+      eyebrow: 'Escrow intake',
+    })
+  }
+
   redirect(returnTo)
 }
 
@@ -508,6 +531,60 @@ export async function markTradeInspectionAction(formData: FormData) {
     event_type: inspectionStatus === 'failed' ? 'inspection_failed' : 'inspection_passed',
     event_data: { side, inspectionNotes, inspectedAt: now },
   })
+
+  for (const participant of refreshedParticipants) {
+    if (!participant.user_id) continue
+    await createNotification(context.supabase, {
+      userId: participant.user_id,
+      actorUserId: context.user.id,
+      type: inspectionStatus === 'failed' ? 'trade_inspection_failed' : 'trade_inspection_passed',
+      title: inspectionStatus === 'failed' ? 'Deck flagged during inspection' : 'Deck passed inspection',
+      body:
+        inspectionStatus === 'failed'
+          ? `${sideLabel(side)}'s deck for Trade #${tradeId} was flagged during inspection.${inspectionNotes ? ` Notes: ${inspectionNotes}` : ''}`
+          : `${sideLabel(side)}'s deck for Trade #${tradeId} passed intake inspection.${inspectionNotes ? ` Notes: ${inspectionNotes}` : ''}`,
+      href: getDraftHref(tradeId),
+      metadata: { tradeId, side, inspectionStatus },
+    })
+
+    await sendTradeEmail({
+      userId: participant.user_id,
+      subject: inspectionStatus === 'failed' ? 'Deck flagged during inspection' : 'Deck passed inspection',
+      body:
+        inspectionStatus === 'failed'
+          ? `${sideLabel(side)}'s deck for Trade #${tradeId} was flagged during inspection.${inspectionNotes ? ` Notes: ${inspectionNotes}` : ''}`
+          : `${sideLabel(side)}'s deck for Trade #${tradeId} passed intake inspection.${inspectionNotes ? ` Notes: ${inspectionNotes}` : ''}`,
+      href: getDraftHref(tradeId),
+      ctaLabel: inspectionStatus === 'failed' ? 'Review trade issue' : 'Review trade status',
+      idempotencyKey: `trade-inspection:${inspectionStatus}:${tradeId}:${side}:${participant.user_id}`,
+      eyebrow: inspectionStatus === 'failed' ? 'Inspection issue' : 'Inspection update',
+    })
+  }
+
+  if (nextStatus === 'ready_to_release') {
+    for (const participant of refreshedParticipants) {
+      if (!participant.user_id) continue
+      await createNotification(context.supabase, {
+        userId: participant.user_id,
+        actorUserId: context.user.id,
+        type: 'trade_ready_to_release',
+        title: 'Trade cleared for release',
+        body: `Trade #${tradeId} has passed intake and inspection on both sides. The escrow release step is next.`,
+        href: getDraftHref(tradeId),
+        metadata: { tradeId },
+      })
+
+      await sendTradeEmail({
+        userId: participant.user_id,
+        subject: 'Trade cleared for release',
+        body: `Trade #${tradeId} has passed intake and inspection on both sides. The escrow release step is next.`,
+        href: getDraftHref(tradeId),
+        ctaLabel: 'Review trade status',
+        idempotencyKey: `trade-ready-to-release:${tradeId}:${participant.user_id}`,
+        eyebrow: 'Escrow release',
+      })
+    }
+  }
 
   redirect(returnTo)
 }

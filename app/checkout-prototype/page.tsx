@@ -3,6 +3,7 @@ import {
   ESCROW_EXAMPLES,
   type SupportedCountry,
 } from '@/lib/escrow/prototype'
+import { buildPrototypeCheckoutBreakdowns } from '@/lib/escrow/checkout'
 import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createClient } from '@/lib/supabase/server'
@@ -64,6 +65,7 @@ export default async function CheckoutPrototypePage({
     boxKitA,
     boxKitB,
   })
+  const breakdowns = buildPrototypeCheckoutBreakdowns(result)
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -241,34 +243,23 @@ export default async function CheckoutPrototypePage({
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-lg font-semibold text-white">User A Due Now</div>
                     <div className="text-2xl font-semibold text-emerald-300">
-                      {formatUsd(result.deckA.amountDue)}
+                      {formatUsd(breakdowns.deckA.totalDue)}
                     </div>
                   </div>
                   <div className="mt-4 space-y-3 text-sm text-zinc-300">
                     <div className="flex items-center justify-between">
                       <span>Deck value</span>
-                      <span>{formatUsd(result.deckA.deckValue)}</span>
+                      <span>{formatUsd(breakdowns.deckA.deckValue)}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Matching fee</span>
-                      <span>{formatUsd(result.deckA.matchingFee)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Shipping</span>
-                      <span>{formatUsd(result.deckA.shipping)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Insurance</span>
-                      <span>{formatUsd(result.deckA.insurance)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Box kit + label</span>
-                      <span>{formatUsd(result.deckA.packaging)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Equalization owed</span>
-                      <span>{formatUsd(result.deckA.equalizationOwed)}</span>
-                    </div>
+                    {breakdowns.deckA.lineItems.map((item) => (
+                      <div key={`deck-a-${item.label}`} className="flex items-center justify-between">
+                        <span>{item.label}</span>
+                        <span>{formatUsd(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                    {breakdowns.deckA.packagingMessage}
                   </div>
                 </div>
 
@@ -276,34 +267,23 @@ export default async function CheckoutPrototypePage({
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-lg font-semibold text-white">User B Due Now</div>
                     <div className="text-2xl font-semibold text-emerald-300">
-                      {formatUsd(result.deckB.amountDue)}
+                      {formatUsd(breakdowns.deckB.totalDue)}
                     </div>
                   </div>
                   <div className="mt-4 space-y-3 text-sm text-zinc-300">
                     <div className="flex items-center justify-between">
                       <span>Deck value</span>
-                      <span>{formatUsd(result.deckB.deckValue)}</span>
+                      <span>{formatUsd(breakdowns.deckB.deckValue)}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Matching fee</span>
-                      <span>{formatUsd(result.deckB.matchingFee)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Shipping</span>
-                      <span>{formatUsd(result.deckB.shipping)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Insurance</span>
-                      <span>{formatUsd(result.deckB.insurance)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Box kit + label</span>
-                      <span>{formatUsd(result.deckB.packaging)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Equalization owed</span>
-                      <span>{formatUsd(result.deckB.equalizationOwed)}</span>
-                    </div>
+                    {breakdowns.deckB.lineItems.map((item) => (
+                      <div key={`deck-b-${item.label}`} className="flex items-center justify-between">
+                        <span>{item.label}</span>
+                        <span>{formatUsd(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+                    {breakdowns.deckB.packagingMessage}
                   </div>
                 </div>
               </div>

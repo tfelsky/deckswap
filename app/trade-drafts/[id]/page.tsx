@@ -19,6 +19,7 @@ import {
   type TradeParticipantRow,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
+import { buildCheckoutBreakdownFromParticipant } from '@/lib/escrow/checkout'
 
 export const dynamic = 'force-dynamic'
 
@@ -176,6 +177,7 @@ export default async function TradeDraftPage({
 
   const otherParticipant =
     participants.find((participant) => participant.side !== currentUserParticipant.side) ?? null
+  const checkoutBreakdown = buildCheckoutBreakdownFromParticipant(currentUserParticipant)
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -239,37 +241,21 @@ export default async function TradeDraftPage({
                 <div className="space-y-2 text-sm text-zinc-300">
                   <div className="flex items-center justify-between">
                     <span>Your deck value</span>
-                    <span>{formatUsd(currentUserParticipant.deck_value_usd)}</span>
+                    <span>{formatUsd(checkoutBreakdown.deckValue)}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>Matching fee</span>
-                    <span>{formatUsd(currentUserParticipant.matching_fee_usd)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Shipping</span>
-                    <span>{formatUsd(currentUserParticipant.shipping_usd)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Insurance</span>
-                    <span>{formatUsd(currentUserParticipant.insurance_usd)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Box + prepaid label</span>
-                    <span>{formatUsd(currentUserParticipant.packaging_addon_usd)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Equalization</span>
-                    <span>{formatUsd(currentUserParticipant.equalization_owed_usd)}</span>
-                  </div>
+                  {checkoutBreakdown.lineItems.map((item) => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span>{item.label}</span>
+                      <span>{formatUsd(item.value)}</span>
+                    </div>
+                  ))}
                   <div className="flex items-center justify-between pt-2 text-base font-semibold text-white">
                     <span>Total due</span>
-                    <span>{formatUsd(currentUserParticipant.amount_due_usd)}</span>
+                    <span>{formatUsd(checkoutBreakdown.totalDue)}</span>
                   </div>
                 </div>
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
-                  {currentUserParticipant.label_box_requested
-                    ? 'You requested the next-day flat folded box with prepaid label. That $20 add-on is already included above.'
-                    : 'You did not add the next-day flat folded box with prepaid label on this draft.'}
+                  {checkoutBreakdown.packagingMessage}
                 </div>
               </div>
             </div>
