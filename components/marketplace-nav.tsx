@@ -79,10 +79,14 @@ export default function MarketplaceNav({
               item.key === 'import'
                 ? current === 'import' || current === 'create'
                 : item.key === current
+            const hasUnreadTradeOffers = item.key === 'trade-offers' && unreadTradeOffers > 0
+            const hasUnreadNotifications =
+              item.key === 'notifications' && unreadNotifications > 0
+            const hasUnread = hasUnreadTradeOffers || hasUnreadNotifications
             const label =
-              item.key === 'trade-offers' && unreadTradeOffers > 0
+              hasUnreadTradeOffers
                 ? `${item.label} (${unreadTradeOffers})`
-                : item.key === 'notifications' && unreadNotifications > 0
+                : hasUnreadNotifications
                 ? `${item.label} (${unreadNotifications})`
                 : item.label
 
@@ -93,10 +97,27 @@ export default function MarketplaceNav({
                 className={`rounded-2xl px-3.5 py-2 text-sm font-medium transition ${
                   active
                     ? 'bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(0,0,0,0.16)]'
+                    : hasUnreadNotifications
+                    ? 'relative border border-amber-300/35 bg-[linear-gradient(135deg,rgba(251,191,36,0.24),rgba(245,158,11,0.12))] text-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.08),0_10px_28px_rgba(245,158,11,0.18)] hover:bg-[linear-gradient(135deg,rgba(251,191,36,0.3),rgba(245,158,11,0.16))]'
+                    : hasUnreadTradeOffers
+                    ? 'border border-primary/25 bg-primary/10 text-primary shadow-[0_10px_24px_rgba(16,185,129,0.12)] hover:bg-primary/15'
                     : 'border border-border/80 bg-secondary/50 text-foreground hover:bg-secondary/80'
                 }`}
               >
-                {label}
+                <span className="inline-flex items-center gap-2">
+                  {hasUnreadNotifications ? (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-200 shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
+                    </span>
+                  ) : null}
+                  {label}
+                  {hasUnreadNotifications ? (
+                    <span className="rounded-full border border-amber-200/30 bg-amber-100/15 px-2 py-0.5 text-[11px] font-semibold text-amber-50">
+                      New
+                    </span>
+                  ) : null}
+                </span>
               </Link>
             )
           })}
