@@ -380,6 +380,7 @@ export default async function DeckDetailPage({
   const hasBuyNow = buyNowPrice > 0
   const inventoryStatus = normalizeInventoryStatus(typedDeck.inventory_status)
   const inventoryStatusLocked = isInventoryStatusLocked(inventoryStatus)
+  const canTakeGuaranteedOffer = isOwner && currentPrice > 0 && !inventoryStatusLocked
   const marketingChips = getDeckMarketingChips(typedDeck)
   const compareHref = buildTradeMatchesHref(deckId)
   const compareCallToAction = !user
@@ -1900,17 +1901,17 @@ export default async function DeckDetailPage({
                       >
                         Propose trade
                       </Link>
-                    ) : hasBuyNow ? (
-                      <Link
-                        href={sellerProfile?.username ? `/u/${sellerProfile.username}` : `/decks/${deckId}#seller`}
-                        className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-200 hover:bg-amber-400/15"
-                      >
-                        Buy it now interest
-                      </Link>
-                    ) : null}
+                      ) : hasBuyNow ? (
+                        <Link
+                          href={`/orders/new?deckId=${deckId}&type=buy_now`}
+                          className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-200 hover:bg-amber-400/15"
+                        >
+                          Buy it now checkout
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
 
             <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.95fr)]">
@@ -2051,10 +2052,10 @@ export default async function DeckDetailPage({
                         {formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
                       </div>
                     </div>
-                    {isAdmin ? (
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
-                          Guaranteed Offer
+                      {isAdmin || isOwner ? (
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
+                            Guaranteed Offer
                         </div>
                         <div className="mt-1 text-2xl font-semibold text-rose-200">
                           {formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}
@@ -2084,22 +2085,30 @@ export default async function DeckDetailPage({
                   <p className="mt-2 text-sm text-amber-50/70">
                     Buy It Now is the direct-sale lane for another user to purchase the deck without an auction.
                   </p>
-                  {isAdmin ? (
-                    <p className="mt-2 text-sm text-amber-50/70">
-                      Guaranteed Offer is a separate internal DeckSwap purchase lane and remains admin-only.
-                    </p>
-                  ) : null}
-                  {hasBuyNow ? (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white">
-                      Seller is currently willing to take <span className="font-semibold text-amber-200">{formatCurrencyAmount(buyNowPrice, buyNowCurrency)}</span> without an auction.
-                      {typedDeck.buy_now_listing_notes ? ` ${typedDeck.buy_now_listing_notes}` : ''}
-                    </div>
+                    {canTakeGuaranteedOffer ? (
+                      <p className="mt-2 text-sm text-amber-50/70">
+                        Guaranteed Offer now opens a seller checkout and then moves the deck into a shipping workflow.
+                      </p>
+                    ) : null}
+                    {hasBuyNow ? (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white">
+                        Seller is currently willing to take <span className="font-semibold text-amber-200">{formatCurrencyAmount(buyNowPrice, buyNowCurrency)}</span> without an auction.
+                        {typedDeck.buy_now_listing_notes ? ` ${typedDeck.buy_now_listing_notes}` : ''}
+                      </div>
                   ) : isOwner ? (
                     <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-amber-50/85">
-                      Add a buy-it-now price in deck settings if you want to offer a direct-sale path without opening an auction.
-                    </div>
-                  ) : null}
-                </div>
+                        Add a buy-it-now price in deck settings if you want to offer a direct-sale path without opening an auction.
+                      </div>
+                    ) : null}
+                    {canTakeGuaranteedOffer ? (
+                      <Link
+                        href={`/orders/new?deckId=${deckId}&type=guaranteed_offer`}
+                        className="mt-3 inline-flex rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-medium text-rose-100 hover:bg-rose-300/15"
+                      >
+                        Take guaranteed offer
+                      </Link>
+                    ) : null}
+                  </div>
 
                 <div className="rounded-3xl border border-white/10 bg-zinc-900/90 p-5">
                   <div className="text-sm text-zinc-400">Price Trend</div>

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createNotification } from '@/lib/notifications'
@@ -70,7 +70,7 @@ export default async function TradeDetailPage({
   }
 
   const access = await getAdminAccessForUser(user)
-  const adminSupabase = createAdminClient()
+  const adminSupabase = createAdminClientOrNull() ?? supabase
 
   const [tradeResult, participantResult, eventResult] = await Promise.all([
     adminSupabase
@@ -125,7 +125,7 @@ export default async function TradeDetailPage({
     'use server'
 
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -188,7 +188,7 @@ export default async function TradeDetailPage({
 
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -285,7 +285,7 @@ export default async function TradeDetailPage({
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const trackingCode = String(formData.get('tracking_code') || '').trim() || null
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -381,7 +381,7 @@ export default async function TradeDetailPage({
 
     const side = String(formData.get('side') || '') as 'a' | 'b'
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -441,7 +441,7 @@ export default async function TradeDetailPage({
     const inspectionStatus = String(formData.get('inspection_status') || 'passed') as 'passed' | 'failed'
     const inspectionNotes = String(formData.get('inspection_notes') || '').trim() || null
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -499,7 +499,7 @@ export default async function TradeDetailPage({
     'use server'
 
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -550,7 +550,7 @@ export default async function TradeDetailPage({
 
     const disputeReason = String(formData.get('dispute_reason') || '').trim() || 'Trade manually flagged for dispute.'
     const supabase = await createClient()
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const {
       data: { user },
     } = await supabase.auth.getUser()

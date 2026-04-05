@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAdminAccessForUser } from '@/lib/admin/access'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatTradeStatus,
@@ -24,7 +24,7 @@ export default async function TradesPage() {
   }
 
   const access = await getAdminAccessForUser(user)
-  const adminSupabase = createAdminClient()
+  const adminSupabase = createAdminClientOrNull() ?? supabase
 
   const { data: offersData } = await supabase
     .from('trade_offers')

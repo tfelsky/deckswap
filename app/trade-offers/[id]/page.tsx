@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import {
@@ -92,7 +92,7 @@ function buildActionErrorHref(
 }
 
 async function findExistingTradeDraftForOffer(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: any,
   offerId: number
 ) {
   const existingTradeEvent = await supabase
@@ -257,7 +257,7 @@ export default async function TradeOfferDetailPage({
       redirect(`/trade-offers/${offerId}`)
     }
 
-    const adminSupabase = createAdminClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
     const existingTrade = await findExistingTradeDraftForOffer(adminSupabase, offerId)
     if (existingTrade.schemaMissing) {
       redirect(`/trade-offers/${offerId}?schemaMissing=1`)

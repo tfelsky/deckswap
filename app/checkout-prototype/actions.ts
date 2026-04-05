@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildTradeDraftRows,
@@ -26,7 +26,7 @@ function parseBoolean(value: FormDataEntryValue | null) {
 
 export async function createTradeDraftAction(formData: FormData) {
   const supabase = await createClient()
-  const adminSupabase = createAdminClient()
+  const adminSupabase = createAdminClientOrNull() ?? supabase
   const {
     data: { user },
   } = await supabase.auth.getUser()
