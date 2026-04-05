@@ -16,6 +16,8 @@ export async function POST(request: Request) {
       previewText?: string
       ctaLabel?: string
       ctaUrl?: string
+      html?: string
+      text?: string
       send?: boolean
       scheduledAt?: string
       name?: string
@@ -63,6 +65,8 @@ export async function POST(request: Request) {
       previewText: String(body.previewText ?? '').trim() || undefined,
       ctaLabel: String(body.ctaLabel ?? '').trim() || undefined,
       ctaUrl: String(body.ctaUrl ?? '').trim() || undefined,
+      html: String(body.html ?? '').trim() || undefined,
+      text: String(body.text ?? '').trim() || undefined,
       send: body.send === true,
       scheduledAt: String(body.scheduledAt ?? '').trim() || undefined,
       name: String(body.name ?? '').trim() || undefined,

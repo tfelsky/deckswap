@@ -990,6 +990,12 @@ export default async function AdminDashboardPage() {
                 Open MTG trend watcher and content prompt builder
               </Link>
               <Link
+                href="/admin/email"
+                className="block rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-white hover:bg-white/10"
+              >
+                Open email operations console
+              </Link>
+              <Link
                 href="/admin/paper-power-9"
                 className="block rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-white hover:bg-white/10"
               >

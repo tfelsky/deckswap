@@ -124,6 +124,8 @@ export async function createMarketingBroadcast(input: {
   previewText?: string | null
   ctaLabel?: string | null
   ctaUrl?: string | null
+  html?: string | null
+  text?: string | null
   send?: boolean
   scheduledAt?: string | null
   name?: string | null
@@ -131,10 +133,12 @@ export async function createMarketingBroadcast(input: {
   const resend = getResendClient()
   const emailConfig = getEmailConfigSnapshot()
   const audience = await syncResendMarketingAudience()
-  const html = renderBroadcastHtml(input)
-  const text = `${input.subject}\n\n${stripHtml(input.body)}${
-    input.ctaLabel && input.ctaUrl ? `\n\n${input.ctaLabel}: ${input.ctaUrl}` : ''
-  }`
+  const html = input.html?.trim() || renderBroadcastHtml(input)
+  const text =
+    input.text?.trim() ||
+    `${input.subject}\n\n${stripHtml(input.body)}${
+      input.ctaLabel && input.ctaUrl ? `\n\n${input.ctaLabel}: ${input.ctaUrl}` : ''
+    }`
 
   const createResult = await resend.broadcasts.create({
     segmentId: audience.segmentId,
