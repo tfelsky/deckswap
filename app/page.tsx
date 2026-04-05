@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/hero-section"
 import { FeaturedDeckShelf, FeaturedDecks } from "@/components/featured-decks"
 import { CTASection } from "@/components/cta-section"
 import { Footer } from "@/components/footer"
+import { TradeEconomicsSection } from "@/components/trade-economics-section"
 import { getCommanderBracketSummary } from "@/lib/commander/brackets"
 import {
   colorIdentityCode,
@@ -590,6 +591,7 @@ export default async function HomePage({
             </div>
           </div>
         </section>
+        <TradeEconomicsSection />
         <CTASection />
       </main>
       <Footer />
