@@ -446,7 +446,7 @@ export default async function TradeOfferDetailPage({
       type: 'trade_offer_accepted',
       title: 'Your trade offer was accepted',
       body: 'Your accepted offer is live. Review the trade draft, choose any shipping add-ons, and pay your side to move into shipment.',
-      href: `/trades/${transactionId}`,
+      href: `/trade-drafts/${transactionId}`,
       metadata: {
         offerId,
         tradeTransactionId: transactionId,
@@ -459,7 +459,7 @@ export default async function TradeOfferDetailPage({
       type: 'trade_draft_created',
       title: 'Trade accepted and payment opened',
       body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
-      href: `/trades/${transactionId}`,
+      href: `/trade-drafts/${transactionId}`,
       metadata: {
         offerId,
         tradeTransactionId: transactionId,
@@ -676,7 +676,7 @@ export default async function TradeOfferDetailPage({
               {'<-'} Back to offers
             </Link>
             {offer.accepted_trade_transaction_id && (
-              <Link href={`/trades/${offer.accepted_trade_transaction_id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+              <Link href={`/trade-drafts/${offer.accepted_trade_transaction_id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
                 View Trade Draft
               </Link>
             )}
@@ -745,7 +745,7 @@ export default async function TradeOfferDetailPage({
             <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
               Trade draft #{offer.accepted_trade_transaction_id} is already open for this offer.
               <Link
-                href={`/trades/${offer.accepted_trade_transaction_id}`}
+                href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
                 className="ml-2 font-medium text-emerald-300 hover:underline"
               >
                 Open trade draft
@@ -939,7 +939,7 @@ export default async function TradeOfferDetailPage({
                   Once accepted, this offer became a draft escrow transaction with both decks attached.
                 </p>
                 <Link
-                  href={`/trades/${offer.accepted_trade_transaction_id}`}
+                  href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
                   className="mt-5 inline-block rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
                 >
                   Open Trade Draft

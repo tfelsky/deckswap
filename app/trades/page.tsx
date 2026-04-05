@@ -4,14 +4,20 @@ import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
+  formatPaymentStatus,
+  formatShipmentStatus,
   formatTradeStatus,
   isEscrowSchemaMissing,
-  type TradeTransactionRow,
   type TradeParticipantRow,
+  type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
+
+function formatUsd(value?: number | null) {
+  return `$${Number(value ?? 0).toFixed(2)}`
+}
 
 export default async function TradesPage() {
   const supabase = await createClient()
@@ -32,13 +38,20 @@ export default async function TradesPage() {
     .or(`offered_by_user_id.eq.${user.id},requested_user_id.eq.${user.id}`)
 
   const participantRowsResult = access.isAdmin
-    ? await adminSupabase.from('trade_transaction_participants').select('transaction_id')
+    ? await adminSupabase
+        .from('trade_transaction_participants')
+        .select('transaction_id, user_id, side, amount_due_usd, payment_status, shipment_status')
     : await adminSupabase
         .from('trade_transaction_participants')
-        .select('transaction_id')
+        .select('transaction_id, user_id, side, amount_due_usd, payment_status, shipment_status')
         .eq('user_id', user.id)
 
-  const participantRows = (participantRowsResult.data ?? []) as Array<Pick<TradeParticipantRow, 'transaction_id'>>
+  const participantRows = (participantRowsResult.data ?? []) as Array<
+    Pick<
+      TradeParticipantRow,
+      'transaction_id' | 'user_id' | 'side' | 'amount_due_usd' | 'payment_status' | 'shipment_status'
+    >
+  >
   const participantTransactionIds = Array.from(
     new Set(participantRows.map((row) => Number(row.transaction_id)).filter((value) => Number.isFinite(value)))
   )
@@ -102,6 +115,11 @@ export default async function TradesPage() {
   const unreadOffers = ((offersData ?? []) as TradeOfferRow[]).filter((offer) =>
     isUnreadTradeOffer(offer, user.id)
   ).length
+  const participantByTradeId = new Map(
+    participantRows
+      .filter((row) => row.user_id === user.id)
+      .map((row) => [Number(row.transaction_id), row])
+  )
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -120,15 +138,20 @@ export default async function TradesPage() {
           </div>
 
           <div className="mt-8">
-            <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-              Transaction Foundation
+            <div className={`inline-flex rounded-full px-3 py-1 text-xs font-medium tracking-wide ${
+              access.isAdmin
+                ? 'border border-amber-400/20 bg-amber-400/10 text-amber-300'
+                : 'border border-sky-400/20 bg-sky-400/10 text-sky-300'
+            }`}>
+              {access.isAdmin ? 'Admin Trade Review' : 'User Trade Drafts'}
             </div>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight">Trades And Escrows</h1>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight">
+              {access.isAdmin ? 'Trades And Escrows' : 'Your Active Trade Drafts'}
+            </h1>
             <p className="mt-3 max-w-3xl text-zinc-400">
-              These records are the first durable layer under checkout, payment obligations, and future inspection/release workflows.
-            </p>
-            <p className="mt-2 max-w-3xl text-sm text-zinc-500">
-              Negotiation starts in Trade Offers, then accepted offers hand off into this workspace.
+              {access.isAdmin
+                ? 'Internal escrow records for payment readiness, shipment intake, inspection, and release decisions.'
+                : 'Accepted offers land here so you can handle checkout, payment confirmation, and shipment updates without seeing the other trader’s internal costs.'}
             </p>
           </div>
         </div>
@@ -137,33 +160,61 @@ export default async function TradesPage() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         {trades.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
-            <h2 className="text-2xl font-semibold">No trade drafts yet</h2>
-            <p className="mt-3 text-zinc-400">Start from the escrow checkout prototype to create the first persisted transaction.</p>
+            <h2 className="text-2xl font-semibold">{access.isAdmin ? 'No trade reviews yet' : 'No trade drafts yet'}</h2>
+            <p className="mt-3 text-zinc-400">
+              {access.isAdmin
+                ? 'Accepted offers and prototype checkouts will appear here for review.'
+                : 'Accepted offers will open your trade drafts here once checkout is created.'}
+            </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {trades.map((trade) => (
-              <Link
-                key={trade.id}
-                href={`/trades/${trade.id}`}
-                className="rounded-3xl border border-white/10 bg-zinc-900/80 p-5 hover:bg-zinc-900"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <div className="text-xs uppercase tracking-wide text-emerald-300/80">Trade #{trade.id}</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{trade.lane_type}</div>
-                    <div className="mt-2 text-sm text-zinc-400">
-                      Created {trade.created_at ? new Date(trade.created_at).toLocaleString('en-CA') : 'recently'}
+            {trades.map((trade) => {
+              const myParticipant = participantByTradeId.get(trade.id)
+              const href = access.isAdmin ? `/trades/${trade.id}` : `/trade-drafts/${trade.id}`
+
+              return (
+                <Link
+                  key={trade.id}
+                  href={href}
+                  className="rounded-3xl border border-white/10 bg-zinc-900/80 p-5 hover:bg-zinc-900"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className={`text-xs uppercase tracking-wide ${
+                        access.isAdmin ? 'text-amber-300/80' : 'text-sky-300/80'
+                      }`}>
+                        Trade #{trade.id}
+                      </div>
+                      <div className="mt-2 text-2xl font-semibold text-white">{trade.lane_type}</div>
+                      <div className="mt-2 text-sm text-zinc-400">
+                        Created {trade.created_at ? new Date(trade.created_at).toLocaleString('en-CA') : 'recently'}
+                      </div>
                     </div>
+
+                    {access.isAdmin ? (
+                      <div className="grid gap-2 text-right">
+                        <div className="text-sm text-zinc-400">{formatTradeStatus(trade.status)}</div>
+                        <div className="text-lg font-semibold text-amber-300">{formatUsd(trade.platform_gross_usd)}</div>
+                        <div className="text-xs text-zinc-500">Platform gross before payment rails</div>
+                      </div>
+                    ) : (
+                      <div className="grid gap-2 text-right">
+                        <div className="text-sm text-zinc-400">{formatTradeStatus(trade.status)}</div>
+                        <div className="text-sm text-white">
+                          {myParticipant ? `Your total: ${formatUsd(myParticipant.amount_due_usd)}` : 'Open draft'}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {myParticipant
+                            ? `${formatPaymentStatus(myParticipant.payment_status)} payment, ${formatShipmentStatus(myParticipant.shipment_status)} shipment`
+                            : 'Waiting for your participant row'}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="grid gap-2 text-right">
-                    <div className="text-sm text-zinc-400">{formatTradeStatus(trade.status)}</div>
-                    <div className="text-lg font-semibold text-emerald-300">${Number(trade.platform_gross_usd ?? 0).toFixed(2)}</div>
-                    <div className="text-xs text-zinc-500">Platform gross before payment rails</div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>
