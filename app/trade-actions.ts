@@ -363,6 +363,8 @@ export async function overrideTradeShippedForTestingAction(formData: FormData) {
 
   const side = String(formData.get('side') || '') as 'a' | 'b'
   const trackingCode = String(formData.get('tracking_code') || '').trim() || `TEST-SHIP-${tradeId}-${side.toUpperCase()}`
+  const overrideReason =
+    String(formData.get('override_reason') || '').trim() || 'Admin testing override'
   const context = await getTradeContext(tradeId)
   const returnTo = getReturnTo(formData, getReviewHref(tradeId))
   const participant = context.participants.find((row) => row.side === side) ?? null
@@ -407,7 +409,8 @@ export async function overrideTradeShippedForTestingAction(formData: FormData) {
       side,
       trackingCode,
       shippedAt: now,
-      reason: 'admin_test_override',
+      reason: overrideReason,
+      overrideType: 'admin_test_override',
     },
   })
 

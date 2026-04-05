@@ -54,6 +54,58 @@ function eventTitle(eventType: string) {
   return eventType.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function eventDetails(event: EscrowEventRow) {
+  const data = (event.event_data ?? {}) as Record<string, unknown>
+  const details: string[] = []
+
+  const side = typeof data.side === 'string' ? data.side.toUpperCase() : null
+  const reason = typeof data.reason === 'string' ? data.reason.trim() : ''
+  const overrideType = typeof data.overrideType === 'string' ? data.overrideType.trim() : ''
+  const trackingCode = typeof data.trackingCode === 'string' ? data.trackingCode.trim() : ''
+  const inspectionNotes = typeof data.inspectionNotes === 'string' ? data.inspectionNotes.trim() : ''
+  const discrepancyUsd =
+    typeof data.discrepancyUsd === 'number' ? data.discrepancyUsd : Number.NaN
+  const highValueAuthenticityFlags =
+    typeof data.highValueAuthenticityFlags === 'number' ? data.highValueAuthenticityFlags : Number.NaN
+  const deckLevelFlags = Array.isArray(data.deckLevelFlags)
+    ? data.deckLevelFlags.filter((flag): flag is string => typeof flag === 'string' && flag.trim().length > 0)
+    : []
+
+  if (side) {
+    details.push(`Side ${side}`)
+  }
+
+  if (trackingCode) {
+    details.push(`Tracking ${trackingCode}`)
+  }
+
+  if (reason) {
+    details.push(`Reason: ${reason}`)
+  }
+
+  if (overrideType) {
+    details.push(`Flow: ${overrideType.replace(/_/g, ' ')}`)
+  }
+
+  if (inspectionNotes) {
+    details.push(`Inspection notes: ${inspectionNotes}`)
+  }
+
+  if (Number.isFinite(discrepancyUsd)) {
+    details.push(`Value discrepancy: ${formatUsd(discrepancyUsd)}`)
+  }
+
+  if (Number.isFinite(highValueAuthenticityFlags) && highValueAuthenticityFlags > 0) {
+    details.push(`High-value authenticity flags: ${highValueAuthenticityFlags}`)
+  }
+
+  for (const flag of deckLevelFlags.slice(0, 3)) {
+    details.push(flag)
+  }
+
+  return details
+}
+
 export default async function TradeReviewPage({
   params,
 }: {
@@ -300,6 +352,13 @@ export default async function TradeReviewPage({
                             placeholder="Optional test tracking code"
                             className="w-full rounded-xl border border-fuchsia-400/20 bg-zinc-950 p-3 text-sm text-white"
                           />
+                          <textarea
+                            name="override_reason"
+                            rows={2}
+                            required
+                            placeholder="Required reason for admin override"
+                            className="w-full rounded-xl border border-fuchsia-400/20 bg-zinc-950 p-3 text-sm text-white"
+                          />
                           <FormActionButton
                             pendingLabel="Overriding..."
                             className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-2 text-sm font-medium text-fuchsia-100 disabled:cursor-wait disabled:opacity-70"
@@ -423,14 +482,29 @@ export default async function TradeReviewPage({
               <h2 className="text-2xl font-semibold">Timeline</h2>
               <div className="mt-4 space-y-3">
                 {events.length > 0 ? (
-                  events.map((event) => (
+                  events.map((event) => {
+                    const details = eventDetails(event)
+
+                    return (
                     <div key={`${event.event_type}-${event.created_at}-${event.id ?? 0}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="text-sm font-medium text-white">{eventTitle(event.event_type)}</div>
                       <div className="mt-1 text-xs text-zinc-500">
                         {event.created_at ? new Date(event.created_at).toLocaleString('en-CA') : 'Unknown time'}
                       </div>
+                      {details.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {details.map((detail) => (
+                            <div
+                              key={`${event.id ?? 0}-${detail}`}
+                              className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-300"
+                            >
+                              {detail}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                  ))
+                  )})
                 ) : (
                   <p className="text-sm text-zinc-400">No events recorded yet.</p>
                 )}

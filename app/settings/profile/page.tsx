@@ -14,6 +14,7 @@ import {
   getProfileCompletion,
   getProfileHints,
   getTrustBadges,
+  getVerificationReadinessMap,
   isProfileSchemaMissing,
   marketplaceLinks,
   normalizeUsername,
@@ -157,6 +158,7 @@ export default async function ProfileSettingsPage({
   const profileCompletion = getProfileCompletion(profile, privateProfile, summary)
   const profileHints = getProfileHints(profile, privateProfile)
   const trustBadges = getTrustBadges(summary, verifications)
+  const verificationReadiness = getVerificationReadinessMap(profile, privateProfile)
   const externalLinks = marketplaceLinks(profile)
   const access = await getAdminAccessForUser(user)
   const decks = ((decksResult.data ?? []) as DeckProgressRow[]) ?? []
@@ -206,6 +208,10 @@ export default async function ProfileSettingsPage({
   const discoveryPercent = clampPercent(
     (completedDiscoverySteps / discoveryChecklist.length) * 100
   )
+  const blockedVerificationTypes = String(resolvedSearchParams.verificationBlocked || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
 
   async function savePublicProfile(formData: FormData) {
     'use server'
@@ -283,10 +289,30 @@ export default async function ProfileSettingsPage({
 
     if (!user) redirect('/sign-in')
 
-    const { data: existingVerificationRows } = await supabase
-      .from('profile_verifications')
-      .select('id, user_id, verification_type, status, notes, submitted_at, reviewed_at, reviewed_by, review_notes')
-      .eq('user_id', user.id)
+    const [profileResult, privateProfileResult, existingVerificationRowsResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('profile_private').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase
+        .from('profile_verifications')
+        .select('id, user_id, verification_type, status, notes, submitted_at, reviewed_at, reviewed_by, review_notes')
+        .eq('user_id', user.id),
+    ])
+
+    const liveProfile = (profileResult.data as PublicProfile | null) ?? { user_id: user.id }
+    const livePrivateProfile = (privateProfileResult.data as PrivateProfile | null) ?? { user_id: user.id }
+    const readiness = getVerificationReadinessMap(liveProfile, livePrivateProfile)
+    const requestedTypes = [
+      formData.get('seller_attestation') === 'on' ? 'seller_attestation' : null,
+      formData.get('shipping_address_verified') === 'on' ? 'shipping_address' : null,
+      formData.get('government_id_ready') === 'on' ? 'government_id' : null,
+    ].filter(Boolean) as Array<'seller_attestation' | 'shipping_address' | 'government_id'>
+
+    const blockedTypes = requestedTypes.filter((type) => !readiness[type].ready)
+    if (blockedTypes.length > 0) {
+      redirect(`/settings/profile?verificationBlocked=${encodeURIComponent(blockedTypes.join(','))}`)
+    }
+
+    const existingVerificationRows = existingVerificationRowsResult.data
 
     const existingVerificationMap = new Map<string, ProfileVerification>(
       ((existingVerificationRows ?? []) as ProfileVerification[]).map((row) => [row.verification_type, row])
@@ -480,6 +506,12 @@ export default async function ProfileSettingsPage({
           {resolvedSearchParams.saved === 'verification' && (
             <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-100">
               Verification request saved. The trust review queue now reflects your latest request.
+            </div>
+          )}
+
+          {blockedVerificationTypes.length > 0 && (
+            <div className="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">
+              Some verification requests were blocked because required profile or shipping fields are still missing. Review the checklist inside each verification card, update the missing fields, and submit again.
             </div>
           )}
 
@@ -807,6 +839,17 @@ export default async function ProfileSettingsPage({
                     placeholder="Optional context for review"
                     className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
                   />
+                  {!verificationReadiness.seller_attestation.ready ? (
+                    <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs text-amber-100">
+                      {verificationReadiness.seller_attestation.missing.map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-xs text-emerald-100">
+                      Ready to submit for review.
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -829,6 +872,17 @@ export default async function ProfileSettingsPage({
                     placeholder="Optional note for the reviewer"
                     className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
                   />
+                  {!verificationReadiness.shipping_address.ready ? (
+                    <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs text-amber-100">
+                      {verificationReadiness.shipping_address.missing.map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-xs text-emerald-100">
+                      Ready to submit for review.
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -851,6 +905,17 @@ export default async function ProfileSettingsPage({
                     placeholder="Optional secure intake reference or note"
                     className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
                   />
+                  {!verificationReadiness.government_id.ready ? (
+                    <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs text-amber-100">
+                      {verificationReadiness.government_id.missing.map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-xs text-emerald-100">
+                      Ready to submit for review.
+                    </div>
+                  )}
                 </div>
               </div>
 

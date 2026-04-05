@@ -88,6 +88,11 @@ export type InternalValidationSummary = {
   notes: string[]
 }
 
+export type VerificationReadiness = {
+  ready: boolean
+  missing: string[]
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
@@ -412,4 +417,69 @@ export function marketplaceLinks(profile?: Partial<PublicProfile> | null) {
     { label: 'YouTube', href: profile?.youtube_url },
     { label: 'Website', href: profile?.website_url },
   ].filter((item) => !!item.href) as Array<{ label: string; href: string }>
+}
+
+function hasValue(value?: string | null) {
+  return !!value?.trim()
+}
+
+export function getVerificationReadiness(
+  verificationType: string,
+  profile?: Partial<PublicProfile> | null,
+  privateProfile?: Partial<PrivateProfile> | null
+): VerificationReadiness {
+  switch (verificationType) {
+    case 'seller_attestation': {
+      const missing = [
+        !hasValue(profile?.display_name) ? 'Add a display name.' : null,
+        !hasValue(profile?.username) ? 'Choose a username.' : null,
+        !hasValue(profile?.location_country) ? 'Set your public ship-from country.' : null,
+        !hasValue(profile?.bio) && !hasValue(profile?.marketplace_tagline)
+          ? 'Add a bio or marketplace tagline.'
+          : null,
+        !hasValue(privateProfile?.support_email) ? 'Add a support email.' : null,
+      ].filter(Boolean) as string[]
+
+      return { ready: missing.length === 0, missing }
+    }
+    case 'shipping_address': {
+      const missing = [
+        !hasValue(privateProfile?.shipping_name) ? 'Add a shipping name.' : null,
+        !hasValue(privateProfile?.shipping_address_line_1) ? 'Add shipping address line 1.' : null,
+        !hasValue(privateProfile?.shipping_city) ? 'Add a shipping city.' : null,
+        !hasValue(privateProfile?.shipping_region) ? 'Add a shipping region or state.' : null,
+        !hasValue(privateProfile?.shipping_postal_code) ? 'Add a shipping postal code.' : null,
+        !hasValue(privateProfile?.shipping_country) ? 'Add a shipping country.' : null,
+        !hasValue(privateProfile?.support_email) ? 'Add a support email.' : null,
+      ].filter(Boolean) as string[]
+
+      return { ready: missing.length === 0, missing }
+    }
+    case 'government_id': {
+      const shippingReadiness = getVerificationReadiness('shipping_address', profile, privateProfile)
+      const missing = [
+        ...shippingReadiness.missing,
+        !hasValue(privateProfile?.legal_first_name) ? 'Add a legal first name.' : null,
+        !hasValue(privateProfile?.legal_last_name) ? 'Add a legal last name.' : null,
+        !hasValue(privateProfile?.government_id_storage_key)
+          ? 'Add an internal ID intake reference.'
+          : null,
+      ].filter(Boolean) as string[]
+
+      return { ready: missing.length === 0, missing }
+    }
+    default:
+      return { ready: true, missing: [] }
+  }
+}
+
+export function getVerificationReadinessMap(
+  profile?: Partial<PublicProfile> | null,
+  privateProfile?: Partial<PrivateProfile> | null
+) {
+  return {
+    seller_attestation: getVerificationReadiness('seller_attestation', profile, privateProfile),
+    shipping_address: getVerificationReadiness('shipping_address', profile, privateProfile),
+    government_id: getVerificationReadiness('government_id', profile, privateProfile),
+  }
 }
