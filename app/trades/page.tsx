@@ -11,7 +11,7 @@ import {
   type TradeParticipantRow,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
-import { isProfileSchemaMissing, type PublicProfile } from '@/lib/profiles'
+import { isProfileSchemaMissing, type PublicProfile, type ReputationSummary } from '@/lib/profiles'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
@@ -28,11 +28,49 @@ type DeckSummary = {
   image_url?: string | null
 }
 
+type TradeProfileSummary = PublicProfile & {
+  created_at?: string | null
+}
+
+type TradeReputationSummary = Pick<
+  ReputationSummary,
+  'user_id' | 'last_seen_at' | 'internal_validation_score' | 'approved_at' | 'internal_validation_tier'
+>
+
 function formatUserLabel(profile?: PublicProfile | null, userId?: string | null) {
   if (profile?.display_name?.trim()) return profile.display_name.trim()
   if (profile?.username?.trim()) return `@${profile.username.trim()}`
   if (userId) return `${userId.slice(0, 8)}...`
   return 'Unknown trader'
+}
+
+function formatTimestamp(value?: string | null) {
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatLastActive(value?: string | null) {
+  if (!value) return 'Not recorded'
+  const timestamp = new Date(value).getTime()
+  if (Number.isNaN(timestamp)) return 'Not recorded'
+
+  const deltaMs = Date.now() - timestamp
+  const deltaHours = Math.floor(deltaMs / (1000 * 60 * 60))
+  const deltaDays = Math.floor(deltaHours / 24)
+
+  if (deltaHours < 1) return 'Within the last hour'
+  if (deltaHours < 24) return `${deltaHours}h ago`
+  if (deltaDays < 30) return `${deltaDays}d ago`
+
+  return formatTimestamp(value)
+}
+
+function getMemberSince(profile?: TradeProfileSummary | null, summary?: TradeReputationSummary | null) {
+  return summary?.approved_at ?? profile?.created_at ?? null
 }
 
 function formatUsd(value?: number | null) {
@@ -120,6 +158,50 @@ function TradeDeckThumb({
         <div className="truncate text-xs text-zinc-300">{getDeckSubline(deck)}</div>
       </div>
     </div>
+  )
+}
+
+function AdminTraderChip({
+  profile,
+  summary,
+  userId,
+}: {
+  profile?: TradeProfileSummary | null
+  summary?: TradeReputationSummary | null
+  userId?: string | null
+}) {
+  const label = formatUserLabel(profile, userId)
+  const href =
+    profile?.username?.trim() ? `/u/${profile.username.trim()}` : undefined
+  const trustScore =
+    typeof summary?.internal_validation_score === 'number'
+      ? Math.round(summary.internal_validation_score)
+      : null
+  const memberSince = getMemberSince(profile, summary)
+
+  const trigger = href ? (
+    <Link href={href} className="underline decoration-white/15 underline-offset-4 hover:text-white">
+      {label}
+    </Link>
+  ) : (
+    <span>{label}</span>
+  )
+
+  return (
+    <span className="group relative inline-flex items-center">
+      <span className="cursor-help rounded-md px-1.5 py-0.5 transition hover:bg-white/5">{trigger}</span>
+      <span className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-64 rounded-2xl border border-white/10 bg-zinc-950/95 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur group-hover:block group-focus-within:block">
+        <span className="block text-sm font-semibold text-white">{label}</span>
+        <span className="mt-3 block text-xs uppercase tracking-wide text-zinc-500">Last active</span>
+        <span className="mt-1 block text-sm text-zinc-200">{formatLastActive(summary?.last_seen_at)}</span>
+        <span className="mt-3 block text-xs uppercase tracking-wide text-zinc-500">Trust score</span>
+        <span className="mt-1 block text-sm text-zinc-200">
+          {trustScore != null ? `${trustScore}/100${summary?.internal_validation_tier ? ` · ${summary.internal_validation_tier}` : ''}` : 'Not recorded'}
+        </span>
+        <span className="mt-3 block text-xs uppercase tracking-wide text-zinc-500">Member since</span>
+        <span className="mt-1 block text-sm text-zinc-200">{formatTimestamp(memberSince)}</span>
+      </span>
+    </span>
   )
 }
 
@@ -239,11 +321,22 @@ export default async function TradesPage() {
   )
   const profilesResult =
     access.isAdmin && participantUserIds.length > 0
-      ? await adminSupabase.from('profiles').select('user_id, display_name, username').in('user_id', participantUserIds)
-      : { data: [] as PublicProfile[], error: null as { message?: string } | null }
+      ? await adminSupabase.from('profiles').select('user_id, display_name, username, created_at').in('user_id', participantUserIds)
+      : { data: [] as TradeProfileSummary[], error: null as { message?: string } | null }
+  const reputationResult =
+    access.isAdmin && participantUserIds.length > 0
+      ? await adminSupabase
+          .from('profile_reputation_summary')
+          .select('user_id, last_seen_at, internal_validation_score, approved_at, internal_validation_tier')
+          .in('user_id', participantUserIds)
+      : { data: [] as TradeReputationSummary[], error: null as { message?: string } | null }
   const profilesSchemaMissing = isProfileSchemaMissing(profilesResult.error?.message)
-  const profilesByUser = new Map<string, PublicProfile>(
-    profilesSchemaMissing ? [] : (((profilesResult.data ?? []) as PublicProfile[]).map((profile) => [profile.user_id, profile]))
+  const reputationSchemaMissing = isProfileSchemaMissing(reputationResult.error?.message)
+  const profilesByUser = new Map<string, TradeProfileSummary>(
+    profilesSchemaMissing ? [] : (((profilesResult.data ?? []) as TradeProfileSummary[]).map((profile) => [profile.user_id, profile]))
+  )
+  const reputationByUser = new Map<string, TradeReputationSummary>(
+    reputationSchemaMissing ? [] : (((reputationResult.data ?? []) as TradeReputationSummary[]).map((summary) => [summary.user_id, summary]))
   )
 
   const deckIds = Array.from(
@@ -326,8 +419,10 @@ export default async function TradesPage() {
               const href = access.isAdmin ? `/trades/${trade.id}` : `/trade-drafts/${trade.id}`
               const tradeTitle = getTradeTitle(participants, decks, trade.lane_type)
               const tradeSubtitle = getTradeSubtitle(participants, decks, trade.lane_type)
-              const sideALabel = access.isAdmin ? formatUserLabel(profilesByUser.get(sideA?.user_id ?? ''), sideA?.user_id) : null
-              const sideBLabel = access.isAdmin ? formatUserLabel(profilesByUser.get(sideB?.user_id ?? ''), sideB?.user_id) : null
+              const sideAProfile = access.isAdmin ? profilesByUser.get(sideA?.user_id ?? '') : null
+              const sideBProfile = access.isAdmin ? profilesByUser.get(sideB?.user_id ?? '') : null
+              const sideASummary = access.isAdmin ? reputationByUser.get(sideA?.user_id ?? '') : null
+              const sideBSummary = access.isAdmin ? reputationByUser.get(sideB?.user_id ?? '') : null
 
               return (
                 <Link
@@ -346,9 +441,15 @@ export default async function TradesPage() {
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">{tradeTitle}</div>
                       <div className="mt-2 text-sm text-zinc-400">
-                        {access.isAdmin && (sideALabel || sideBLabel)
-                          ? `${sideALabel ?? 'Unknown trader'} vs ${sideBLabel ?? 'Unknown trader'}`
-                          : tradeSubtitle}
+                        {access.isAdmin ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <AdminTraderChip profile={sideAProfile} summary={sideASummary} userId={sideA?.user_id} />
+                            <span className="text-zinc-500">vs</span>
+                            <AdminTraderChip profile={sideBProfile} summary={sideBSummary} userId={sideB?.user_id} />
+                          </div>
+                        ) : (
+                          tradeSubtitle
+                        )}
                       </div>
                       {access.isAdmin && tradeSubtitle ? (
                         <div className="mt-1 text-xs text-zinc-500">{tradeSubtitle}</div>

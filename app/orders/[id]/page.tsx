@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
+import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -77,8 +78,10 @@ export default async function OrderDetailPage({
   const order = orderResult.data as DirectSaleOrderRow
   const isSeller = order.seller_user_id === user.id
   const isBuyer = order.buyer_user_id === user.id
+  const access = await getAdminAccessForUser(user)
+  const isAdmin = access.isAdmin
 
-  if (!isSeller && !isBuyer) {
+  if (!isSeller && !isBuyer && !isAdmin) {
     redirect('/decks')
   }
 
@@ -184,6 +187,50 @@ export default async function OrderDetailPage({
     redirect(`/orders/${orderId}`)
   }
 
+  async function overrideShippedForTestingAction(formData: FormData) {
+    'use server'
+
+    const trackingCode =
+      String(formData.get('tracking_code') || '').trim() || `TEST-ORDER-${orderId}`
+    const supabase = await createClient()
+    const adminSupabase = createAdminClientOrNull() ?? supabase
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) redirect('/sign-in')
+    const access = await getAdminAccessForUser(user)
+    if (!access.isAdmin) redirect(`/orders/${orderId}`)
+
+    const currentOrderResult = await adminSupabase
+      .from('direct_sale_orders')
+      .select('*')
+      .eq('id', orderId)
+      .maybeSingle()
+    const currentOrder = currentOrderResult.data as DirectSaleOrderRow | null
+
+    if (!currentOrder) {
+      redirect(`/orders/${orderId}`)
+    }
+
+    const now = new Date().toISOString()
+    await adminSupabase
+      .from('direct_sale_orders')
+      .update({
+        status: 'shipped',
+        tracking_code: trackingCode,
+        shipped_at: now,
+        updated_at: now,
+      })
+      .eq('id', orderId)
+
+    await adminSupabase
+      .from('decks')
+      .update({ inventory_status: 'awaiting_delivery' })
+      .eq('id', currentOrder.deck_id)
+
+    redirect(`/orders/${orderId}`)
+  }
+
   async function markDeliveredAction() {
     'use server'
 
@@ -229,6 +276,11 @@ export default async function OrderDetailPage({
   const canMarkDelivered =
     order.status === 'shipped' &&
     ((order.order_type === 'buy_now' && isBuyer) || (order.order_type === 'guaranteed_offer' && isSeller))
+  const canOverrideShippedForTesting =
+    isAdmin &&
+    order.status !== 'shipped' &&
+    order.status !== 'completed' &&
+    order.status !== 'cancelled'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -322,6 +374,23 @@ export default async function OrderDetailPage({
                   <FormActionButton pendingLabel="Saving shipment..." className="w-full rounded-2xl border border-sky-400/20 bg-sky-400/10 px-5 py-3 text-sm font-medium text-sky-100 hover:bg-sky-400/15 disabled:cursor-wait disabled:opacity-70">
                     Mark shipped
                   </FormActionButton>
+                </form>
+              ) : null}
+
+              {canOverrideShippedForTesting ? (
+                <form action={overrideShippedForTestingAction} className="space-y-3">
+                  <input
+                    type="text"
+                    name="tracking_code"
+                    placeholder="Optional test tracking code"
+                    className="w-full rounded-2xl border border-fuchsia-400/20 bg-zinc-950 px-4 py-3 text-white"
+                  />
+                  <FormActionButton pendingLabel="Overriding..." className="w-full rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/10 px-5 py-3 text-sm font-medium text-fuchsia-100 hover:bg-fuchsia-400/15 disabled:cursor-wait disabled:opacity-70">
+                    Admin test override to shipped
+                  </FormActionButton>
+                  <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-4 text-sm text-fuchsia-100">
+                    Test-only override. This bypasses the normal checkout and shipping prerequisites for admin QA.
+                  </div>
                 </form>
               ) : null}
 
