@@ -25,7 +25,8 @@ export function isTradeOffersSchemaMissing(message?: string | null) {
   return (
     message.includes("relation 'public.trade_offers'") ||
     message.includes('relation "public.trade_offers"') ||
-    message.includes("Could not find the relation 'public.trade_offers'")
+    message.includes("Could not find the relation 'public.trade_offers'") ||
+    message.includes("Could not find the 'accepted_trade_transaction_id' column of 'trade_offers'")
   )
 }
 

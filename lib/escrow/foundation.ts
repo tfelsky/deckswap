@@ -88,7 +88,18 @@ export function isEscrowSchemaMissing(message?: string | null) {
     message.includes('relation "public.escrow_events"') ||
     message.includes("Could not find the relation 'public.trade_transactions'") ||
     message.includes("Could not find the relation 'public.trade_transaction_participants'") ||
-    message.includes("Could not find the relation 'public.escrow_events'")
+    message.includes("Could not find the relation 'public.escrow_events'") ||
+    message.includes("Could not find the 'payment_requested_at' column of 'trade_transactions'") ||
+    message.includes("Could not find the 'release_ready_at' column of 'trade_transactions'") ||
+    message.includes("Could not find the 'completed_at' column of 'trade_transactions'") ||
+    message.includes("Could not find the 'dispute_reason' column of 'trade_transactions'") ||
+    message.includes("Could not find the 'payment_marked_at' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'shipment_status' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'tracking_code' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'shipped_at' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'received_at' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'inspection_status' column of 'trade_transaction_participants'") ||
+    message.includes("Could not find the 'inspection_notes' column of 'trade_transaction_participants'")
   )
 }
 

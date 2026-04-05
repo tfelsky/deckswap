@@ -8,6 +8,10 @@ create table if not exists public.trade_transactions (
   equalization_amount_usd numeric not null default 0,
   platform_gross_usd numeric not null default 0,
   notes text[] not null default '{}',
+  payment_requested_at timestamptz,
+  release_ready_at timestamptz,
+  completed_at timestamptz,
+  dispute_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -26,6 +30,13 @@ create table if not exists public.trade_transaction_participants (
   equalization_owed_usd numeric not null default 0,
   amount_due_usd numeric not null default 0,
   payment_status text not null default 'unpaid',
+  payment_marked_at timestamptz,
+  shipment_status text not null default 'not_shipped',
+  tracking_code text,
+  shipped_at timestamptz,
+  received_at timestamptz,
+  inspection_status text not null default 'pending',
+  inspection_notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (transaction_id, side)
@@ -48,6 +59,35 @@ create index if not exists trade_transaction_participants_user_id_idx
 
 create index if not exists escrow_events_transaction_id_idx
   on public.escrow_events (transaction_id, created_at desc);
+
+alter table public.trade_transactions
+  add column if not exists payment_requested_at timestamptz,
+  add column if not exists release_ready_at timestamptz,
+  add column if not exists completed_at timestamptz,
+  add column if not exists dispute_reason text;
+
+alter table public.trade_transaction_participants
+  add column if not exists payment_marked_at timestamptz,
+  add column if not exists shipment_status text not null default 'not_shipped',
+  add column if not exists tracking_code text,
+  add column if not exists shipped_at timestamptz,
+  add column if not exists received_at timestamptz,
+  add column if not exists inspection_status text not null default 'pending',
+  add column if not exists inspection_notes text;
+
+alter table public.trade_transaction_participants
+  drop constraint if exists trade_transaction_participants_shipment_status_check;
+
+alter table public.trade_transaction_participants
+  add constraint trade_transaction_participants_shipment_status_check
+  check (shipment_status in ('not_shipped', 'shipped', 'received'));
+
+alter table public.trade_transaction_participants
+  drop constraint if exists trade_transaction_participants_inspection_status_check;
+
+alter table public.trade_transaction_participants
+  add constraint trade_transaction_participants_inspection_status_check
+  check (inspection_status in ('pending', 'passed', 'failed'));
 
 alter table public.trade_transactions enable row level security;
 alter table public.trade_transaction_participants enable row level security;

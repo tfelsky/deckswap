@@ -263,11 +263,6 @@ export default async function ManageDeckPage({
     eurValue: guaranteedBuyNowUsd.guaranteedOffer * 0.92,
     currency: buyNowCurrency,
   })
-  const guaranteedHaircut = convertDeckValueForCurrency({
-    usdValue: guaranteedBuyNowUsd.haircut,
-    eurValue: guaranteedBuyNowUsd.haircut * 0.92,
-    currency: buyNowCurrency,
-  })
   const selectedWantedColors = new Set(
     ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
       (value: string) => String(value)
@@ -1334,17 +1329,21 @@ export default async function ManageDeckPage({
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-50/85">
-                    Guaranteed exit lane: if you want certainty over maximizing price, DeckSwap can quote a <span className="font-medium text-white">we&apos;ll buy it now</span> price that undercuts the estimated buylist by {formatCurrencyAmount(guaranteedHaircut, buyNowCurrency)}.
+                    Buy It Now is for selling this deck directly to another user without running an auction.
                   </div>
 
                   <BuyNowQuoteGate
                     currency={buyNowCurrency}
                     buylistFloor={formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
-                    guaranteedOffer={formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}
-                    guaranteedHaircut={formatCurrencyAmount(guaranteedHaircut, buyNowCurrency)}
                     suggestedBuyNow={formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
                     ceiling={formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
                   />
+
+                  {isAdmin ? (
+                    <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-50/85">
+                      Guaranteed Offer is an internal admin-only DeckSwap purchase lane. Current quote: <span className="font-medium text-white">{formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}</span>.
+                    </div>
+                  ) : null}
 
                   <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                     <div>

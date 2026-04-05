@@ -5,13 +5,11 @@ import { cn } from '@/lib/utils'
 import { CheckCircle2, LockKeyhole } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-type QuoteFocus = 'guaranteed' | 'suggested'
+type QuoteFocus = 'floor' | 'suggested'
 
 type BuyNowQuoteGateProps = {
   currency: string
   buylistFloor: string
-  guaranteedOffer: string
-  guaranteedHaircut: string
   suggestedBuyNow: string
   ceiling: string
 }
@@ -22,8 +20,6 @@ type ReadinessChoice = 'ready' | 'needs_help' | null
 export function BuyNowQuoteGate({
   currency,
   buylistFloor,
-  guaranteedOffer,
-  guaranteedHaircut,
   suggestedBuyNow,
   ceiling,
 }: BuyNowQuoteGateProps) {
@@ -34,7 +30,7 @@ export function BuyNowQuoteGate({
   const canReveal = speed !== null && readiness !== null
 
   const recommendedFocus = useMemo<QuoteFocus>(() => {
-    if (speed === 'fast' || readiness === 'needs_help') return 'guaranteed'
+    if (speed === 'fast' || readiness === 'needs_help') return 'floor'
     return 'suggested'
   }, [readiness, speed])
 
@@ -44,7 +40,7 @@ export function BuyNowQuoteGate({
         <div>
           <div className="text-sm font-medium text-white">Buy It Now Quote</div>
           <p className="mt-2 text-sm text-amber-50/80">
-            Answer two quick questions and we&apos;ll reveal the pricing lanes for your deck in {currency}.
+            Answer two quick questions and we&apos;ll suggest a Buy It Now starting point for selling directly to another user in {currency}.
           </p>
         </div>
         <div className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300">
@@ -131,7 +127,7 @@ export function BuyNowQuoteGate({
           disabled={!canReveal}
           className="rounded-xl bg-amber-400 text-black hover:bg-amber-300"
         >
-          Get my buy it now quote
+          Get my buy it now guidance
         </Button>
         {!canReveal ? (
           <div className="text-xs text-zinc-500">Choose both answers to unlock the quote.</div>
@@ -143,8 +139,8 @@ export function BuyNowQuoteGate({
           <div
             className={cn(
               'rounded-2xl border p-4 text-sm',
-              recommendedFocus === 'guaranteed'
-                ? 'border-rose-300/20 bg-rose-300/10 text-rose-50'
+              recommendedFocus === 'floor'
+                ? 'border-amber-300/20 bg-amber-300/10 text-amber-50'
                 : 'border-emerald-300/20 bg-emerald-300/10 text-emerald-50'
             )}
           >
@@ -152,34 +148,30 @@ export function BuyNowQuoteGate({
               <CheckCircle2 className="mt-0.5 h-4 w-4" />
               <div>
                 <div className="font-medium text-white">
-                  {recommendedFocus === 'guaranteed'
-                    ? 'Recommended for you: guaranteed DeckSwap offer'
+                  {recommendedFocus === 'floor'
+                    ? 'Recommended for you: start near the floor'
                     : 'Recommended for you: stronger Buy It Now ask'}
                 </div>
                 <p className="mt-1 text-xs leading-6">
-                  {recommendedFocus === 'guaranteed'
-                    ? `Because you want a faster or lower-friction exit, the safer quote lane is the guaranteed offer. It undercuts buylist by ${guaranteedHaircut} in exchange for certainty.`
+                  {recommendedFocus === 'floor'
+                    ? 'Because you want a faster or lower-friction direct sale, start closer to the floor so another user can say yes sooner.'
                     : 'Because you can wait and the deck is shipping-ready, the stronger direct-sale quote is the better starting point.'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
-              <div className="mt-2 text-xl font-semibold text-amber-200">{buylistFloor}</div>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-3">
             <div
               className={cn(
                 'rounded-2xl border p-4',
-                recommendedFocus === 'guaranteed'
-                  ? 'border-rose-300/20 bg-rose-300/10'
+                recommendedFocus === 'floor'
+                  ? 'border-amber-300/20 bg-amber-300/10'
                   : 'border-white/10 bg-zinc-950/60'
               )}
             >
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Guaranteed offer</div>
-              <div className="mt-2 text-xl font-semibold text-rose-200">{guaranteedOffer}</div>
+              <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
+              <div className="mt-2 text-xl font-semibold text-amber-200">{buylistFloor}</div>
             </div>
             <div
               className={cn(

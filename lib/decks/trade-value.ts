@@ -2,6 +2,8 @@ function roundCurrency(value: number) {
   return Number(value.toFixed(2))
 }
 
+const GUARANTEED_OFFER_DISCOUNT_TO_BUYLIST = 0.25
+
 export function buylistRateForValue(value: number) {
   if (value < 150) return 0.35
   if (value < 500) return 0.42
@@ -68,15 +70,9 @@ export function calculateSuggestedBuyNowPrice(value: number) {
   }
 }
 
-export function guaranteedBuyNowHaircutForValue(value: number) {
-  if (value < 150) return 10
-  if (value < 500) return 20
-  return 40
-}
-
 export function calculateGuaranteedBuyNowOffer(value: number) {
   const tradeValue = calculateDeckTradeValue(value)
-  const haircut = guaranteedBuyNowHaircutForValue(tradeValue.deckValue)
+  const haircut = roundCurrency(tradeValue.buylistValue * GUARANTEED_OFFER_DISCOUNT_TO_BUYLIST)
   const guaranteedOffer = roundCurrency(Math.max(0, tradeValue.buylistValue - haircut))
   const guaranteedRate =
     tradeValue.deckValue > 0 ? roundCurrency(guaranteedOffer / tradeValue.deckValue) : 0

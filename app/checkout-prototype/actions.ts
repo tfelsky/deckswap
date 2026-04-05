@@ -61,6 +61,9 @@ export async function createTradeDraftAction(formData: FormData) {
   )
 
   if (participantInsert.error) {
+    if (isEscrowSchemaMissing(participantInsert.error.message)) {
+      redirect('/checkout-prototype?schemaMissing=1')
+    }
     redirect('/checkout-prototype?saveError=1')
   }
 
@@ -70,6 +73,9 @@ export async function createTradeDraftAction(formData: FormData) {
   })
 
   if (eventInsert.error) {
+    if (isEscrowSchemaMissing(eventInsert.error.message)) {
+      redirect('/checkout-prototype?schemaMissing=1')
+    }
     redirect('/checkout-prototype?saveError=1')
   }
 

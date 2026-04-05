@@ -369,11 +369,6 @@ export default async function DeckDetailPage({
     eurValue: guaranteedBuyNowUsd.guaranteedOffer * 0.92,
     currency: buyNowCurrency,
   })
-  const guaranteedHaircut = convertDeckValueForCurrency({
-    usdValue: guaranteedBuyNowUsd.haircut,
-    eurValue: guaranteedBuyNowUsd.haircut * 0.92,
-    currency: buyNowCurrency,
-  })
   const buyNowPrice = Number(typedDeck.buy_now_price_usd ?? 0)
   const hasBuyNow = buyNowPrice > 0
   const inventoryStatus = normalizeInventoryStatus(typedDeck.inventory_status)
@@ -1933,7 +1928,7 @@ export default async function DeckDetailPage({
 
                 <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
                   <div className="text-sm text-amber-100">Buy It Now Guidance</div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                  <div className={`mt-3 grid gap-3 ${isAdmin ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
                     <div>
                       <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
                         Buylist Floor
@@ -1942,14 +1937,16 @@ export default async function DeckDetailPage({
                         {formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
-                        Guaranteed
+                    {isAdmin ? (
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
+                          Guaranteed Offer
+                        </div>
+                        <div className="mt-1 text-2xl font-semibold text-rose-200">
+                          {formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}
+                        </div>
                       </div>
-                      <div className="mt-1 text-2xl font-semibold text-rose-200">
-                        {formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}
-                      </div>
-                    </div>
+                    ) : null}
                     <div>
                       <div className="text-xs uppercase tracking-[0.2em] text-amber-100/70">
                         Suggested
@@ -1971,8 +1968,13 @@ export default async function DeckDetailPage({
                     Think in order: maximize value through Deck Swap first, offer Buy It Now second, and save auctions for the fallback path when the deck still needs help moving.
                   </p>
                   <p className="mt-2 text-sm text-amber-50/70">
-                    If DeckSwap wants to guarantee the exit directly, the model undercuts the estimated buylist by {formatCurrencyAmount(guaranteedHaircut, buyNowCurrency)} in exchange for immediacy and certainty.
+                    Buy It Now is the direct-sale lane for another user to purchase the deck without an auction.
                   </p>
+                  {isAdmin ? (
+                    <p className="mt-2 text-sm text-amber-50/70">
+                      Guaranteed Offer is a separate internal DeckSwap purchase lane and remains admin-only.
+                    </p>
+                  ) : null}
                   {hasBuyNow ? (
                     <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white">
                       Seller is currently willing to take <span className="font-semibold text-amber-200">{formatCurrencyAmount(buyNowPrice, buyNowCurrency)}</span> without an auction.

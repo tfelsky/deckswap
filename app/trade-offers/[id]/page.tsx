@@ -233,6 +233,9 @@ export default async function TradeOfferDetailPage({
     ])
 
     if (participantInsert.error) {
+      if (isEscrowSchemaMissing(participantInsert.error.message)) {
+        redirect(`/trade-offers/${offerId}?schemaMissing=1`)
+      }
       redirect(`/trade-offers/${offerId}?error=1`)
     }
 
@@ -247,10 +250,13 @@ export default async function TradeOfferDetailPage({
     })
 
     if (eventInsert.error) {
+      if (isEscrowSchemaMissing(eventInsert.error.message)) {
+        redirect(`/trade-offers/${offerId}?schemaMissing=1`)
+      }
       redirect(`/trade-offers/${offerId}?error=1`)
     }
 
-    await supabase
+    const offerUpdate = await supabase
       .from('trade_offers')
       .update({
         status: 'accepted',
@@ -260,6 +266,13 @@ export default async function TradeOfferDetailPage({
         updated_at: new Date().toISOString(),
       })
       .eq('id', offerId)
+
+    if (offerUpdate.error) {
+      if (isTradeOffersSchemaMissing(offerUpdate.error.message)) {
+        redirect(`/trade-offers/${offerId}?schemaMissing=1`)
+      }
+      redirect(`/trade-offers/${offerId}?error=1`)
+    }
 
     await createNotification(supabase, {
       userId: currentOffer.offered_by_user_id,

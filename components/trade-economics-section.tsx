@@ -40,9 +40,7 @@ const guaranteedExamples = [1000, 500, 300].map((value) => {
 
   return {
     value,
-    buylist: model.buylistValue,
     guaranteed: model.guaranteedOffer,
-    haircut: model.haircut,
   }
 })
 
@@ -140,19 +138,18 @@ export async function TradeEconomicsSection() {
             {access.isAdmin ? (
               <AdminOnlyCallout
                 className="mt-8"
-                title="Guaranteed DeckSwap purchase model"
+                title="Guaranteed Offer model"
                 description="Visible to admins only. This pricing model is hidden from non-admin users."
               >
                 <p className="text-sm leading-7 text-muted-foreground">
-                  For sellers who want certainty, we can quote a simple <span className="font-semibold text-foreground">&quot;we&apos;ll buy it now&quot;</span> price that intentionally sits a little below the estimated buylist in exchange for an immediate guaranteed exit.
+                  For sellers who want certainty, admins can quote a <span className="font-semibold text-foreground">Guaranteed Offer</span> for a direct DeckSwap purchase. This lane stays internal and separate from public Buy It Now pricing.
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {guaranteedExamples.map((example) => (
                     <div key={example.value} className="rounded-2xl border border-white/10 bg-black/10 p-4">
                       <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">${example.value} deck</div>
-                      <div className="mt-2 text-sm text-foreground">Buylist est. ${example.buylist.toFixed(2)}</div>
-                      <div className="mt-1 text-lg font-semibold text-amber-200">Guaranteed ${example.guaranteed.toFixed(2)}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">${example.haircut.toFixed(2)} below buylist for certainty</div>
+                      <div className="mt-2 text-lg font-semibold text-amber-200">Guaranteed Offer ${example.guaranteed.toFixed(2)}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">Internal admin quote for an immediate DeckSwap purchase.</div>
                     </div>
                   ))}
                 </div>
