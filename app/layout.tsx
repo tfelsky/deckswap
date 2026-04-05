@@ -2,12 +2,33 @@ import type { Metadata } from 'next'
 import { ActionFeedback } from '@/components/action-feedback'
 import { AnalyticsConsentGate } from '@/components/analytics-consent'
 import { Toaster } from '@/components/ui/sonner'
+import { getSiteUrl } from '@/lib/site'
 import './globals.css'
 
+const siteUrl = getSiteUrl()
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Mythiverse Exchange - Deck Trading, Pricing, And Trust For Paper Magic',
   description: 'Import decks, estimate value, compare inventory, and use Deck Swap for safer deck-for-deck trading.',
+  alternates: {
+    canonical: '/',
+  },
   generator: 'v0.app',
+  openGraph: {
+    type: 'website',
+    url: siteUrl,
+    siteName: 'Mythiverse Exchange',
+    title: 'Mythiverse Exchange - Deck Trading, Pricing, And Trust For Paper Magic',
+    description:
+      'Import decks, estimate value, compare inventory, and use Deck Swap for safer deck-for-deck trading.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mythiverse Exchange - Deck Trading, Pricing, And Trust For Paper Magic',
+    description:
+      'Import decks, estimate value, compare inventory, and use Deck Swap for safer deck-for-deck trading.',
+  },
   icons: {
     icon: [
       {
