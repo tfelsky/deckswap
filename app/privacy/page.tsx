@@ -1,6 +1,6 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
-import Link from 'next/link'
+import { ComplianceLinks } from '@/components/compliance-links'
 
 export default function PrivacyPage() {
   return (
@@ -16,17 +16,16 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="mt-4 max-w-3xl text-lg text-muted-foreground">
-              This is a placeholder privacy policy for DeckSwap. It is intentionally generic for
-              now and should be reviewed by legal counsel before public launch.
+              This privacy policy explains the categories of information Mythiverse Exchange may
+              collect, how that information may be used, and the controls users should expect
+              around analytics, cookies, and account-related data.
             </p>
-            <div className="mt-8">
-              <Link
-                href="/terms"
-                className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
-              >
-                View Terms and Conditions
-              </Link>
-            </div>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
+              This page should still be reviewed and finalized with legal counsel before launch so
+              the published policy matches actual data flows, vendors, retention practices, and
+              support processes.
+            </p>
+            <ComplianceLinks current="/privacy" />
           </div>
         </section>
 
@@ -50,6 +49,16 @@ export default function PrivacyPage() {
                 Optional analytics and performance measurement tools are disabled by default until a
                 visitor opts in through the privacy choices prompt. Visitors can change that choice
                 later from the privacy controls available on the site.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-foreground">User Rights and Requests</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                Before launch, the site should publish a contact method for privacy questions,
+                correction requests, deletion requests, and consent-related inquiries. Internal
+                handling procedures should match the response timelines and actions promised to
+                users.
               </p>
             </section>
 

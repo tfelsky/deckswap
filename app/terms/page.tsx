@@ -1,6 +1,6 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
-import Link from 'next/link'
+import { ComplianceLinks } from '@/components/compliance-links'
 
 export default function TermsPage() {
   return (
@@ -16,17 +16,14 @@ export default function TermsPage() {
               Terms and Conditions
             </h1>
             <p className="mt-4 max-w-3xl text-lg text-muted-foreground">
-              This is a provisional terms page for DeckSwap. It is intentionally broad and should
-              be replaced with a finalized legal version before public launch.
+              These terms describe the rules, expectations, limitations, and disclosures that apply
+              to use of Mythiverse Exchange and its marketplace-style features.
             </p>
-            <div className="mt-8">
-              <Link
-                href="/privacy"
-                className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
-              >
-                View Privacy Policy
-              </Link>
-            </div>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">
+              This draft should be finalized with legal review before launch so it accurately
+              reflects the live product, payment flows, dispute handling, and user obligations.
+            </p>
+            <ComplianceLinks current="/terms" />
           </div>
         </section>
 
@@ -107,6 +104,15 @@ export default function TermsPage() {
                 DeckSwap may suspend, restrict, or terminate access to the service at any time,
                 especially in cases of abuse, fraud, misuse, or conduct that creates risk for the
                 platform or other users.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-foreground">Policy Relationship</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                These terms should be read together with the Privacy Policy and Accessibility
+                Statement. Product claims, consent flows, and support commitments should remain
+                consistent across all public-facing compliance pages.
               </p>
             </section>
 

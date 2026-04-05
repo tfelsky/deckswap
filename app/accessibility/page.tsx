@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
+import { ComplianceLinks } from '@/components/compliance-links'
 
 const commitments = [
   {
@@ -61,20 +61,7 @@ export default function AccessibilityPage() {
               and organization-specific compliance processes should be completed before public
               launch.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/privacy"
-                className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
-              >
-                View Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                className="rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
-              >
-                View Terms
-              </Link>
-            </div>
+            <ComplianceLinks current="/accessibility" />
           </div>
         </section>
 
@@ -141,6 +128,15 @@ export default function AccessibilityPage() {
                 deck management, or trading interactions change. Periodic manual testing with
                 keyboard-only navigation and screen reader spot checks should complement automated
                 linting and contrast validation.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-foreground">How this connects to other compliance work</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                Accessibility should be reviewed alongside privacy and terms updates. Consent
+                prompts, support workflows, forms, and legal disclosures all need to remain usable
+                for keyboard and assistive technology users, not just visually present on the page.
               </p>
             </section>
           </div>
