@@ -157,7 +157,7 @@ export function FeaturedDeckShelf({
                   </div>
                   <div className="mt-2 flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/auction-prototype?deckId=${deck.id}`}>
+                      <Link href="/auctions">
                         <Gavel className="mr-2 h-4 w-4" />
                         Auction
                       </Link>

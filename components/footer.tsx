@@ -6,33 +6,27 @@ const footerLinks = {
     { name: "Browse Decks", href: "/decks" },
     { name: "Create Deck", href: "/create-deck" },
     { name: "Import Deck", href: "/import-deck" },
-    { name: "My Decks", href: "/my-decks" },
+    { name: "Live Auctions", href: "/auctions" },
   ],
   trading: [
     { name: "Deck Swap", href: "/trade-matches" },
     { name: "Trade Offers", href: "/trade-offers" },
-    { name: "Info & FAQ", href: "/info" },
     { name: "Trades Workspace", href: "/trades" },
+    { name: "My Decks", href: "/my-decks" },
   ],
-  community: [
-    { name: "Deck Comments", href: "/decks" },
-    { name: "Guest Import Preview", href: "/guest-import" },
-    { name: "Checkout Prototype", href: "/checkout-prototype" },
-    { name: "Auction Prototype", href: "/auction-prototype" },
+  resources: [
+    { name: "Info & FAQ", href: "/info" },
+    { name: "Completed Sales", href: "/completed-sales" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },
     { name: "Paper Power 9", href: "/paper-power-9" },
   ],
   company: [
-    { name: "About Mythiverse Exchange", href: "/" },
     { name: "Compliance", href: "/compliance" },
     { name: "Cookies and Consent", href: "/cookies" },
     { name: "Sustainability", href: "/sustainability" },
     { name: "Accessibility", href: "/accessibility" },
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms", href: "/terms" },
-    { name: "Sign In", href: "/sign-in" },
-    { name: "Admin Tools", href: "/admin/backfill-decks" },
-    { name: "Home", href: "/" },
   ],
 }
 
@@ -46,9 +40,9 @@ export function Footer() {
               <Image
                 src="/mythiverse-shield.png"
                 alt="Mythiverse Exchange shield logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
               />
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                 <span className="text-sm font-bold text-primary-foreground">ME</span>
@@ -56,8 +50,8 @@ export function Footer() {
               <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
-              A deck marketplace centered on value-for-value trading, cleaner imports, and better
-              inventory context.
+              A deck marketplace for complete Commander decks, value-preserving trades, and
+              clearer selling paths.
             </p>
           </div>
 
@@ -94,9 +88,9 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-foreground">Community</h4>
+            <h4 className="mb-4 text-sm font-semibold text-foreground">Resources</h4>
             <ul className="space-y-3">
-              {footerLinks.community.map((link) => (
+              {footerLinks.resources.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
@@ -134,8 +128,14 @@ export function Footer() {
             <Link href="/decks" className="text-sm text-muted-foreground hover:text-foreground">
               Marketplace
             </Link>
+            <Link href="/auctions" className="text-sm text-muted-foreground hover:text-foreground">
+              Auctions
+            </Link>
             <Link href="/info" className="text-sm text-muted-foreground hover:text-foreground">
               Info
+            </Link>
+            <Link href="/trade-offers" className="text-sm text-muted-foreground hover:text-foreground">
+              Trade Offers
             </Link>
             <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
               Privacy
@@ -157,9 +157,6 @@ export function Footer() {
             </Link>
             <Link href="/my-decks" className="text-sm text-muted-foreground hover:text-foreground">
               My Decks
-            </Link>
-            <Link href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground">
-              Sign In
             </Link>
           </div>
         </div>

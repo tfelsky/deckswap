@@ -471,7 +471,7 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
                   auctionCandidates.map((deck) => (
                     <Link
                       key={deck.id}
-                      href={`/auction-prototype?deckId=${deck.id}`}
+                      href="/auctions"
                       className="block rounded-2xl border border-border bg-background/80 px-4 py-4 text-sm hover:bg-secondary"
                     >
                       <div className="font-medium text-foreground">{deck.name ?? "Unnamed deck"}</div>
@@ -549,10 +549,10 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
                     Protect more value by moving strong deck-for-deck matches toward a confident close.
                   </div>
                 </Link>
-                <Link href="/auction-prototype" className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary">
-                  <div className="font-medium text-foreground">Explore the auction path</div>
+                <Link href="/auctions" className="rounded-2xl border border-border bg-secondary/30 px-5 py-4 hover:bg-secondary">
+                  <div className="font-medium text-foreground">View live auctions</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Use auction when you need a quicker exit after trade and Buy It Now have done their job.
+                    See active listings and the faster-sale lane without surfacing an old prototype page.
                   </div>
                 </Link>
               </div>

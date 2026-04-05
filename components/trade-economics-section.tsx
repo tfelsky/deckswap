@@ -158,7 +158,7 @@ export async function TradeEconomicsSection() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/checkout-prototype"
+                href="/info"
                 className="rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
               >
                 Explore the economics

@@ -36,9 +36,9 @@ export default function AppHeader({
             <Image
               src="/mythiverse-shield.png"
               alt="Mythiverse Exchange shield logo"
-              width={44}
-              height={44}
-              className="h-11 w-11 rounded-2xl object-cover shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
+              width={52}
+              height={52}
+              className="h-[52px] w-[52px] rounded-2xl object-cover shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
             />
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
               ME

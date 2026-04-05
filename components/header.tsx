@@ -12,9 +12,9 @@ export function Header() {
           <Image
             src="/mythiverse-shield.png"
             alt="Mythiverse Exchange shield logo"
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
           />
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
             <span className="text-sm font-bold text-primary-foreground">ME</span>
