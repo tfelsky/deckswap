@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       subject,
       text,
       html,
+      idempotencyKey: `new-user-alert:${email}:${userId}`,
     })
 
     return NextResponse.json({ ok: true })
