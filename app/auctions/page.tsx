@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import AppHeader from '@/components/app-header'
 import { getAdminAccessForUser } from '@/lib/admin/access'
@@ -13,6 +14,14 @@ import { createClient } from '@/lib/supabase/server'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
+export const metadata: Metadata = {
+  title: 'Live Auctions | Mythiverse Exchange',
+  description:
+    'Browse live deck auctions, reserve and no-reserve listings, current bids, and sale-stage follow-through on Mythiverse Exchange.',
+  alternates: {
+    canonical: '/auctions',
+  },
+}
 
 type AuctionListingRow = {
   id: number

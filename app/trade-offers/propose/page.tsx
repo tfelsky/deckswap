@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { sendUserTransactionalEmailById } from '@/lib/email-events'
 import { createNotification } from '@/lib/notifications'
 import { isTradeOffersSchemaMissing } from '@/lib/trade-offers'
 import FormActionButton from '@/components/form-action-button'
@@ -156,6 +157,22 @@ export default async function ProposeTradeOfferPage({
         requestedDeckId,
       },
     })
+
+    try {
+      await sendUserTransactionalEmailById({
+        userId: requestedDeckResult.data.user_id,
+        subject: 'New trade offer received',
+        body: message
+          ? 'A user sent a trade offer on your deck and included a note. Review the offer and decide whether to accept, decline, or counter.'
+          : 'A user sent a trade offer on your deck. Review the offer and decide whether to accept, decline, or counter.',
+        href: `/trade-offers/${insert.data.id}`,
+        ctaLabel: 'Review trade offer',
+        idempotencyKey: `trade-offer-created:${insert.data.id}`,
+        eyebrow: 'Trade offer',
+      })
+    } catch (error) {
+      console.error('Failed to send trade offer email:', error)
+    }
 
     redirect(`/trade-offers/${insert.data.id}?created=1`)
   }

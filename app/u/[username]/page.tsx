@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -20,6 +21,56 @@ type SellerDeck = {
   format?: string | null
   image_url?: string | null
   price_total_usd_foil?: number | null
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>
+}): Promise<Metadata> {
+  const { username } = await params
+  const supabase = await createClient()
+  const profileResult = await supabase
+    .from('profiles')
+    .select('user_id, username, display_name, bio, marketplace_tagline')
+    .eq('username', username.toLowerCase())
+    .maybeSingle()
+
+  const profile = profileResult.data as PublicProfile | null
+
+  if (!profile) {
+    return {
+      title: 'Trader Profile Not Found | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const profileName = profile.display_name?.trim() || `@${profile.username}`
+  const description =
+    profile.bio?.trim() ||
+    profile.marketplace_tagline?.trim() ||
+    `${profileName} on Mythiverse Exchange. Browse seller trust signals, active deck listings, and marketplace links.`
+  const canonical = `/u/${profile.username?.trim().toLowerCase() ?? username.toLowerCase()}`
+  const title = `${profileName} | Trader Profile | Mythiverse Exchange`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: 'profile',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  }
 }
 
 export default async function PublicProfilePage({

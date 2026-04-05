@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import DeckCardViews from '@/components/deck-card-views'
 import DeckTradeChallengeCard from '@/components/deck-trade-challenge-card'
 import FormActionButton from '@/components/form-action-button'
@@ -180,6 +181,11 @@ type CommentAuthor = {
   username?: string | null
 }
 
+type MetadataDeck = Pick<
+  Deck,
+  'id' | 'name' | 'commander' | 'format' | 'image_url' | 'price_total_usd_foil' | 'inventory_status'
+>
+
 function toImportedDeckCard(card: DeckCard): ImportedDeckCard {
   return {
     section: card.section,
@@ -226,6 +232,86 @@ function changeTone(value: number | null) {
   if (value > 0) return 'text-emerald-300'
   if (value < 0) return 'text-red-300'
   return 'text-zinc-300'
+}
+
+function buildDeckMetadataDescription(deck: MetadataDeck) {
+  const parts = [
+    deck.commander?.trim() ? `Commander: ${deck.commander.trim()}.` : null,
+    `Format: ${getDeckFormatLabel(normalizeDeckFormat(deck.format))}.`,
+    Number(deck.price_total_usd_foil ?? 0) > 0
+      ? `Estimated deck value: $${Number(deck.price_total_usd_foil ?? 0).toFixed(2)}.`
+      : null,
+    'Browse complete deck details, pricing context, and seller trust signals on Mythiverse Exchange.',
+  ]
+
+  return parts.filter(Boolean).join(' ')
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const deckId = Number(id)
+
+  if (!Number.isFinite(deckId)) {
+    return {
+      title: 'Deck Not Found | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('decks')
+    .select('id, name, commander, format, image_url, price_total_usd_foil, inventory_status')
+    .eq('id', deckId)
+    .maybeSingle()
+
+  const deck = data as MetadataDeck | null
+
+  if (!deck) {
+    return {
+      title: 'Deck Not Found | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  if (getInventoryStatusVisibility(deck.inventory_status) === 'private') {
+    return {
+      title: 'Private Deck | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const titleBase = deck.name?.trim() || deck.commander?.trim() || `Deck #${deck.id}`
+  const formatLabel = getDeckFormatLabel(normalizeDeckFormat(deck.format))
+  const title = `${titleBase} | ${formatLabel} Deck Listing | Mythiverse Exchange`
+  const description = buildDeckMetadataDescription(deck)
+  const canonical = `/decks/${deck.id}`
+  const image = deck.image_url ?? undefined
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: 'article',
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  }
 }
 
 export default async function DeckDetailPage({

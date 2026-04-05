@@ -1,6 +1,16 @@
+import type { Metadata } from 'next'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Holiday Giveback | Mythiverse Exchange',
+  description:
+    'Explore the Holiday Giveback campaign concept for donating complete Commander decks to future families, kids, and community partners.',
+  alternates: {
+    canonical: '/holiday-giveback',
+  },
+}
 
 const pledgeSteps = [
   {

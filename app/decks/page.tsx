@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
@@ -25,6 +26,14 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
+export const metadata: Metadata = {
+  title: 'Browse Decks | Mythiverse Exchange',
+  description:
+    'Browse complete Magic deck listings with pricing, format details, Commander bracket signals, and marketplace-ready inventory on Mythiverse Exchange.',
+  alternates: {
+    canonical: '/decks',
+  },
+}
 
 type Deck = {
   id: number

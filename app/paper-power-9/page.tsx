@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import { PersonalPowerNineGallery } from '@/components/personal-power-nine-gallery'
@@ -9,6 +10,15 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { submitPaperPowerNineAction } from './actions'
+
+export const metadata: Metadata = {
+  title: 'Paper Power 9 | Mythiverse Exchange',
+  description:
+    'Submit your personal Power 9 of favorite paper printings and explore collector-style entries on Mythiverse Exchange.',
+  alternates: {
+    canonical: '/paper-power-9',
+  },
+}
 
 const nineCardPrompt = Array.from({ length: PERSONAL_POWER_NINE_CARD_COUNT }, (_, index) => ({
   slot: index + 1,

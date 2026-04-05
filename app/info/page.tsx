@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { FAQSection } from "@/components/faq-section"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
@@ -16,6 +17,15 @@ import {
   Truck,
 } from "lucide-react"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: 'How DeckSwap Works | Mythiverse Exchange',
+  description:
+    'Learn how Mythiverse Exchange approaches protection, escrow timing, shipment intake, and inspection for higher-trust deck transactions.',
+  alternates: {
+    canonical: '/info',
+  },
+}
 
 const trustStats = [
   {

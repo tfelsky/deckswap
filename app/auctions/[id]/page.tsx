@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import AppHeader from '@/components/app-header'
@@ -74,6 +75,13 @@ type ReputationSummary = {
   banned_status?: string | null
 }
 
+type MetadataAuction = Pick<
+  AuctionListing,
+  'id' | 'auction_type' | 'current_bid_usd' | 'ends_at'
+> & {
+  decks?: AuctionListing['decks']
+}
+
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
@@ -88,6 +96,75 @@ function formatEventLabel(value: string) {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const auctionId = Number(id)
+
+  if (!Number.isFinite(auctionId)) {
+    return {
+      title: 'Auction Not Found | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('auction_listings')
+    .select('id, auction_type, current_bid_usd, ends_at, decks!inner(name, commander, image_url)')
+    .eq('id', auctionId)
+    .maybeSingle()
+
+  const auction = data as MetadataAuction | null
+
+  if (!auction) {
+    return {
+      title: 'Auction Not Found | Mythiverse Exchange',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const deckName = auction.decks?.name?.trim() || 'Deck auction'
+  const commander = auction.decks?.commander?.trim()
+  const currentBid = Number(auction.current_bid_usd ?? 0)
+  const description = [
+    commander ? `Commander: ${commander}.` : null,
+    `Auction type: ${formatAuctionType(auction.auction_type)}.`,
+    currentBid > 0 ? `Current bid: $${currentBid.toFixed(2)}.` : null,
+    auction.ends_at ? `Ends ${formatAuctionTimestamp(auction.ends_at)}.` : null,
+    'View bidding status, pricing, and sale-stage updates on Mythiverse Exchange.',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const title = `${deckName} Auction | Mythiverse Exchange`
+  const canonical = `/auctions/${auction.id}`
+  const image = auction.decks?.image_url ?? undefined
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: 'article',
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  }
 }
 
 export default async function AuctionDetailPage({

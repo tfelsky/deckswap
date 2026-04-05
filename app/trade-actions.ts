@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import { sendUserTransactionalEmailById } from '@/lib/email-events'
 import { createNotification } from '@/lib/notifications'
 import {
   deriveTradeStatus,
@@ -26,6 +27,32 @@ function getReviewHref(tradeId: number) {
 
 function getDraftHref(tradeId: number) {
   return `/trade-drafts/${tradeId}`
+}
+
+async function sendTradeEmail(input: {
+  userId?: string | null
+  subject: string
+  body: string
+  href: string
+  ctaLabel: string
+  idempotencyKey: string
+  eyebrow?: string
+}) {
+  if (!input.userId) return
+
+  try {
+    await sendUserTransactionalEmailById({
+      userId: input.userId,
+      subject: input.subject,
+      body: input.body,
+      href: input.href,
+      ctaLabel: input.ctaLabel,
+      idempotencyKey: input.idempotencyKey,
+      eyebrow: input.eyebrow,
+    })
+  } catch (error) {
+    console.error('Failed to send trade lifecycle email:', error)
+  }
 }
 
 function getReturnTo(formData: FormData, fallback: string) {
@@ -109,6 +136,16 @@ export async function requestTradePaymentAction(formData: FormData) {
       href: getDraftHref(tradeId),
       metadata: { tradeId, side: participant.side },
     })
+
+    await sendTradeEmail({
+      userId: participant.user_id,
+      subject: 'Trade payment requested',
+      body: `Trade #${tradeId} is ready for checkout. Review your amount due, decide whether you want the $20 box kit, and confirm payment.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'Open trade draft',
+      idempotencyKey: `trade-payment-requested:${tradeId}:${participant.user_id}`,
+      eyebrow: 'Trade payment',
+    })
   }
 
   redirect(returnTo)
@@ -176,6 +213,16 @@ export async function markTradePaidAction(formData: FormData) {
       href: getDraftHref(tradeId),
       metadata: { tradeId, side },
     })
+
+    await sendTradeEmail({
+      userId: other.user_id,
+      subject: 'Trade payment confirmed',
+      body: `${sideLabel(side)} confirmed payment on Trade #${tradeId}.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'Review trade draft',
+      idempotencyKey: `trade-payment-confirmed:${tradeId}:${side}:${other.user_id}`,
+      eyebrow: 'Trade payment',
+    })
   }
 
   if (refreshedParticipants.every((row) => row.payment_status === 'paid')) {
@@ -189,6 +236,16 @@ export async function markTradePaidAction(formData: FormData) {
         body: 'Both sides have paid. Pack your deck, confirm shipment, and add tracking when it heads to the escrow hub.',
         href: getDraftHref(tradeId),
         metadata: { tradeId },
+      })
+
+      await sendTradeEmail({
+        userId: participantRow.user_id,
+        subject: 'Both payments are in',
+        body: 'Both sides have paid. Pack your deck, confirm shipment, and add tracking when it heads to the escrow hub.',
+        href: getDraftHref(tradeId),
+        ctaLabel: 'Open shipment checklist',
+        idempotencyKey: `trade-ready-to-ship:${tradeId}:${participantRow.user_id}`,
+        eyebrow: 'Trade ready',
       })
     }
   }
@@ -260,6 +317,16 @@ export async function markTradeShippedAction(formData: FormData) {
       href: getDraftHref(tradeId),
       metadata: { tradeId, side, trackingCode },
     })
+
+    await sendTradeEmail({
+      userId: other.user_id,
+      subject: 'Shipment confirmed',
+      body: `${sideLabel(side)} marked their deck as shipped${trackingCode ? ` with tracking ${trackingCode}` : ''}.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'Review trade draft',
+      idempotencyKey: `trade-shipment-confirmed:${tradeId}:${side}:${other.user_id}`,
+      eyebrow: 'Shipment update',
+    })
   }
 
   if (refreshedParticipants.every((row) => row.shipment_status === 'shipped')) {
@@ -273,6 +340,16 @@ export async function markTradeShippedAction(formData: FormData) {
         body: 'Both traders have confirmed shipment. The next checkpoint is receipt at the hub.',
         href: getDraftHref(tradeId),
         metadata: { tradeId },
+      })
+
+      await sendTradeEmail({
+        userId: participantRow.user_id,
+        subject: 'Both decks are in transit',
+        body: 'Both traders have confirmed shipment. The next checkpoint is receipt at the hub.',
+        href: getDraftHref(tradeId),
+        ctaLabel: 'Track trade progress',
+        idempotencyKey: `trade-both-shipments:${tradeId}:${participantRow.user_id}`,
+        eyebrow: 'Shipment update',
       })
     }
   }
@@ -418,6 +495,16 @@ export async function markTradeCompletedAction(formData: FormData) {
       href: getDraftHref(tradeId),
       metadata: { tradeId },
     })
+
+    await sendTradeEmail({
+      userId: participant.user_id,
+      subject: 'Trade completed',
+      body: `Trade #${tradeId} was marked completed.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'View trade record',
+      idempotencyKey: `trade-completed:${tradeId}:${participant.user_id}`,
+      eyebrow: 'Trade complete',
+    })
   }
 
   redirect(returnTo)
@@ -465,6 +552,16 @@ export async function markTradeDisputedAction(formData: FormData) {
       body: `Trade #${tradeId} was flagged for review. DeckSwap will follow up before anything moves forward.`,
       href: getDraftHref(tradeId),
       metadata: { tradeId },
+    })
+
+    await sendTradeEmail({
+      userId: participant.user_id,
+      subject: 'Trade flagged for review',
+      body: `Trade #${tradeId} was flagged for review. DeckSwap will follow up before anything moves forward.`,
+      href: getDraftHref(tradeId),
+      ctaLabel: 'Review trade status',
+      idempotencyKey: `trade-disputed:${tradeId}:${participant.user_id}`,
+      eyebrow: 'Trade review',
     })
   }
 

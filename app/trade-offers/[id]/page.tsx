@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
+import { sendUserTransactionalEmailById } from '@/lib/email-events'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import {
@@ -453,6 +454,20 @@ export default async function TradeOfferDetailPage({
       },
     })
 
+    try {
+      await sendUserTransactionalEmailById({
+        userId: currentOffer.offered_by_user_id,
+        subject: 'Your trade offer was accepted',
+        body: 'Your accepted offer is live. Review the trade draft, choose any shipping add-ons, and pay your side to move into shipment.',
+        href: `/trade-drafts/${transactionId}`,
+        ctaLabel: 'Open trade draft',
+        idempotencyKey: `trade-offer-accepted:${offerId}:${currentOffer.offered_by_user_id}`,
+        eyebrow: 'Trade accepted',
+      })
+    } catch (error) {
+      console.error('Failed to send trade accepted email:', error)
+    }
+
     await createNotification(supabase, {
       userId: currentOffer.requested_user_id,
       actorUserId: user.id,
@@ -465,6 +480,20 @@ export default async function TradeOfferDetailPage({
         tradeTransactionId: transactionId,
       },
     })
+
+    try {
+      await sendUserTransactionalEmailById({
+        userId: currentOffer.requested_user_id,
+        subject: 'Trade accepted and payment opened',
+        body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
+        href: `/trade-drafts/${transactionId}`,
+        ctaLabel: 'Open trade draft',
+        idempotencyKey: `trade-draft-created:${offerId}:${currentOffer.requested_user_id}`,
+        eyebrow: 'Trade draft',
+      })
+    } catch (error) {
+      console.error('Failed to send trade draft email:', error)
+    }
 
     redirect(`/trade-offers/${offerId}?accepted=1`)
   }
@@ -505,6 +534,20 @@ export default async function TradeOfferDetailPage({
       },
     })
 
+    try {
+      await sendUserTransactionalEmailById({
+        userId: offer.offered_by_user_id,
+        subject: 'Trade offer declined',
+        body: 'One of your trade offers was declined. You can review the offer thread and decide whether to send a fresh offer on another listing.',
+        href: `/trade-offers/${offerId}`,
+        ctaLabel: 'Review offer thread',
+        idempotencyKey: `trade-offer-declined:${offerId}:${offer.offered_by_user_id}`,
+        eyebrow: 'Trade offer',
+      })
+    } catch (error) {
+      console.error('Failed to send trade declined email:', error)
+    }
+
     redirect(`/trade-offers/${offerId}?declined=1`)
   }
 
@@ -543,6 +586,20 @@ export default async function TradeOfferDetailPage({
         offerId,
       },
     })
+
+    try {
+      await sendUserTransactionalEmailById({
+        userId: offer.requested_user_id,
+        subject: 'Trade offer cancelled',
+        body: 'A pending trade offer was cancelled before you responded, so no action is needed on your side.',
+        href: `/trade-offers/${offerId}`,
+        ctaLabel: 'Review offer thread',
+        idempotencyKey: `trade-offer-cancelled:${offerId}:${offer.requested_user_id}`,
+        eyebrow: 'Trade offer',
+      })
+    } catch (error) {
+      console.error('Failed to send trade cancelled email:', error)
+    }
 
     redirect(`/trade-offers/${offerId}?cancelled=1`)
   }
@@ -650,6 +707,22 @@ export default async function TradeOfferDetailPage({
         parentOfferId: currentOffer.id,
       },
     })
+
+    try {
+      await sendUserTransactionalEmailById({
+        userId: requestedUserIdForCounter,
+        subject: 'Counteroffer received',
+        body: message
+          ? 'A trade offer came back with changes and a new note. Review the updated offer and decide how you want to respond.'
+          : 'A trade offer came back with changes. Review the updated offer and decide how you want to respond.',
+        href: `/trade-offers/${insert.data.id}`,
+        ctaLabel: 'Review counteroffer',
+        idempotencyKey: `trade-offer-countered:${insert.data.id}:${requestedUserIdForCounter}`,
+        eyebrow: 'Counteroffer',
+      })
+    } catch (error) {
+      console.error('Failed to send counteroffer email:', error)
+    }
 
     redirect(`/trade-offers/${insert.data.id}?countered=1`)
   }

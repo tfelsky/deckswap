@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import AppHeader from '@/components/app-header'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
@@ -13,6 +14,14 @@ import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
+export const metadata: Metadata = {
+  title: 'Completed Sales | Mythiverse Exchange',
+  description:
+    'View completed sales and committed deck moves that have already left the live marketplace on Mythiverse Exchange.',
+  alternates: {
+    canonical: '/completed-sales',
+  },
+}
 
 type Deck = {
   id: number
