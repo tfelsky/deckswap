@@ -4,10 +4,10 @@ import FormActionButton from '@/components/form-action-button'
 import {
   markTradeCompletedAction,
   markTradeDisputedAction,
-  markTradeInspectionAction,
   markTradePaidAction,
   markTradeReceivedAction,
   markTradeShippedAction,
+  overrideTradeShippedForTestingAction,
   requestTradePaymentAction,
 } from '@/app/trade-actions'
 import { getAdminAccessForUser } from '@/lib/admin/access'
@@ -289,11 +289,35 @@ export default async function TradeReviewPage({
                         </form>
                       ) : null}
 
+                      {participant.shipment_status !== 'shipped' && participant.shipment_status !== 'received' ? (
+                        <form action={overrideTradeShippedForTestingAction} className="space-y-2">
+                          <input type="hidden" name="trade_id" value={trade.id} />
+                          <input type="hidden" name="side" value={participant.side} />
+                          <input type="hidden" name="return_to" value={`/trades/${trade.id}`} />
+                          <input
+                            type="text"
+                            name="tracking_code"
+                            placeholder="Optional test tracking code"
+                            className="w-full rounded-xl border border-fuchsia-400/20 bg-zinc-950 p-3 text-sm text-white"
+                          />
+                          <FormActionButton
+                            pendingLabel="Overriding..."
+                            className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-2 text-sm font-medium text-fuchsia-100 disabled:cursor-wait disabled:opacity-70"
+                          >
+                            Admin test override to shipped
+                          </FormActionButton>
+                        </form>
+                      ) : null}
+
                       {participant.shipment_status === 'shipped' ? (
                         <form action={markTradeReceivedAction}>
                           <input type="hidden" name="trade_id" value={trade.id} />
                           <input type="hidden" name="side" value={participant.side} />
-                          <input type="hidden" name="return_to" value={`/trades/${trade.id}`} />
+                          <input
+                            type="hidden"
+                            name="return_to"
+                            value={`/admin/logistics/intake/${trade.id}/${participant.side}`}
+                          />
                           <FormActionButton
                             pendingLabel="Saving..."
                             className="rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
@@ -303,32 +327,25 @@ export default async function TradeReviewPage({
                         </form>
                       ) : null}
 
+                      {participant.shipment_status === 'received' ? (
+                        <Link
+                          href={`/admin/logistics/intake/${trade.id}/${participant.side}`}
+                          className="inline-flex rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 hover:bg-emerald-400/15"
+                        >
+                          Open warehouse intake
+                        </Link>
+                      ) : null}
+
                       {participant.shipment_status === 'received' && participant.inspection_status !== 'passed' ? (
-                        <form action={markTradeInspectionAction} className="space-y-2">
-                          <input type="hidden" name="trade_id" value={trade.id} />
-                          <input type="hidden" name="side" value={participant.side} />
-                          <input type="hidden" name="return_to" value={`/trades/${trade.id}`} />
-                          <select
-                            name="inspection_status"
-                            defaultValue="passed"
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950 p-3 text-sm text-white"
-                          >
-                            <option value="passed">Pass inspection</option>
-                            <option value="failed">Fail inspection</option>
-                          </select>
-                          <textarea
-                            name="inspection_notes"
-                            rows={3}
-                            placeholder="Inspection notes"
-                            className="w-full rounded-xl border border-white/10 bg-zinc-950 p-3 text-sm text-white"
-                          />
-                          <FormActionButton
-                            pendingLabel="Saving..."
-                            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-200 disabled:cursor-wait disabled:opacity-70"
-                          >
-                            Save inspection
-                          </FormActionButton>
-                        </form>
+                        <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                          Warehouse intake is required for received decks. Open the checklist to inspect cards over $5, verify authenticity on higher-value cards, and review sleeve and box condition before release.
+                        </div>
+                      ) : null}
+
+                      {participant.shipment_status !== 'shipped' && participant.shipment_status !== 'received' ? (
+                        <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-4 text-sm text-fuchsia-100">
+                          Test-only override. This bypasses the normal payment and shipping prerequisites and is meant for admin QA flows.
+                        </div>
                       ) : null}
                     </div>
                   </div>

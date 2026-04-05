@@ -357,6 +357,63 @@ export async function markTradeShippedAction(formData: FormData) {
   redirect(returnTo)
 }
 
+export async function overrideTradeShippedForTestingAction(formData: FormData) {
+  const tradeId = parseTradeId(formData)
+  if (!tradeId) redirect('/trades')
+
+  const side = String(formData.get('side') || '') as 'a' | 'b'
+  const trackingCode = String(formData.get('tracking_code') || '').trim() || `TEST-SHIP-${tradeId}-${side.toUpperCase()}`
+  const context = await getTradeContext(tradeId)
+  const returnTo = getReturnTo(formData, getReviewHref(tradeId))
+  const participant = context.participants.find((row) => row.side === side) ?? null
+
+  if (!context.trade || !context.access.isAdmin || !participant) {
+    redirect(returnTo)
+  }
+
+  const now = new Date().toISOString()
+
+  await context.adminSupabase
+    .from('trade_transaction_participants')
+    .update({
+      shipment_status: 'shipped',
+      tracking_code: trackingCode,
+      shipped_at: now,
+      updated_at: now,
+    })
+    .eq('transaction_id', tradeId)
+    .eq('side', side)
+
+  const refreshedParticipants = context.participants.map((row) =>
+    row.side === side
+      ? { ...row, shipment_status: 'shipped' as const, tracking_code: trackingCode }
+      : row
+  )
+  const nextStatus = deriveTradeStatus(context.trade, refreshedParticipants)
+
+  await context.adminSupabase
+    .from('trade_transactions')
+    .update({
+      status: nextStatus,
+      updated_at: now,
+    })
+    .eq('id', tradeId)
+
+  await context.adminSupabase.from('escrow_events').insert({
+    transaction_id: tradeId,
+    actor_user_id: context.user.id,
+    event_type: 'shipment_override_marked_sent',
+    event_data: {
+      side,
+      trackingCode,
+      shippedAt: now,
+      reason: 'admin_test_override',
+    },
+  })
+
+  redirect(returnTo)
+}
+
 export async function markTradeReceivedAction(formData: FormData) {
   const tradeId = parseTradeId(formData)
   if (!tradeId) redirect('/trades')

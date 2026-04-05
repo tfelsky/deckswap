@@ -11,6 +11,7 @@ import {
   type TradeParticipantRow,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
+import { isProfileSchemaMissing, type PublicProfile } from '@/lib/profiles'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,13 @@ type DeckSummary = {
   name: string
   commander?: string | null
   image_url?: string | null
+}
+
+function formatUserLabel(profile?: PublicProfile | null, userId?: string | null) {
+  if (profile?.display_name?.trim()) return profile.display_name.trim()
+  if (profile?.username?.trim()) return `@${profile.username.trim()}`
+  if (userId) return `${userId.slice(0, 8)}...`
+  return 'Unknown trader'
 }
 
 function formatUsd(value?: number | null) {
@@ -226,6 +234,18 @@ export default async function TradesPage() {
     participantsByTradeId.set(Number(participant.transaction_id), existing)
   }
 
+  const participantUserIds = Array.from(
+    new Set(allParticipants.map((participant) => participant.user_id).filter((value): value is string => !!value))
+  )
+  const profilesResult =
+    access.isAdmin && participantUserIds.length > 0
+      ? await adminSupabase.from('profiles').select('user_id, display_name, username').in('user_id', participantUserIds)
+      : { data: [] as PublicProfile[], error: null as { message?: string } | null }
+  const profilesSchemaMissing = isProfileSchemaMissing(profilesResult.error?.message)
+  const profilesByUser = new Map<string, PublicProfile>(
+    profilesSchemaMissing ? [] : (((profilesResult.data ?? []) as PublicProfile[]).map((profile) => [profile.user_id, profile]))
+  )
+
   const deckIds = Array.from(
     new Set(allParticipants.map((participant) => Number(participant.deck_id)).filter((value) => Number.isFinite(value)))
   )
@@ -306,6 +326,8 @@ export default async function TradesPage() {
               const href = access.isAdmin ? `/trades/${trade.id}` : `/trade-drafts/${trade.id}`
               const tradeTitle = getTradeTitle(participants, decks, trade.lane_type)
               const tradeSubtitle = getTradeSubtitle(participants, decks, trade.lane_type)
+              const sideALabel = access.isAdmin ? formatUserLabel(profilesByUser.get(sideA?.user_id ?? ''), sideA?.user_id) : null
+              const sideBLabel = access.isAdmin ? formatUserLabel(profilesByUser.get(sideB?.user_id ?? ''), sideB?.user_id) : null
 
               return (
                 <Link
@@ -323,7 +345,14 @@ export default async function TradesPage() {
                         Trade #{trade.id}
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">{tradeTitle}</div>
-                      <div className="mt-2 text-sm text-zinc-400">{tradeSubtitle}</div>
+                      <div className="mt-2 text-sm text-zinc-400">
+                        {access.isAdmin && (sideALabel || sideBLabel)
+                          ? `${sideALabel ?? 'Unknown trader'} vs ${sideBLabel ?? 'Unknown trader'}`
+                          : tradeSubtitle}
+                      </div>
+                      {access.isAdmin && tradeSubtitle ? (
+                        <div className="mt-1 text-xs text-zinc-500">{tradeSubtitle}</div>
+                      ) : null}
                       <div className="mt-2 text-xs text-zinc-500">
                         Opened {trade.created_at ? new Date(trade.created_at).toLocaleString('en-CA') : 'recently'}
                       </div>

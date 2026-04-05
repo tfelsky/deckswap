@@ -74,6 +74,12 @@ export default async function AdminLayout({
                 User Approvals
               </Link>
               <Link
+                href="/admin/logistics"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Logistics Map
+              </Link>
+              <Link
                 href="/admin/trends"
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
               >
