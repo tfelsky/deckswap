@@ -3,6 +3,9 @@ import {
   ESCROW_EXAMPLES,
   type SupportedCountry,
 } from '@/lib/escrow/prototype'
+import { AdminOnlyCallout } from '@/components/admin-only-callout'
+import { getAdminAccessForUser } from '@/lib/admin/access'
+import { createClient } from '@/lib/supabase/server'
 import { createTradeDraftAction } from './actions'
 import Link from 'next/link'
 
@@ -34,6 +37,11 @@ export default async function CheckoutPrototypePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = searchParams ? await searchParams : {}
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const access = await getAdminAccessForUser(user)
   const deckAValue = parseMoney(params.deckAValue, 1000)
   const deckBValue = parseMoney(params.deckBValue, 1000)
   const countryA = parseCountry(params.countryA, 'ca')
@@ -329,38 +337,52 @@ export default async function CheckoutPrototypePage({
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Payment Method</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Dummy checkout for now. Stripe would eventually replace this step.
+                {access.isAdmin
+                  ? 'Internal prototype controls for testing the planned checkout flow.'
+                  : 'Payment collection details are intentionally hidden in the public prototype.'}
               </p>
 
-              <div className="mt-6 space-y-3">
-                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-                  <input type="radio" name="payment-method" defaultChecked className="mt-1" />
-                  <div>
-                    <div className="font-medium text-white">Saved test card</div>
-                    <div className="mt-1 text-sm text-zinc-400">
-                      Dummy Visa ending in 4242 for prototype review only.
-                    </div>
-                  </div>
-                </label>
+              {access.isAdmin ? (
+                <AdminOnlyCallout
+                  className="mt-6"
+                  title="Prototype payment controls"
+                  description="These testing reminders and implementation placeholders are hidden from non-admin users."
+                >
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                      <input type="radio" name="payment-method" defaultChecked className="mt-1" />
+                      <div>
+                        <div className="font-medium text-white">Saved test card</div>
+                        <div className="mt-1 text-sm text-zinc-400">
+                          Dummy Visa ending in 4242 for prototype review only.
+                        </div>
+                      </div>
+                    </label>
 
-                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <input type="radio" name="payment-method" className="mt-1" />
-                  <div>
-                    <div className="font-medium text-white">Bank transfer placeholder</div>
-                    <div className="mt-1 text-sm text-zinc-400">
-                      Useful later for higher-value escrow lanes.
-                    </div>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <input type="radio" name="payment-method" className="mt-1" />
+                      <div>
+                        <div className="font-medium text-white">Bank transfer placeholder</div>
+                        <div className="mt-1 text-sm text-zinc-400">
+                          Useful later for higher-value escrow lanes.
+                        </div>
+                      </div>
+                    </label>
                   </div>
-                </label>
-              </div>
 
-              <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-zinc-950/70 p-4">
-                <div className="text-sm font-medium text-white">Stripe Integration Placeholder</div>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Future state: create one payment intent per user for `amount_due`, support
-                  separate capture/release states, and link settlement to physical deck inspection.
-                </p>
-              </div>
+                  <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-zinc-950/70 p-4">
+                    <div className="text-sm font-medium text-white">Stripe Integration Placeholder</div>
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Future state: create one payment intent per user for `amount_due`, support
+                      separate capture/release states, and link settlement to physical deck inspection.
+                    </p>
+                  </div>
+                </AdminOnlyCallout>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                  Final payment handling will be shown only when this flow is ready for public use.
+                </div>
+              )}
 
               <form action={createTradeDraftAction} className="mt-6 space-y-3">
                 <input type="hidden" name="deckAValue" value={deckAValue} />

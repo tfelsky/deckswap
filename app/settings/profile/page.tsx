@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatVerificationStatus,
@@ -456,103 +457,111 @@ export default async function ProfileSettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-sky-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(24,24,27,0.9))] p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium tracking-wide text-sky-200">
-                  Marketplace Progress
-                </div>
-                <h2 className="mt-4 text-3xl font-semibold tracking-tight">
-                  Discover the next feature by finishing the next step
-                </h2>
-                <p className="mt-3 text-sm text-zinc-300">
-                  The simplest path is: complete your profile, add a deck, try Deck Swap first,
-                  then Buy It Now, and only lean on auctions if the first two lanes do not move the
-                  deck.
-                </p>
-              </div>
+          {access.isAdmin ? (
+            <AdminOnlyCallout
+              className="mt-6"
+              title="Marketplace progress and next-step prompts"
+              description="This guidance block is hidden from non-admin users because it contains internal discovery sequencing and testing-oriented product nudges."
+            >
+              <div className="rounded-3xl border border-sky-400/20 bg-[linear-gradient(135deg,rgba(56,189,248,0.12),rgba(24,24,27,0.9))] p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-3xl">
+                    <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium tracking-wide text-sky-200">
+                      Marketplace Progress
+                    </div>
+                    <h2 className="mt-4 text-3xl font-semibold tracking-tight">
+                      Discover the next feature by finishing the next step
+                    </h2>
+                    <p className="mt-3 text-sm text-zinc-300">
+                      The simplest path is: complete your profile, add a deck, try Deck Swap first,
+                      then Buy It Now, and only lean on auctions if the first two lanes do not move the
+                      deck.
+                    </p>
+                  </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/20 px-5 py-4 text-center">
-                <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">Discovery</div>
-                <div className="mt-2 text-3xl font-semibold text-white">{discoveryPercent}%</div>
-                <div className="mt-1 text-sm text-zinc-400">
-                  {completedDiscoverySteps} of {discoveryChecklist.length} steps done
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-sky-400 transition-all"
-                style={{ width: `${discoveryPercent}%` }}
-              />
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="space-y-3">
-                {discoveryChecklist.map((step) => (
-                  <div
-                    key={step.label}
-                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-white">
-                          {step.done ? 'Complete' : 'Next'}: {step.label}
-                        </div>
-                        <p className="mt-1 text-sm text-zinc-400">{step.help}</p>
-                      </div>
-                      <Link
-                        href={step.href}
-                        className={`rounded-xl px-4 py-2 text-sm font-medium ${
-                          step.done
-                            ? 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
-                            : 'bg-sky-400 text-zinc-950 hover:opacity-90'
-                        }`}
-                      >
-                        {step.done ? 'Review' : 'Open'}
-                      </Link>
+                  <div className="rounded-3xl border border-white/10 bg-black/20 px-5 py-4 text-center">
+                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-400">Discovery</div>
+                    <div className="mt-2 text-3xl font-semibold text-white">{discoveryPercent}%</div>
+                    <div className="mt-1 text-sm text-zinc-400">
+                      {completedDiscoverySteps} of {discoveryChecklist.length} steps done
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Decks Added</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{deckCount}</div>
-                  <div className="mt-1 text-sm text-zinc-400">
-                    Imported or manually created inventory
-                  </div>
+                <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-sky-400 transition-all"
+                    style={{ width: `${discoveryPercent}%` }}
+                  />
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Deck Swap Live</div>
-                  <div className="mt-2 text-2xl font-semibold text-emerald-300">
-                    {listedDeckCount}
+
+                <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                  <div className="space-y-3">
+                    {discoveryChecklist.map((step) => (
+                      <div
+                        key={step.label}
+                        className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-white">
+                              {step.done ? 'Complete' : 'Next'}: {step.label}
+                            </div>
+                            <p className="mt-1 text-sm text-zinc-400">{step.help}</p>
+                          </div>
+                          <Link
+                            href={step.href}
+                            className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                              step.done
+                                ? 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                                : 'bg-sky-400 text-zinc-950 hover:opacity-90'
+                            }`}
+                          >
+                            {step.done ? 'Review' : 'Open'}
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="mt-1 text-sm text-zinc-400">
-                    Highest-value lane before direct sale or auction
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Buy It Now Live</div>
-                  <div className="mt-2 text-2xl font-semibold text-amber-200">
-                    {buyNowDeckCount}
-                  </div>
-                  <div className="mt-1 text-sm text-zinc-400">
-                    Direct-sale fallback listings
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Offer Activity</div>
-                  <div className="mt-2 text-2xl font-semibold text-sky-200">{offerCount}</div>
-                  <div className="mt-1 text-sm text-zinc-400">
-                    Total offers sent or received so far
+
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Decks Added</div>
+                      <div className="mt-2 text-2xl font-semibold text-white">{deckCount}</div>
+                      <div className="mt-1 text-sm text-zinc-400">
+                        Imported or manually created inventory
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Deck Swap Live</div>
+                      <div className="mt-2 text-2xl font-semibold text-emerald-300">
+                        {listedDeckCount}
+                      </div>
+                      <div className="mt-1 text-sm text-zinc-400">
+                        Highest-value lane before direct sale or auction
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Buy It Now Live</div>
+                      <div className="mt-2 text-2xl font-semibold text-amber-200">
+                        {buyNowDeckCount}
+                      </div>
+                      <div className="mt-1 text-sm text-zinc-400">
+                        Direct-sale fallback listings
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Offer Activity</div>
+                      <div className="mt-2 text-2xl font-semibold text-sky-200">{offerCount}</div>
+                      <div className="mt-1 text-sm text-zinc-400">
+                        Total offers sent or received so far
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </AdminOnlyCallout>
+          ) : null}
 
           {profileSchemaMissing && (
             <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">

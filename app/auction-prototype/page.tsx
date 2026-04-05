@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
@@ -287,6 +288,14 @@ export default async function AuctionPrototypePage({
                 We couldn&apos;t launch that auction right now.
               </div>
             )}
+            {access.isAdmin && (
+              <AdminOnlyCallout
+                title="Auction testing override"
+                description="This launch path is visible to admins only because it includes a trust-gate bypass for internal testing."
+              >
+                <p className="text-sm text-amber-50/85">{eligibility.reason}</p>
+              </AdminOnlyCallout>
+            )}
           </div>
         </div>
       </section>
@@ -415,10 +424,12 @@ export default async function AuctionPrototypePage({
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-                <div className="font-medium text-white">Seller trust gate</div>
-                <p className="mt-2">{eligibility.reason}</p>
-              </div>
+              {!access.isAdmin ? (
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                  <div className="font-medium text-white">Seller trust gate</div>
+                  <p className="mt-2">{eligibility.reason}</p>
+                </div>
+              ) : null}
             </form>
           </div>
 

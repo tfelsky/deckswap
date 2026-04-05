@@ -1,4 +1,5 @@
 import { ArrowRightLeft, ShieldCheck, TrendingUp } from "lucide-react"
+import { AdminOnlyCallout } from "@/components/admin-only-callout"
 import { calculateGuaranteedBuyNowOffer } from "@/lib/decks/trade-value"
 import { getAdminAccessForUser } from "@/lib/admin/access"
 import { createClient } from "@/lib/supabase/server"
@@ -137,19 +138,12 @@ export async function TradeEconomicsSection() {
             </div>
 
             {access.isAdmin ? (
-              <div className="mt-8 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-5">
-                <div className="inline-flex rounded-full border border-amber-300/40 bg-amber-200/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
-                  Admin Only
-                </div>
-                <div className="mt-3 rounded-2xl border border-amber-200/20 bg-black/10 p-4">
-                  <div className="text-sm font-medium text-amber-100">
-                    Visible to admins only. This pricing model is hidden from non-admin users.
-                  </div>
-                  <p className="mt-2 text-sm leading-7 text-amber-50/80">
-                    Guaranteed DeckSwap purchase model
-                  </p>
-                </div>
-                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+              <AdminOnlyCallout
+                className="mt-8"
+                title="Guaranteed DeckSwap purchase model"
+                description="Visible to admins only. This pricing model is hidden from non-admin users."
+              >
+                <p className="text-sm leading-7 text-muted-foreground">
                   For sellers who want certainty, we can quote a simple <span className="font-semibold text-foreground">&quot;we&apos;ll buy it now&quot;</span> price that intentionally sits a little below the estimated buylist in exchange for an immediate guaranteed exit.
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -162,7 +156,7 @@ export async function TradeEconomicsSection() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </AdminOnlyCallout>
             ) : null}
 
             <div className="mt-8 flex flex-wrap gap-3">

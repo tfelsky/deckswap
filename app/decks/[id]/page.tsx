@@ -2,6 +2,7 @@ import DeckCardViews from '@/components/deck-card-views'
 import FormActionButton from '@/components/form-action-button'
 import GuestDraftCleanup from '@/components/guest-draft-cleanup'
 import AppHeader from '@/components/app-header'
+import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import { Button } from '@/components/ui/button'
 import {
   HoverCard,
@@ -2151,7 +2152,11 @@ export default async function DeckDetailPage({
                     </div>
 
                     {showInternalAdminPanel && (
-                      <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                      <AdminOnlyCallout
+                        className="mt-4"
+                        title="Internal validation score"
+                        description="This seller trust panel is visible to admins only and hidden from public deck viewers."
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <div className="text-xs uppercase tracking-wide text-emerald-100/70">
@@ -2163,9 +2168,6 @@ export default async function DeckDetailPage({
                             <div className="mt-1 text-sm text-emerald-100/80">
                               {internalValidation.tier}
                             </div>
-                          </div>
-                          <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-emerald-100/80">
-                            Internal only
                           </div>
                         </div>
 
@@ -2214,7 +2216,7 @@ export default async function DeckDetailPage({
                             <p key={note}>{note}</p>
                           ))}
                         </div>
-                      </div>
+                      </AdminOnlyCallout>
                     )}
 
                     <div className="mt-4 flex flex-wrap gap-2">
