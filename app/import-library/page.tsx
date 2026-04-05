@@ -1,5 +1,6 @@
 import AppHeader from '@/components/app-header'
 import {
+  getLibraryImportCapabilities,
   listLibraryDecks,
   type LibraryDeckSummary,
   type LibraryImportProvider,
@@ -65,6 +66,7 @@ export default async function ImportLibraryPage({
   const failedCount = getSingleParam(resolvedSearchParams, 'failedCount')
   const importFailed = getSingleParam(resolvedSearchParams, 'importFailed')
   const importFailedMessage = getSingleParam(resolvedSearchParams, 'message')
+  const providerCapabilities = getLibraryImportCapabilities(provider)
 
   let preview:
     | {
@@ -125,14 +127,16 @@ export default async function ImportLibraryPage({
 
             <div className="mt-8 max-w-3xl">
             <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-              Library Import
+              Inventory Import
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Pull in a whole public deck library
+              Prepare full inventory import for Mythiverse Exchange Ones
             </h1>
               <p className="mt-3 text-zinc-400">
-                Start with a public Moxfield or Archidekt profile, preview the decks we can see,
-                then import one or batch-import the whole visible library into Mythiverse Exchange. Imported decks land in staging first so you can review details before making them live.
+                Start with public deck libraries today, while getting the import surface ready for
+                singles and full collection ingest next. Right now we preview visible decks from
+                Moxfield and Archidekt, import them into Mythiverse Exchange staging, and keep the
+                page framed around the broader inventory model that Mythiverse Exchange Ones will need.
               </p>
             </div>
         </div>
@@ -141,10 +145,34 @@ export default async function ImportLibraryPage({
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-[24rem_minmax(0,1fr)]">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-            <h2 className="text-xl font-semibold text-white">Preview a library</h2>
+            <h2 className="text-xl font-semibold text-white">Preview an inventory source</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Public decks only. Private lists and protected profiles will not show up here, and imported decks start in staging until you choose how to market them.
+              Public deck libraries are live now. Singles binders and whole collection imports are
+              the next phase, so this setup now reflects inventory scope instead of only deck scope.
             </p>
+
+            <div className="mt-6 grid gap-3">
+              {providerCapabilities.map((capability) => (
+                <div
+                  key={capability.scope}
+                  className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-medium text-white">{capability.label}</div>
+                    <div
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                        capability.status === 'available'
+                          ? 'border border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                          : 'border border-white/10 bg-white/5 text-zinc-300'
+                      }`}
+                    >
+                      {capability.status === 'available' ? 'Available now' : 'Planned next'}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-400">{capability.description}</p>
+                </div>
+              ))}
+            </div>
 
             <form method="get" className="mt-6 grid gap-5">
               <div>
@@ -183,11 +211,13 @@ export default async function ImportLibraryPage({
               </button>
             </form>
 
-            <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-sm text-zinc-400">
+              <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-sm text-zinc-400">
               <div className="font-medium text-white">Phase 1 coverage</div>
               <p className="mt-2">
-                This first pass imports public libraries from Moxfield and Archidekt. Deckstats
-                and TappedOut are next on the roadmap once this source-linking flow proves out. Each imported deck stays private in staging until you review it.
+                This first pass imports public deck libraries from Moxfield and Archidekt.
+                Deckstats and TappedOut are next on the roadmap, followed by singles and whole
+                collection ingestion for Mythiverse Exchange Ones. Each imported deck stays private
+                in staging until you review it.
               </p>
             </div>
           </div>
@@ -195,7 +225,7 @@ export default async function ImportLibraryPage({
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
             {importedDeckId ? (
               <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                Library deck imported to staging successfully.{' '}
+                Source deck imported to staging successfully.{' '}
                 <Link href={`/my-decks/${importedDeckId}?tab=settings`} className="font-medium text-white underline">
                   Review deck {importedDeckId}
                 </Link>
@@ -223,8 +253,8 @@ export default async function ImportLibraryPage({
 
             {!preview && !previewError ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-zinc-950/60 px-6 py-10 text-center text-zinc-400">
-                Enter a public Moxfield or Archidekt account to preview the decks available for
-                import.
+                Enter a public Moxfield or Archidekt account to preview the deck inventory
+                available for import today.
               </div>
             ) : null}
 
@@ -267,10 +297,18 @@ export default async function ImportLibraryPage({
                   ) : null}
                 </div>
 
-                <div className="mt-6 grid gap-3">
+                <div className="mt-6">
+                  <div className="text-sm font-medium text-white">Available deck imports</div>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    These are the deck-level records currently visible from this source. Singles and
+                    whole collection records will appear here once those import scopes are supported.
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3">
                   {preview.decks.length === 0 ? (
                     <div className="rounded-2xl border border-white/10 bg-zinc-950/60 px-5 py-4 text-sm text-zinc-400">
-                      No public decks were found for this account right now.
+                      No public deck records were found for this account right now.
                     </div>
                   ) : (
                     preview.decks.map((deck) => {

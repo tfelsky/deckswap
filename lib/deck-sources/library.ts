@@ -4,6 +4,14 @@ import { isDeckImportEventsSchemaMissing } from '@/lib/import-events'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 
 export type LibraryImportProvider = 'moxfield' | 'archidekt'
+export type LibraryImportScope = 'decks' | 'singles' | 'full_collection'
+
+export type LibraryImportCapability = {
+  scope: LibraryImportScope
+  label: string
+  status: 'available' | 'planned'
+  description: string
+}
 
 export type LibraryDeckSummary = {
   provider: LibraryImportProvider
@@ -17,6 +25,52 @@ export type LibraryDeckSummary = {
 }
 
 type SupabaseLike = any
+
+const PROVIDER_LIBRARY_CAPABILITIES: Record<
+  LibraryImportProvider,
+  LibraryImportCapability[]
+> = {
+  moxfield: [
+    {
+      scope: 'decks',
+      label: 'Deck libraries',
+      status: 'available',
+      description: 'Preview public decks from a profile and import them into staging.',
+    },
+    {
+      scope: 'singles',
+      label: 'Singles binders',
+      status: 'planned',
+      description: 'Track individual cards for Mythiverse Exchange Ones once binder ingest lands.',
+    },
+    {
+      scope: 'full_collection',
+      label: 'Whole collection exports',
+      status: 'planned',
+      description: 'Bring in deckless inventory and mixed holdings from full collection exports.',
+    },
+  ],
+  archidekt: [
+    {
+      scope: 'decks',
+      label: 'Deck libraries',
+      status: 'available',
+      description: 'Preview public decks from a profile and import them into staging.',
+    },
+    {
+      scope: 'singles',
+      label: 'Singles binders',
+      status: 'planned',
+      description: 'Prepare for one-card listings instead of only complete deck listings.',
+    },
+    {
+      scope: 'full_collection',
+      label: 'Whole collection exports',
+      status: 'planned',
+      description: 'Support imports that include decks, staples, and unsorted collection inventory.',
+    },
+  ],
+}
 
 function cleanText(value?: string | null) {
   return value?.trim() || ''
@@ -124,6 +178,10 @@ export async function listLibraryDecks(provider: LibraryImportProvider, value: s
   }
 
   return listMoxfieldLibraryDecks(value)
+}
+
+export function getLibraryImportCapabilities(provider: LibraryImportProvider) {
+  return PROVIDER_LIBRARY_CAPABILITIES[provider]
 }
 
 export async function fetchLibraryDeck(

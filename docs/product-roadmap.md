@@ -15,6 +15,7 @@ DeckSwap already has:
 - guest preview handoff into authenticated save flow
 - guest draft backup across browser storage plus server-side recovery token flow
 - first-pass public library import for Moxfield and Archidekt
+- Mythiverse Exchange Ones import framing so the inventory flow can grow from deck libraries into singles and whole collection ingest
 - Commander validation and bracket estimation
 - Commander color identity validation after enrichment
 - homepage marketplace filters by color identity
@@ -99,6 +100,7 @@ Scope:
 - keep guest drafts recoverable from sign-in and import routes even if local browser state drops
 - harden Moxfield, Archidekt, file, and text import reliability
 - expand library import beyond the first-pass Moxfield and Archidekt provider support
+- add inventory-scoped import support for singles and full collection exports, not only collections of decks
 - improve commander inference and post-import repair paths
 - expand the new saved-row repair tooling so broken imports can be fixed safely without a full source re-import
 - keep deck color identity, counts, pricing snapshots, and validation fully in sync during import and re-enrichment
