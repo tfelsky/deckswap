@@ -56,6 +56,18 @@ function getScryfallUrl(card: BaseCard) {
   )}%22`
 }
 
+function getEdhrecUrl(card: BaseCard) {
+  const slug = card.card_name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return `https://edhrec.com/cards/${slug}`
+}
+
 function getUnitPrice(card: BaseCard) {
   return card.foil
     ? (card.price_usd_foil ?? card.price_usd ?? null)
@@ -181,6 +193,14 @@ function CardModal({
               className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-300 hover:bg-emerald-400/15"
             >
               Open in Scryfall
+            </a>
+            <a
+              href={getEdhrecUrl(card)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm text-sky-200 hover:bg-sky-400/15"
+            >
+              Open in EDHREC
             </a>
             <button
               onClick={onClose}

@@ -1,8 +1,16 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
+import { PersonalPowerNineGallery } from '@/components/personal-power-nine-gallery'
+import FormActionButton from '@/components/form-action-button'
+import {
+  isPaperPowerNineSchemaMissing,
+  PERSONAL_POWER_NINE_CARD_COUNT,
+} from '@/lib/paper-power-nine'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { submitPaperPowerNineAction } from './actions'
 
-const nineCardPrompt = Array.from({ length: 9 }, (_, index) => ({
+const nineCardPrompt = Array.from({ length: PERSONAL_POWER_NINE_CARD_COUNT }, (_, index) => ({
   slot: index + 1,
   placeholder: `Favorite printing #${index + 1}`,
 }))
@@ -28,7 +36,99 @@ const episodeIdeas = [
   'Commander staples with the coolest personal printing mix',
 ]
 
-export default function PaperPowerNinePage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>
+
+function getSingleParam(
+  searchParams: Record<string, string | string[] | undefined>,
+  key: string
+) {
+  const value = searchParams[key]
+  return Array.isArray(value) ? value[0] ?? '' : value ?? ''
+}
+
+export default async function PaperPowerNinePage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const resolvedSearchParams = await searchParams
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const submittedId = getSingleParam(resolvedSearchParams, 'submitted')
+  const exactMatches = getSingleParam(resolvedSearchParams, 'exactMatches')
+  const errorMessage = getSingleParam(resolvedSearchParams, 'error')
+  const activeSubmissionId = submittedId ? Number(submittedId) : null
+
+  let latestSubmissionCards: Array<{
+    id: number
+    slot_number: number
+    submitted_name: string
+    requested_finish: string
+    card_name?: string | null
+    set_name?: string | null
+    set_code?: string | null
+    collector_number?: string | null
+    image_url?: string | null
+    rarity?: string | null
+    type_line?: string | null
+    artist_name?: string | null
+    artist_summary?: string | null
+    artist_notable_cards?: string[] | null
+    top_eight_points?: string[] | null
+    color_identity?: string[] | null
+    exact_print_matched?: boolean | null
+  }> = []
+
+  if (user) {
+    try {
+      const submissionQuery = supabase
+        .from('paper_power_nine_submissions')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const submissionResult = activeSubmissionId
+        ? await supabase
+            .from('paper_power_nine_submissions')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('id', activeSubmissionId)
+            .maybeSingle()
+        : await submissionQuery.maybeSingle()
+
+      if (submissionResult.error && !isPaperPowerNineSchemaMissing(submissionResult.error.message)) {
+        throw new Error(submissionResult.error.message)
+      }
+
+      const latestSubmissionId = Number(submissionResult.data?.id ?? 0)
+
+      if (latestSubmissionId > 0) {
+        const cardsResult = await supabase
+          .from('paper_power_nine_submission_cards')
+          .select(
+            'id, slot_number, submitted_name, requested_finish, card_name, set_name, set_code, collector_number, image_url, rarity, type_line, artist_name, artist_summary, artist_notable_cards, top_eight_points, color_identity, exact_print_matched'
+          )
+          .eq('submission_id', latestSubmissionId)
+          .eq('user_id', user.id)
+          .order('slot_number', { ascending: true })
+
+        if (cardsResult.error && !isPaperPowerNineSchemaMissing(cardsResult.error.message)) {
+          throw new Error(cardsResult.error.message)
+        }
+
+        if (!cardsResult.error) {
+          latestSubmissionCards = (cardsResult.data ?? []) as typeof latestSubmissionCards
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load Personal Power 9 gallery:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -177,98 +277,174 @@ export default function PaperPowerNinePage() {
         <section id="submission-form" className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-8">
             <div className="max-w-3xl">
-              <div className="text-sm font-medium text-amber-200">Prototype submission form</div>
+              <div className="text-sm font-medium text-amber-200">Live submission intake</div>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-white">
-                Build a Paper Power 9 concept submission
+                Build a Personal Power 9 submission
               </h2>
               <p className="mt-3 text-sm leading-7 text-amber-50/85">
-                This is a prototype page for now. It shows the intended intake shape and CTA, but
-                it does not yet send data anywhere.
+                Submit nine exact printings with set, collector number, and finish. DeckSwap saves
+                the submission to your account and enriches each card with Scryfall data the same
+                way deck imports do.
               </p>
             </div>
 
-            <form className="mt-8 grid gap-5">
-              <div className="grid gap-5 lg:grid-cols-2">
+            {submittedId ? (
+              <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                Submission #{submittedId} was saved to your account. {exactMatches || '0'} of the 9
+                cards matched the exact print you entered.
+              </div>
+            ) : null}
+
+            {errorMessage ? (
+              <div className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            {!user ? (
+              <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 px-5 py-4 text-sm text-zinc-200">
+                Sign in first to attach a Personal Power 9 submission to your account.
+                <div className="mt-3">
+                  <Link
+                    href="/sign-in"
+                    className="rounded-2xl bg-amber-300 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
+                  >
+                    Sign in to submit
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <form action={submitPaperPowerNineAction} className="mt-8 grid gap-5">
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white">Your name</label>
+                    <input
+                      name="credit_name"
+                      defaultValue={user.user_metadata?.display_name ?? ''}
+                      placeholder="How you want to be credited"
+                      className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white">Contact email</label>
+                    <input
+                      type="email"
+                      name="contact_email"
+                      defaultValue={user.email ?? ''}
+                      placeholder="Optional follow-up email"
+                      className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-zinc-950/50 p-5">
+                  <div className="text-sm font-medium text-white">Your 9 favorite printings</div>
+                  <p className="mt-2 text-sm text-zinc-300">
+                    Enter the exact paper printing you want reviewed. Set code and collector number
+                    are used for Scryfall enrichment and exact-print matching.
+                  </p>
+                  <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                    {nineCardPrompt.map((item) => (
+                      <div key={item.slot} className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4">
+                        <label className="mb-3 block text-xs uppercase tracking-wide text-zinc-400">
+                          Card {item.slot}
+                        </label>
+                        <div className="grid gap-3">
+                          <input
+                            name={`card_${item.slot}_name`}
+                            placeholder={item.placeholder}
+                            className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
+                          />
+                          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+                            <input
+                              name={`card_${item.slot}_set`}
+                              placeholder="Set code"
+                              className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white uppercase outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
+                            />
+                            <input
+                              name={`card_${item.slot}_collector`}
+                              placeholder="Collector #"
+                              className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
+                            />
+                          </div>
+                          <select
+                            name={`card_${item.slot}_finish`}
+                            defaultValue="nonfoil"
+                            style={{ colorScheme: 'dark' }}
+                            className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-amber-300/40"
+                          >
+                            <option value="nonfoil" className="bg-zinc-900 text-white">
+                              Non-foil
+                            </option>
+                            <option value="foil" className="bg-zinc-900 text-white">
+                              Foil
+                            </option>
+                            <option value="etched" className="bg-zinc-900 text-white">
+                              Etched foil
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-white">Your name</label>
-                  <input
-                    placeholder="How you want to be credited"
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    Why these nine?
+                  </label>
+                  <textarea
+                    name="story"
+                    rows={8}
+                    placeholder="Tell the story behind your picks. Nostalgia, art, old-border love, the copy you opened as a kid, the version you finally tracked down, or the printings that define your taste."
                     className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
                   />
                 </div>
+
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-white">Email</label>
-                  <input
-                    placeholder="Optional contact for a future live version"
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-zinc-950/50 p-5">
-                <div className="text-sm font-medium text-white">Your 9 favorite printings</div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {nineCardPrompt.map((item) => (
-                    <div key={item.slot}>
-                      <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-400">
-                        Card {item.slot}
-                      </label>
-                      <input
-                        placeholder={item.placeholder}
-                        className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Why these nine?
-                </label>
-                <textarea
-                  rows={8}
-                  placeholder="Tell the story behind your picks. Nostalgia, art, old-border love, the copy you opened as a kid, the version you finally tracked down, or the printings that define your taste."
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-amber-300/40"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Episode angle or theme
-                </label>
-                <select
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-amber-300/40"
-                >
-                  <option value="" className="bg-zinc-900 text-white">
-                    Pick a theme (optional)
-                  </option>
-                  {episodeIdeas.map((idea) => (
-                    <option key={idea} value={idea} className="bg-zinc-900 text-white">
-                      {idea}
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    Episode angle or theme
+                  </label>
+                  <select
+                    name="theme"
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-white outline-none focus:border-amber-300/40"
+                  >
+                    <option value="" className="bg-zinc-900 text-white">
+                      Pick a theme (optional)
                     </option>
-                  ))}
-                </select>
-              </div>
+                    {episodeIdeas.map((idea) => (
+                      <option key={idea} value={idea} className="bg-zinc-900 text-white">
+                        {idea}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
-                >
-                  Submit concept
-                </button>
-                <Link
-                  href="/guest-import"
-                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-medium text-white hover:bg-white/15"
-                >
-                  Try guest deck import
-                </Link>
-              </div>
-            </form>
+                <div className="flex flex-wrap gap-3">
+                  <FormActionButton
+                    pendingLabel="Saving submission..."
+                    className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Submit Personal Power 9
+                  </FormActionButton>
+                  <Link
+                    href="/guest-import"
+                    className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-medium text-white hover:bg-white/15"
+                  >
+                    Try guest deck import
+                  </Link>
+                </div>
+              </form>
+            )}
           </div>
         </section>
+
+        {user && latestSubmissionCards.length > 0 ? (
+          <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+            <PersonalPowerNineGallery cards={latestSubmissionCards} />
+          </section>
+        ) : null}
       </main>
       <Footer />
     </div>

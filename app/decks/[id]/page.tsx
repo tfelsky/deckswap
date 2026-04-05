@@ -17,7 +17,10 @@ import {
   normalizeSupportedCurrency,
 } from '@/lib/currency'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
-import { normalizeImportedCommanderOverlap } from '@/lib/commander/normalize'
+import {
+  normalizeImportedCommanderOverlap,
+  planCommanderOverlapRowFixes,
+} from '@/lib/commander/normalize'
 import type { ImportedDeckCard } from '@/lib/commander/types'
 import { validateDeckForFormat } from '@/lib/commander/validate'
 import { rebuildDeckStructureFromSavedRows } from '@/lib/deck-repair'
@@ -654,15 +657,62 @@ export default async function DeckDetailPage({
       redirect(`/decks/${deckId}?imported=1`)
     }
 
+    const overlapFixPlan = planCommanderOverlapRowFixes(
+      (refreshedCards as DeckCard[]).map((card) => ({
+        id: card.id,
+        section: card.section,
+        quantity: card.quantity,
+        card_name: card.card_name,
+      }))
+    )
+
+    if (overlapFixPlan.hasFixes) {
+      for (const update of overlapFixPlan.updates) {
+        const { error: updateOverlapError } = await supabase
+          .from('deck_cards')
+          .update({ quantity: update.quantity })
+          .eq('id', update.id)
+          .eq('deck_id', deckId)
+
+        if (updateOverlapError) {
+          redirect(`/decks/${deckId}?imported=1`)
+        }
+      }
+
+      if (overlapFixPlan.deletes.length > 0) {
+        const { error: deleteOverlapError } = await supabase
+          .from('deck_cards')
+          .delete()
+          .eq('deck_id', deckId)
+          .in('id', overlapFixPlan.deletes)
+
+        if (deleteOverlapError) {
+          redirect(`/decks/${deckId}?imported=1`)
+        }
+      }
+    }
+
+    const { data: normalizedCards, error: normalizedCardsError } = await supabase
+      .from('deck_cards')
+      .select(
+        'id, section, quantity, card_name, set_code, set_name, collector_number, foil, sort_order, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+      )
+      .eq('deck_id', deckId)
+      .order('sort_order', { ascending: true })
+
+    if (normalizedCardsError || !normalizedCards) {
+      redirect(`/decks/${deckId}?imported=1`)
+    }
+
     const validation = validateDeckForFormat(
-      (refreshedCards as DeckCard[]).map(toImportedDeckCard),
+      (normalizedCards as DeckCard[]).map(toImportedDeckCard),
       ownedDeck.format
     )
-    const commanderNames = (refreshedCards as DeckCard[])
+    const commanderNames = (normalizedCards as DeckCard[])
       .filter((card) => card.section === 'commander')
       .map((card) => card.card_name)
 
-    const primaryCommander = (refreshedCards as DeckCard[]).find(
+    const primaryCommander = (normalizedCards as DeckCard[]).find(
       (card) => card.section === 'commander'
     )
     const tokenCount = (refreshedTokens ?? []).reduce(
@@ -696,10 +746,15 @@ export default async function DeckDetailPage({
         commanderNames,
         commanderMode: validation.commanderMode,
         isValid: validation.isValid,
+        overlapFixesApplied: overlapFixPlan.hasFixes,
+        overlapUpdates: overlapFixPlan.updates.length,
+        overlapDeletes: overlapFixPlan.deletes.length,
       },
     })
 
-    redirect(`/decks/${deckId}?commanderUpdated=1`)
+    redirect(
+      `/decks/${deckId}?commanderUpdated=1${overlapFixPlan.hasFixes ? '&duplicateCardsFixed=1' : ''}`
+    )
   }
 
   async function addDeckCommentAction(formData: FormData) {
@@ -1201,6 +1256,7 @@ export default async function DeckDetailPage({
   const showReimportFailed = resolvedSearchParams?.reimportFailed === '1'
   const showDeckRepaired = resolvedSearchParams?.deckRepaired === '1'
   const showDeckRepairFailed = resolvedSearchParams?.deckRepairFailed === '1'
+  const showDuplicateCardsFixed = resolvedSearchParams?.duplicateCardsFixed === '1'
   const canRunImportRecovery = !!user && (isOwner || isAdmin)
   const canReimportFromSource =
     canRunImportRecovery &&
@@ -1215,6 +1271,9 @@ export default async function DeckDetailPage({
   const likelyNeedsEnrichment =
     Number(typedDeck.price_total_usd_foil ?? 0) === 0 ||
     !typedDeck.image_url?.trim()
+  const duplicateValidationErrors = (typedDeck.validation_errors ?? []).filter((error) =>
+    error.toLowerCase().includes('duplicate card detected')
+  )
 
   const tokenCards = typedTokens.map((token) => ({
     id: token.id,
@@ -1412,6 +1471,15 @@ export default async function DeckDetailPage({
             </div>
           )}
 
+          {showDuplicateCardsFixed && (
+            <div className="mt-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-sm text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.08)]">
+              <div className="font-medium text-emerald-100">Duplicate overlap cleaned up</div>
+              <p className="mt-3 text-emerald-100/90">
+                DeckSwap removed the overlapping commander and mainboard copy that was left behind while saving the commander choice.
+              </p>
+            </div>
+          )}
+
           {showEnrichRetryFailed && (
             <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]">
               <div className="font-medium text-red-200">Enrichment retry failed</div>
@@ -1502,6 +1570,11 @@ export default async function DeckDetailPage({
                         Repair saved rows
                       </FormActionButton>
                     </form>
+                  </div>
+                )}
+                {duplicateValidationErrors.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-yellow-200/20 bg-black/20 p-4 text-sm text-yellow-50/90">
+                    Duplicate-card errors usually mean an import left overlapping commander, mainboard, or token rows behind. Start with <span className="font-medium text-white">Repair saved rows</span>. If the original source is still public, <span className="font-medium text-white">Re-import from source</span> is the cleanest reset.
                   </div>
                 )}
               </details>
@@ -1829,9 +1902,12 @@ export default async function DeckDetailPage({
                             </option>
                           ))}
                         </select>
-                        <button className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
+                        <FormActionButton
+                          pendingLabel="Saving commander..."
+                          className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+                        >
                           Save Commander
-                        </button>
+                        </FormActionButton>
                       </form>
                     </div>
                   )}

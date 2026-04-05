@@ -5,6 +5,8 @@ type ScryfallCard = {
   set: string
   set_name: string
   collector_number: string
+  artist?: string
+  released_at?: string
   cmc?: number
   power?: string
   toughness?: string
@@ -121,6 +123,8 @@ export function scryfallToDeckCardUpdate(card: ScryfallCard) {
     set_code: card.set,
     set_name: card.set_name,
     collector_number: card.collector_number,
+    artist_name: card.artist ?? null,
+    released_at: card.released_at ?? null,
     finishes: card.finishes ?? [],
     oracle_text: card.oracle_text ?? null,
     type_line: card.type_line ?? null,
