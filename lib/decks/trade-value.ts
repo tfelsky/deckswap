@@ -67,3 +67,26 @@ export function calculateSuggestedBuyNowPrice(value: number) {
     suggested,
   }
 }
+
+export function guaranteedBuyNowHaircutForValue(value: number) {
+  if (value < 150) return 10
+  if (value < 500) return 20
+  return 40
+}
+
+export function calculateGuaranteedBuyNowOffer(value: number) {
+  const tradeValue = calculateDeckTradeValue(value)
+  const haircut = guaranteedBuyNowHaircutForValue(tradeValue.deckValue)
+  const guaranteedOffer = roundCurrency(Math.max(0, tradeValue.buylistValue - haircut))
+  const guaranteedRate =
+    tradeValue.deckValue > 0 ? roundCurrency(guaranteedOffer / tradeValue.deckValue) : 0
+  const certaintyCost = roundCurrency(Math.max(0, tradeValue.buylistValue - guaranteedOffer))
+
+  return {
+    ...tradeValue,
+    haircut,
+    certaintyCost,
+    guaranteedOffer,
+    guaranteedRate,
+  }
+}

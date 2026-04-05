@@ -25,11 +25,12 @@ import { getDeckMarketingChips, normalizeBoxType } from '@/lib/decks/marketing'
 import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
-import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
+import { calculateGuaranteedBuyNowOffer, calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
+import { BuyNowQuoteGate } from '@/components/buy-now-quote-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -239,6 +240,7 @@ export default async function ManageDeckPage({
     (deck as typeof deck & { buy_now_currency?: string | null }).buy_now_currency
   )
   const buyNowSuggestionUsd = calculateSuggestedBuyNowPrice(currentPrice)
+  const guaranteedBuyNowUsd = calculateGuaranteedBuyNowOffer(currentPrice)
   const buyNowSuggestion = {
     floor: convertDeckValueForCurrency({
       usdValue: buyNowSuggestionUsd.floor,
@@ -256,6 +258,16 @@ export default async function ManageDeckPage({
       currency: buyNowCurrency,
     }),
   }
+  const guaranteedBuyNow = convertDeckValueForCurrency({
+    usdValue: guaranteedBuyNowUsd.guaranteedOffer,
+    eurValue: guaranteedBuyNowUsd.guaranteedOffer * 0.92,
+    currency: buyNowCurrency,
+  })
+  const guaranteedHaircut = convertDeckValueForCurrency({
+    usdValue: guaranteedBuyNowUsd.haircut,
+    eurValue: guaranteedBuyNowUsd.haircut * 0.92,
+    currency: buyNowCurrency,
+  })
   const selectedWantedColors = new Set(
     ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
       (value: string) => String(value)
@@ -1321,26 +1333,18 @@ export default async function ManageDeckPage({
                     Value ladder: <span className="font-medium text-emerald-200">1. Deck Swap first</span>, <span className="font-medium text-white">2. Buy It Now second</span>, <span className="font-medium text-amber-200">3. Auction only if the first two paths do not move the deck</span>.
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
-                      <div className="mt-2 text-xl font-semibold text-amber-200">
-                        {formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Suggested BIN</div>
-                      <div className="mt-2 text-xl font-semibold text-white">
-                        {formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="text-xs uppercase tracking-wide text-zinc-500">Deck Swap ceiling</div>
-                      <div className="mt-2 text-xl font-semibold text-sky-200">
-                        {formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
-                      </div>
-                    </div>
+                  <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-50/85">
+                    Guaranteed exit lane: if you want certainty over maximizing price, DeckSwap can quote a <span className="font-medium text-white">we&apos;ll buy it now</span> price that undercuts the estimated buylist by {formatCurrencyAmount(guaranteedHaircut, buyNowCurrency)}.
                   </div>
+
+                  <BuyNowQuoteGate
+                    currency={buyNowCurrency}
+                    buylistFloor={formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
+                    guaranteedOffer={formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}
+                    guaranteedHaircut={formatCurrencyAmount(guaranteedHaircut, buyNowCurrency)}
+                    suggestedBuyNow={formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
+                    ceiling={formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
+                  />
 
                   <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                     <div>
@@ -1366,7 +1370,7 @@ export default async function ManageDeckPage({
                         min="0"
                         step="0.01"
                         defaultValue={(deck as typeof deck & { buy_now_price_usd?: number | null }).buy_now_price_usd ?? ''}
-                        placeholder={buyNowSuggestion.suggested.toFixed(2)}
+                        placeholder="Get your quote above, or enter a custom price"
                         className="w-full rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-white"
                       />
                       <p className="mt-2 text-xs text-zinc-400">
