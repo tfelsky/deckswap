@@ -12,6 +12,8 @@ export default function SignInPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nextDeckIdea, setNextDeckIdea] = useState('')
+  const [commanderSuggestions, setCommanderSuggestions] = useState<string[]>([])
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,6 +23,42 @@ export default function SignInPage() {
   useEffect(() => {
     setGuestDraftToken(new URLSearchParams(window.location.search).get('guestDraft')?.trim() ?? '')
   }, [])
+
+  useEffect(() => {
+    if (mode !== 'sign-up') return
+
+    const query = nextDeckIdea.trim()
+
+    if (query.length < 2) {
+      setCommanderSuggestions([])
+      return
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/commanders/suggest?q=${encodeURIComponent(query)}`,
+          {
+            signal: controller.signal,
+          }
+        )
+        const payload = (await response.json()) as {
+          suggestions?: string[]
+        }
+        setCommanderSuggestions(payload.suggestions ?? [])
+      } catch (fetchError) {
+        if ((fetchError as Error).name !== 'AbortError') {
+          setCommanderSuggestions([])
+        }
+      }
+    }, 180)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
+  }, [mode, nextDeckIdea])
 
   function getPostAuthRoute() {
     if (hasGuestImportDraft() || guestDraftToken) {
@@ -55,9 +93,50 @@ export default function SignInPage() {
       return
     }
 
+    const surveyAnswer = nextDeckIdea.trim()
+
+    if (!surveyAnswer) {
+      setError('Tell us which legendary creature you want to build next.')
+      setLoading(false)
+      return
+    }
+
+    const commanderResolutionResponse = await fetch('/api/commanders/resolve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: surveyAnswer,
+      }),
+    })
+
+    const commanderResolution = (await commanderResolutionResponse.json()) as {
+      commanderName?: string
+      corrected?: boolean
+      error?: string
+    }
+
+    if (!commanderResolutionResponse.ok || !commanderResolution.commanderName) {
+      setError(
+        commanderResolution.error ||
+          'We could not match that answer to a known legendary creature.'
+      )
+      setLoading(false)
+      return
+    }
+
+    const normalizedCommanderName = commanderResolution.commanderName
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          next_deck_commander: normalizedCommanderName,
+          next_deck_commander_input: surveyAnswer,
+        },
+      },
     })
 
     if (error) {
@@ -75,6 +154,7 @@ export default function SignInPage() {
         body: JSON.stringify({
           email,
           userId: data.user?.id ?? null,
+          nextDeckCommander: normalizedCommanderName,
         }),
       })
     } catch (notificationError) {
@@ -83,14 +163,14 @@ export default function SignInPage() {
 
     if (getPostAuthRoute() !== '/decks') {
       setMessage(
-        'Account created. If email confirmation is enabled, confirm your email and then sign in here to carry your guest preview into the save flow.'
+        `Account created. We saved your next deck idea as ${normalizedCommanderName}. If email confirmation is enabled, confirm your email and then sign in here to carry your guest preview into the save flow.`
       )
       setLoading(false)
       return
     }
 
     setMessage(
-      'Account created. If email confirmation is enabled in Supabase, check your inbox before signing in.'
+      `Account created. We saved your next deck idea as ${normalizedCommanderName}. If email confirmation is enabled in Supabase, check your inbox before signing in.`
     )
     setLoading(false)
   }
@@ -207,6 +287,35 @@ export default function SignInPage() {
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
             </div>
+
+            {mode === 'sign-up' && (
+              <div>
+                <label
+                  htmlFor="next-deck-idea"
+                  className="mb-2 block text-sm font-medium text-zinc-300"
+                >
+                  The next deck I want to build is
+                </label>
+                <input
+                  id="next-deck-idea"
+                  type="text"
+                  list="commander-suggestions"
+                  required={mode === 'sign-up'}
+                  value={nextDeckIdea}
+                  onChange={(e) => setNextDeckIdea(e.target.value)}
+                  placeholder="Atraxa, Praetors' Voice"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
+                />
+                <datalist id="commander-suggestions">
+                  {commanderSuggestions.map((suggestion) => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Short answer. We will suggest names from the commander directory and still correct spelling on submit.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">

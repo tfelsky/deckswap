@@ -309,8 +309,25 @@ const TOKEN_NAME_PATTERNS = [
   /^the ring$/i,
 ]
 
+const HARDCODED_NON_TOKEN_LANDS = new Set([
+  'plains',
+  'island',
+  'swamp',
+  'mountain',
+  'forest',
+  'wastes',
+])
+
+export function isHardcodedNonTokenLand(cardName: string) {
+  return HARDCODED_NON_TOKEN_LANDS.has(cardName.trim().toLowerCase())
+}
+
 export function isLikelyTokenCard(cardName: string, setCode?: string | null) {
   const normalizedName = cardName.trim().toLowerCase()
+
+  if (isHardcodedNonTokenLand(normalizedName)) {
+    return false
+  }
 
   if (COMMON_TOKEN_NAMES.has(normalizedName)) {
     return true

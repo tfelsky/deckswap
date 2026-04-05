@@ -1,5 +1,5 @@
 import type { ImportedDeckCard } from '@/lib/commander/types'
-import { isLikelyTokenCard } from '@/lib/commander/parse'
+import { isHardcodedNonTokenLand, isLikelyTokenCard } from '@/lib/commander/parse'
 
 type MoxfieldCardEntry = {
   quantity?: number
@@ -84,9 +84,11 @@ function parseMoxfieldBoard(
         section === 'mainboard' && isLikelyTokenCard(name, card?.set)
           ? 'token'
           : section
+      const normalizedSection =
+        inferredSection === 'token' && isHardcodedNonTokenLand(name) ? 'mainboard' : inferredSection
 
       return {
-        section: inferredSection,
+        section: normalizedSection,
         quantity: Number(entry.quantity ?? 1),
         cardName: name,
         foil:

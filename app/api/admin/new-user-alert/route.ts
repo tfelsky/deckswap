@@ -10,10 +10,12 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       email?: string
       userId?: string | null
+      nextDeckCommander?: string | null
     }
 
     const email = String(body.email ?? '').trim().toLowerCase()
     const userId = String(body.userId ?? '').trim() || 'Not returned by signup flow'
+    const nextDeckCommander = String(body.nextDeckCommander ?? '').trim()
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required.' }, { status: 400 })
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
       '',
       `Email: ${email}`,
       `User ID: ${userId}`,
+      ...(nextDeckCommander ? [`Next deck they want to build: ${nextDeckCommander}`] : []),
       '',
       `Review queue: ${baseUrl}/admin/approvals`,
       `Verification queue: ${baseUrl}/admin/verifications`,
@@ -41,6 +44,11 @@ export async function POST(request: Request) {
         <div style="margin: 0 0 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
           <div><strong>Email:</strong> ${email}</div>
           <div style="margin-top: 8px;"><strong>User ID:</strong> ${userId}</div>
+          ${
+            nextDeckCommander
+              ? `<div style="margin-top: 8px;"><strong>Next deck they want to build:</strong> ${nextDeckCommander}</div>`
+              : ''
+          }
         </div>
         <p style="margin: 0 0 10px;">
           <a href="${baseUrl}/admin/approvals">Open user approvals</a>
