@@ -65,6 +65,7 @@ const shippingTickets = [
   "Shipping ticket generation with clear print-and-pack guidance",
   "Pickup-ready label flow so you know when the parcel is truly ready",
   "Reusable first-shipment box strategy to make future sends easier",
+  "A $2 kickback when sleeves arrive clean, clear, and undamaged, roughly in the 3 to 5 play range",
   "Optional next-day couriered starter kit with box and label for a fee",
 ]
 
@@ -390,6 +391,13 @@ export default function InfoPage() {
                 <div className="text-sm font-medium text-foreground">A calmer first shipment leads to easier repeat shipments.</div>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
                   That is why the packaging recommendation, reusable box, and shipping-ticket flow all sit on the same page together.
+                </p>
+              </div>
+
+              <div className="mt-4 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-5">
+                <div className="text-sm font-medium text-foreground">Sleeve-quality bonus</div>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  If the sleeves arrive clean, clear, and undamaged, we can add a <span className="font-semibold text-foreground">$2 kickback</span>. Think lightly used sleeves, approximately in that 3 to 5 play range, rather than cloudy, split, or heavily worn ones.
                 </p>
               </div>
 
