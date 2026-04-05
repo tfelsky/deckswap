@@ -25,7 +25,10 @@ export default function SignInPage() {
   }, [])
 
   useEffect(() => {
-    if (mode !== 'sign-up') return
+    if (mode !== 'sign-up') {
+      setCommanderSuggestions([])
+      return
+    }
 
     const query = nextDeckIdea.trim()
 

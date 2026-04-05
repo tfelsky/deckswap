@@ -5,6 +5,15 @@ import {
   sendTransactionalEmail,
 } from '@/lib/email'
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -42,11 +51,11 @@ export async function POST(request: Request) {
           A new user has created a Mythiverse Exchange account.
         </p>
         <div style="margin: 0 0 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
-          <div><strong>Email:</strong> ${email}</div>
-          <div style="margin-top: 8px;"><strong>User ID:</strong> ${userId}</div>
+          <div><strong>Email:</strong> ${escapeHtml(email)}</div>
+          <div style="margin-top: 8px;"><strong>User ID:</strong> ${escapeHtml(userId)}</div>
           ${
             nextDeckCommander
-              ? `<div style="margin-top: 8px;"><strong>Next deck they want to build:</strong> ${nextDeckCommander}</div>`
+              ? `<div style="margin-top: 8px;"><strong>Next deck they want to build:</strong> ${escapeHtml(nextDeckCommander)}</div>`
               : ''
           }
         </div>

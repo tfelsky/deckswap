@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js'
+
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export type CommanderDirectoryEntry = {
@@ -26,6 +28,24 @@ type ScryfallBulkCard = {
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase()
+}
+
+function createPublicReadClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
+
+  if (!url || !publishableKey) {
+    throw new Error(
+      'Supabase public access is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.'
+    )
+  }
+
+  return createClient(url, publishableKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }
 
 function isCommanderCard(card: ScryfallBulkCard) {
@@ -122,26 +142,32 @@ export async function fetchCommanderDirectoryFromScryfall() {
 export async function refreshCommanderDirectory() {
   const { commanders, sourceUpdatedAt } = await fetchCommanderDirectoryFromScryfall()
   const supabase = createAdminClient()
-
-  const { error: deleteError } = await supabase.from('commander_directory').delete().neq('name', '')
-
-  if (deleteError) {
-    throw new Error(deleteError.message)
-  }
+  const syncedAt = new Date().toISOString()
 
   for (const batch of chunk(
     commanders.map((entry) => ({
       ...entry,
       source_updated_at: sourceUpdatedAt,
-      synced_at: new Date().toISOString(),
+      synced_at: syncedAt,
     })),
     500
   )) {
-    const { error } = await supabase.from('commander_directory').insert(batch)
+    const { error } = await supabase
+      .from('commander_directory')
+      .upsert(batch, { onConflict: 'normalized_name' })
 
     if (error) {
       throw new Error(error.message)
     }
+  }
+
+  const { error: pruneError } = await supabase
+    .from('commander_directory')
+    .delete()
+    .lt('synced_at', syncedAt)
+
+  if (pruneError) {
+    throw new Error(pruneError.message)
   }
 
   return {
@@ -155,14 +181,13 @@ export async function searchCommanderDirectory(query: string, limit = 8) {
 
   if (!trimmed) return []
 
-  const supabase = createAdminClient()
+  const supabase = createPublicReadClient()
   const normalized = normalizeName(trimmed)
-  const escaped = normalized.replace(/[%_]/g, '\\$&')
 
   const startsWithResult = await supabase
     .from('commander_directory')
     .select('name, normalized_name, type_line, oracle_text')
-    .ilike('normalized_name', `${escaped}%`)
+    .ilike('normalized_name', `${normalized}%`)
     .order('normalized_name', { ascending: true })
     .limit(limit)
 
@@ -179,7 +204,7 @@ export async function searchCommanderDirectory(query: string, limit = 8) {
   const containsResult = await supabase
     .from('commander_directory')
     .select('name, normalized_name, type_line, oracle_text')
-    .ilike('normalized_name', `%${escaped}%`)
+    .ilike('normalized_name', `%${normalized}%`)
     .order('normalized_name', { ascending: true })
     .limit(limit * 2)
 
