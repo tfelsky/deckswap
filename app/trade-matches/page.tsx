@@ -32,6 +32,8 @@ type DeckRow = {
   trade_wanted_profile?: string | null
   wanted_color_identities?: string[] | null
   wanted_formats?: string[] | null
+  is_complete_precon?: boolean | null
+  token_count?: number | null
 }
 
 type DeckCardForBracket = {
@@ -69,10 +71,15 @@ function toTradeMatchDeck(
     trade_wanted_profile: deck.trade_wanted_profile ?? null,
     wanted_color_identities: deck.wanted_color_identities ?? null,
     wanted_formats: deck.wanted_formats?.map((value) => normalizeDeckFormat(value)) ?? null,
+    is_complete_precon: deck.is_complete_precon ?? null,
+    token_count: deck.token_count ?? null,
     owner_display_name: ownerProfile?.display_name ?? null,
     owner_location_country: ownerProfile?.location_country ?? null,
+    owner_can_ship_domestic: ownerProfile?.can_ship_domestic ?? null,
     owner_can_ship_international: ownerProfile?.can_ship_international ?? null,
     owner_completed_trades_count: ownerSummary?.completed_trades_count ?? null,
+    owner_avg_trade_reply_hours: ownerSummary?.avg_trade_reply_hours ?? null,
+    owner_internal_user_rating: ownerSummary?.internal_user_rating ?? null,
   }
 }
 
@@ -218,7 +225,7 @@ export default async function TradeMatchesPage({
 
   const { data: myDeckRows } = await supabase
     .from('decks')
-    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
+    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats, is_complete_precon, token_count')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -274,7 +281,7 @@ export default async function TradeMatchesPage({
   const targetDeckResult = targetDeckId
     ? await supabase
         .from('decks')
-        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats, is_complete_precon, token_count')
         .eq('id', targetDeckId)
         .eq('is_listed_for_trade', true)
         .maybeSingle()
@@ -286,7 +293,7 @@ export default async function TradeMatchesPage({
     ? { data: targetDeck ? [targetDeck] : [] }
     : await supabase
         .from('decks')
-        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats, is_complete_precon, token_count')
         .neq('user_id', user.id)
         .eq('is_listed_for_trade', true)
         .order('id', { ascending: false })
@@ -304,7 +311,7 @@ export default async function TradeMatchesPage({
   const { data: signalDeckRows } = signalDeckIds.length
     ? await supabase
         .from('decks')
-        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats, is_complete_precon, token_count')
         .in('id', signalDeckIds)
     : { data: [] as DeckRow[] }
 

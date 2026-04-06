@@ -17,10 +17,15 @@ export type TradeMatchDeck = {
   trade_wanted_profile?: string | null
   wanted_color_identities?: string[] | null
   wanted_formats?: string[] | null
+  is_complete_precon?: boolean | null
+  token_count?: number | null
   owner_display_name?: string | null
   owner_location_country?: string | null
+  owner_can_ship_domestic?: boolean | null
   owner_can_ship_international?: boolean | null
   owner_completed_trades_count?: number | null
+  owner_avg_trade_reply_hours?: number | null
+  owner_internal_user_rating?: number | null
 }
 
 type MatchScorePart = {
@@ -30,7 +35,7 @@ type MatchScorePart = {
 
 type PreferenceSignalDeck = Pick<
   TradeMatchDeck,
-  'format' | 'price_total_usd_foil' | 'color_identity' | 'bracket'
+  'format' | 'price_total_usd_foil' | 'color_identity' | 'bracket' | 'is_complete_precon' | 'token_count'
 >
 
 export type TradeMatchResult = {
@@ -53,6 +58,49 @@ function normalizedCountry(value?: string | null) {
 
 function uniqueNonEmpty<T>(values: T[]) {
   return [...new Set(values)]
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function tokenizePreferenceText(value?: string | null) {
+  const normalized = (value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!normalized) return []
+
+  const stopWords = new Set([
+    'the',
+    'and',
+    'for',
+    'with',
+    'that',
+    'this',
+    'deck',
+    'decks',
+    'trade',
+    'trades',
+    'looking',
+    'value',
+    'close',
+    'into',
+    'from',
+    'plus',
+    'strong',
+    'open',
+    'offers',
+  ])
+
+  return uniqueNonEmpty(
+    normalized
+      .split(' ')
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && !stopWords.has(token))
+  )
 }
 
 function colorOverlapScore(myCode: string, otherCode: string) {
@@ -150,6 +198,7 @@ function bracketScore(myBracket?: number | null, otherBracket?: number | null) {
 
 function shippingScore(
   myCountry?: string | null,
+  otherDomestic?: boolean | null,
   otherCountry?: string | null,
   otherInternational?: boolean | null
 ) {
@@ -157,11 +206,22 @@ function shippingScore(
   const other = normalizedCountry(otherCountry)
 
   if (my && other && my === other) {
-    return { score: 10, reason: 'Same-country shipping should keep the swap easier and cheaper.' }
+    return {
+      score: otherDomestic === false ? 7 : 10,
+      reason: 'Same-country shipping should keep the swap easier and cheaper.',
+    }
   }
 
   if (otherInternational) {
     return { score: 5, reason: 'The other trader appears open to international shipping.' }
+  }
+
+  if (my && other && my !== other) {
+    return { score: -3, reason: 'This shipping lane looks cross-border without an international-ship signal.' }
+  }
+
+  if (otherDomestic === true && !otherInternational) {
+    return { score: 1, reason: 'Shipping fit is probably domestic-only, so this match depends on geography.' }
   }
 
   return { score: 1, reason: 'Shipping fit is weaker, so logistics may need more care.' }
@@ -178,6 +238,41 @@ function trustScore(completedTrades?: number | null) {
   }
 
   return { score: 2, reason: 'This looks like a newer trading profile, so trust history is still building.' }
+}
+
+function responsivenessScore(avgTradeReplyHours?: number | null) {
+  const hours = Number(avgTradeReplyHours ?? NaN)
+
+  if (!Number.isFinite(hours)) {
+    return { score: 1, reason: 'Reply-speed history is still light, so responsiveness is hard to read.' }
+  }
+  if (hours <= 6) {
+    return { score: 6, reason: 'The other trader tends to reply quickly, which helps live trade coordination.' }
+  }
+  if (hours <= 24) {
+    return { score: 4, reason: 'The other trader usually replies within a day.' }
+  }
+  if (hours <= 72) {
+    return { score: 1, reason: 'Reply timing looks workable, though not especially fast.' }
+  }
+
+  return { score: -2, reason: 'Slow reply timing may make the trade harder to close.' }
+}
+
+function ratingScore(internalUserRating?: number | null) {
+  const rating = Number(internalUserRating ?? NaN)
+
+  if (!Number.isFinite(rating)) {
+    return { score: 0, reason: 'No user-rating signal is available yet.' }
+  }
+  if (rating >= 4.5) {
+    return { score: 4, reason: 'Internal user rating adds confidence to this match.' }
+  }
+  if (rating >= 3.5) {
+    return { score: 2, reason: 'User rating is positive enough to modestly support the match.' }
+  }
+
+  return { score: -2, reason: 'Lower user rating adds a little friction to this match.' }
 }
 
 function wantedFormatScore(myDeck: TradeMatchDeck, otherDeck: TradeMatchDeck): MatchScorePart {
@@ -263,6 +358,98 @@ function tradeGoalScore(myDeck: TradeMatchDeck, otherDeck: TradeMatchDeck): Matc
   }
 }
 
+function wantedProfileTextScore(myDeck: TradeMatchDeck, otherDeck: TradeMatchDeck): MatchScorePart {
+  const tokens = tokenizePreferenceText(myDeck.trade_wanted_profile)
+
+  if (tokens.length === 0) {
+    return { score: 0, reason: 'No free-text trade preference was written on your listing.' }
+  }
+
+  const colorCode = colorIdentityCode(otherDeck.color_identity).toLowerCase()
+  const searchableText = [
+    otherDeck.name,
+    otherDeck.commander,
+    otherDeck.format,
+    otherDeck.bracketLabel,
+    colorCode,
+    otherDeck.is_complete_precon ? 'precon' : '',
+    Number(otherDeck.token_count ?? 0) > 0 ? 'token tokens' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const keywordGroups = [
+    {
+      token: 'white',
+      hit: colorCode.includes('w'),
+      label: 'white',
+    },
+    {
+      token: 'blue',
+      hit: colorCode.includes('u'),
+      label: 'blue',
+    },
+    {
+      token: 'black',
+      hit: colorCode.includes('b'),
+      label: 'black',
+    },
+    {
+      token: 'red',
+      hit: colorCode.includes('r'),
+      label: 'red',
+    },
+    {
+      token: 'green',
+      hit: colorCode.includes('g'),
+      label: 'green',
+    },
+    {
+      token: 'precon',
+      hit: otherDeck.is_complete_precon === true,
+      label: 'precon',
+    },
+    {
+      token: 'tokens',
+      hit: Number(otherDeck.token_count ?? 0) > 0,
+      label: 'token support',
+    },
+    {
+      token: 'token',
+      hit: Number(otherDeck.token_count ?? 0) > 0,
+      label: 'token support',
+    },
+  ]
+
+  const matchedLabels = new Set<string>()
+  let rawMatches = 0
+
+  for (const token of tokens) {
+    if (searchableText.includes(token)) {
+      rawMatches += 1
+      matchedLabels.add(token)
+      continue
+    }
+
+    const keyword = keywordGroups.find((entry) => entry.token === token && entry.hit)
+    if (keyword) {
+      rawMatches += 1
+      matchedLabels.add(keyword.label)
+    }
+  }
+
+  if (rawMatches === 0) {
+    return { score: -2, reason: 'This deck misses the themes described in your written trade preferences.' }
+  }
+
+  const score = clamp(rawMatches * 2, 2, 8)
+  return {
+    score,
+    reason: `It lines up with the trade themes you wrote down: ${[...matchedLabels].slice(0, 3).join(', ')}.`,
+  }
+}
+
 function behaviorPreferenceScore(
   label: 'watchlist' | 'rejections',
   otherDeck: TradeMatchDeck,
@@ -308,6 +495,30 @@ function behaviorPreferenceScore(
     )
   }
 
+  const preconMatches = sourceDecks.filter(
+    (deck) => deck.is_complete_precon === true && otherDeck.is_complete_precon === true
+  ).length
+  if (preconMatches > 0) {
+    score += 2
+    reasons.push(
+      label === 'watchlist'
+        ? 'It matches your habit of saving precon-style decks.'
+        : 'It resembles precon-style decks you have been rejecting.'
+    )
+  }
+
+  const tokenMatches = sourceDecks.filter(
+    (deck) => Number(deck.token_count ?? 0) > 0 && Number(otherDeck.token_count ?? 0) > 0
+  ).length
+  if (tokenMatches > 0) {
+    score += tokenMatches >= 2 ? 3 : 1
+    reasons.push(
+      label === 'watchlist'
+        ? 'It shares the token-heavy shape of decks you have been tracking.'
+        : 'It shares the token-heavy shape of decks you have been rejecting.'
+    )
+  }
+
   const ratedSourceDecks = sourceDecks.filter((deck) => deck.bracket != null)
   if (otherDeck.bracket != null && ratedSourceDecks.length > 0) {
     const averageBracket =
@@ -334,7 +545,7 @@ function behaviorPreferenceScore(
   }
 
   return {
-    score: score * direction,
+    score: clamp(score, 0, 9) * direction,
     reason: reasons.join(' '),
   }
 }
@@ -359,13 +570,17 @@ export function calculateTradeMatch(
   const bracket = bracketScore(myDeck.bracket, otherDeck.bracket)
   const shipping = shippingScore(
     options?.myCountry,
+    otherDeck.owner_can_ship_domestic,
     otherDeck.owner_location_country,
     otherDeck.owner_can_ship_international
   )
   const trust = trustScore(otherDeck.owner_completed_trades_count)
+  const responsiveness = responsivenessScore(otherDeck.owner_avg_trade_reply_hours)
+  const rating = ratingScore(otherDeck.owner_internal_user_rating)
   const wantedFormat = wantedFormatScore(myDeck, otherDeck)
   const wantedColor = wantedColorScore(myDeck, otherDeck)
   const goal = tradeGoalScore(myDeck, otherDeck)
+  const wantedProfileText = wantedProfileTextScore(myDeck, otherDeck)
   const watchlistBehavior = behaviorPreferenceScore(
     'watchlist',
     otherDeck,
@@ -389,9 +604,12 @@ export function calculateTradeMatch(
         bracket.score +
         shipping.score +
         trust.score +
+        responsiveness.score +
+        rating.score +
         wantedFormat.score +
         wantedColor.score +
         goal.score +
+        wantedProfileText.score +
         watchlistBehavior.score +
         rejectionBehavior.score
     )
@@ -404,9 +622,12 @@ export function calculateTradeMatch(
     bracket,
     shipping,
     trust,
+    responsiveness,
+    rating,
     wantedFormat,
     wantedColor,
     goal,
+    wantedProfileText,
     watchlistBehavior,
     rejectionBehavior,
   ]
