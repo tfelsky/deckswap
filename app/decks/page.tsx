@@ -21,6 +21,10 @@ import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import { isUserDeckPassesSchemaMissing, type UserDeckPassRow } from '@/lib/user-deck-passes'
+import {
+  isUserDeckWatchlistSchemaMissing,
+  type UserDeckWatchlistRow,
+} from '@/lib/user-deck-watchlist'
 import { Info } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -99,7 +103,43 @@ export default async function DecksPage() {
     const deckId = Number(formData.get('deck_id'))
     if (!Number.isFinite(deckId)) redirect('/decks')
 
+    await supabase
+      .from('user_deck_watchlist')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
     await supabase.from('user_deck_passes').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+      },
+      { onConflict: 'user_id,deck_id' }
+    )
+
+    redirect('/decks')
+  }
+
+  async function watchDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    if (!Number.isFinite(deckId)) redirect('/decks')
+
+    await supabase
+      .from('user_deck_passes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
+    await supabase.from('user_deck_watchlist').upsert(
       {
         user_id: user.id,
         deck_id: deckId,
@@ -132,6 +172,28 @@ export default async function DecksPage() {
     redirect('/decks')
   }
 
+  async function restoreWatchedDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    if (!Number.isFinite(deckId)) redirect('/decks')
+
+    await supabase
+      .from('user_deck_watchlist')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
+    redirect('/decks')
+  }
+
   const { data, error } = await supabase
     .from('decks')
     .select(
@@ -155,9 +217,20 @@ export default async function DecksPage() {
         .select('id, user_id, deck_id, created_at, reason')
         .eq('user_id', user.id)
     : { data: [] as UserDeckPassRow[], error: null }
+  const watchedDecksResult = user
+    ? await supabase
+        .from('user_deck_watchlist')
+        .select('id, user_id, deck_id, created_at, note')
+        .eq('user_id', user.id)
+    : { data: [] as UserDeckWatchlistRow[], error: null }
   const passesSchemaMissing = isUserDeckPassesSchemaMissing(passedDecksResult.error?.message)
+  const watchlistSchemaMissing = isUserDeckWatchlistSchemaMissing(watchedDecksResult.error?.message)
   const passedDeckRows = passesSchemaMissing ? [] : ((passedDecksResult.data ?? []) as UserDeckPassRow[])
+  const watchedDeckRows = watchlistSchemaMissing
+    ? []
+    : ((watchedDecksResult.data ?? []) as UserDeckWatchlistRow[])
   const passedDeckIds = new Set(passedDeckRows.map((row) => row.deck_id))
+  const watchedDeckIds = new Set(watchedDeckRows.map((row) => row.deck_id))
   const completedDeckCount = allDecks.filter((deck) => isInventoryStatusCompleted(deck.inventory_status)).length
   const deckIds = decks.map((deck) => deck.id)
 
@@ -182,8 +255,11 @@ export default async function DecksPage() {
     return { ...deck, bracket, format }
   })
   const availableDeckViews = user
-    ? deckViews.filter((deck) => !passedDeckIds.has(deck.id))
+    ? deckViews.filter((deck) => !passedDeckIds.has(deck.id) && !watchedDeckIds.has(deck.id))
     : deckViews
+  const watchedDeckViews = user
+    ? deckViews.filter((deck) => watchedDeckIds.has(deck.id) && !passedDeckIds.has(deck.id))
+    : []
   const passedDeckViews = user
     ? deckViews.filter((deck) => passedDeckIds.has(deck.id))
     : []
@@ -311,7 +387,8 @@ export default async function DecksPage() {
               <div className="text-sm text-zinc-400">Visibility Rules</div>
               <div className="mt-2 text-sm text-zinc-300">
                 Only decks in public live statuses appear here. Staged, donation, checkout, and escrow-management statuses stay out of the live marketplace.
-                {user && passedDeckViews.length > 0 ? ` You have passed on ${passedDeckViews.length} deck${passedDeckViews.length === 1 ? '' : 's'}, so they are hidden from your available list.` : ''}
+                {user && watchedDeckViews.length > 0 ? ` You are watching ${watchedDeckViews.length} deck${watchedDeckViews.length === 1 ? '' : 's'} in a separate list.` : ''}
+                {user && passedDeckViews.length > 0 ? ` You have rejected ${passedDeckViews.length} deck${passedDeckViews.length === 1 ? '' : 's'}, so they are hidden from your available list.` : ''}
                 {completedDeckCount > 0 ? ` ${completedDeckCount} deck${completedDeckCount === 1 ? ' has' : 's have'} already moved into completed status.` : ''}
               </div>
             </div>
@@ -451,7 +528,7 @@ export default async function DecksPage() {
             <h3 className="text-xl font-semibold">No available decks right now</h3>
             <p className="mt-2 text-zinc-400">
               {user && passedDeckViews.length > 0
-                ? 'Everything currently visible has been moved into your Pass list. You can restore any of them below.'
+                ? 'Everything currently visible has been moved into your watchlist or rejected list. You can restore any of them below.'
                 : 'Your connection works. Now seed the table with more decks and metadata.'}
             </p>
           </div>
@@ -590,14 +667,26 @@ export default async function DecksPage() {
                   </div>
                 </Link>
 
-                {user && !passesSchemaMissing ? (
+                {user && (!passesSchemaMissing || !watchlistSchemaMissing) ? (
                   <div className="border-t border-white/10 px-5 py-4">
-                    <form action={passDeckAction}>
-                      <input type="hidden" name="deck_id" value={deck.id} />
-                      <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
-                        Pass for now
-                      </button>
-                    </form>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {!watchlistSchemaMissing ? (
+                        <form action={watchDeckAction}>
+                          <input type="hidden" name="deck_id" value={deck.id} />
+                          <button className="w-full rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-400/15">
+                            Add to watchlist
+                          </button>
+                        </form>
+                      ) : null}
+                      {!passesSchemaMissing ? (
+                        <form action={passDeckAction}>
+                          <input type="hidden" name="deck_id" value={deck.id} />
+                          <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
+                            Reject
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </article>
@@ -605,9 +694,81 @@ export default async function DecksPage() {
           </div>
         )}
 
-        {user && passesSchemaMissing ? (
+        {user && (passesSchemaMissing || watchlistSchemaMissing) ? (
           <div className="mt-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
-            Run <code>docs/sql/user-deck-passes.sql</code> to enable the per-user Pass list.
+            {passesSchemaMissing ? (
+              <span>Run <code>docs/sql/user-deck-passes.sql</code> to enable rejected decks.</span>
+            ) : null}
+            {passesSchemaMissing && watchlistSchemaMissing ? <span> </span> : null}
+            {watchlistSchemaMissing ? (
+              <span>Run <code>docs/sql/user-deck-watchlist.sql</code> to enable the per-user watchlist.</span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {user && watchedDeckViews.length > 0 ? (
+          <div className="mt-12">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">Watchlist</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Decks you want to keep an eye on without leaving them in the main browsing grid.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                {watchedDeckViews.length} watched deck{watchedDeckViews.length === 1 ? '' : 's'}
+              </div>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {watchedDeckViews.map((deck) => (
+                <article key={deck.id} className="overflow-hidden rounded-3xl border border-amber-400/20 bg-zinc-900/80">
+                  <Link href={`/decks/${deck.id}`} className="block">
+                    <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                      {deck.image_url ? (
+                        <img
+                          src={deck.image_url}
+                          alt={deck.name}
+                          className="h-full w-full object-cover object-top opacity-90"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-5">
+                        <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+                          Watchlist
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-white">
+                          {deck.commander || deck.name}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-xl font-semibold tracking-tight text-white">{deck.name}</h3>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {formatSupportsCommanderRules(deck.format)
+                          ? `Commander: ${deck.commander || 'Not set'}`
+                          : `Format: ${getDeckFormatLabel(deck.format)}`}
+                      </p>
+                    </div>
+                  </Link>
+
+                  <div className="grid gap-3 border-t border-white/10 px-5 py-4 sm:grid-cols-2">
+                    <form action={restoreWatchedDeckAction}>
+                      <input type="hidden" name="deck_id" value={deck.id} />
+                      <button className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+                        Restore to browsing
+                      </button>
+                    </form>
+                    <form action={passDeckAction}>
+                      <input type="hidden" name="deck_id" value={deck.id} />
+                      <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -615,13 +776,13 @@ export default async function DecksPage() {
           <div className="mt-12">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight">Pass</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Rejected</h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Decks you have hidden from your available list. Restore them if you passed by mistake or review them later for rejection trends.
+                  Decks you have rejected and hidden from your available list. Restore them if you want to reconsider later.
                 </p>
               </div>
               <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-                {passedDeckViews.length} passed deck{passedDeckViews.length === 1 ? '' : 's'}
+                {passedDeckViews.length} rejected deck{passedDeckViews.length === 1 ? '' : 's'}
               </div>
             </div>
 
@@ -640,7 +801,7 @@ export default async function DecksPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-5">
                         <div className="text-xs uppercase tracking-[0.2em] text-rose-200/80">
-                          Passed
+                          Rejected
                         </div>
                         <div className="mt-2 text-2xl font-semibold text-white">
                           {deck.commander || deck.name}
@@ -661,7 +822,7 @@ export default async function DecksPage() {
                     <form action={restorePassedDeckAction}>
                       <input type="hidden" name="deck_id" value={deck.id} />
                       <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15">
-                        Restore to available list
+                        Restore to browsing
                       </button>
                     </form>
                   </div>

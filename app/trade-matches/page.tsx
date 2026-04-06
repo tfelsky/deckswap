@@ -8,7 +8,13 @@ import { isProfileSchemaMissing, type PublicProfile, type ReputationSummary } fr
 import { createClient } from '@/lib/supabase/server'
 import { calculateTradeMatch, type TradeMatchDeck } from '@/lib/trade-matches'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
+import { isUserDeckPassesSchemaMissing, type UserDeckPassRow } from '@/lib/user-deck-passes'
+import {
+  isUserDeckWatchlistSchemaMissing,
+  type UserDeckWatchlistRow,
+} from '@/lib/user-deck-watchlist'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -118,6 +124,68 @@ export default async function TradeMatchesPage({
     )
   }
 
+  async function rejectDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    const returnTo = String(formData.get('return_to') || '/trade-matches')
+    if (!Number.isFinite(deckId)) redirect(returnTo)
+
+    await supabase
+      .from('user_deck_watchlist')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
+    await supabase.from('user_deck_passes').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+      },
+      { onConflict: 'user_id,deck_id' }
+    )
+
+    redirect(returnTo)
+  }
+
+  async function watchDeckAction(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) redirect('/sign-in')
+
+    const deckId = Number(formData.get('deck_id'))
+    const returnTo = String(formData.get('return_to') || '/trade-matches')
+    if (!Number.isFinite(deckId)) redirect(returnTo)
+
+    await supabase
+      .from('user_deck_passes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('deck_id', deckId)
+
+    await supabase.from('user_deck_watchlist').upsert(
+      {
+        user_id: user.id,
+        deck_id: deckId,
+      },
+      { onConflict: 'user_id,deck_id' }
+    )
+
+    redirect(returnTo)
+  }
+
   const access = await getAdminAccessForUser(user)
   const { data: tradeOffersData } = await supabase
     .from('trade_offers')
@@ -127,6 +195,18 @@ export default async function TradeMatchesPage({
     isUnreadTradeOffer(offer, user.id)
   ).length
   const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
+  const [passedDecksResult, watchedDecksResult] = await Promise.all([
+    supabase.from('user_deck_passes').select('id, user_id, deck_id, created_at, reason').eq('user_id', user.id),
+    supabase.from('user_deck_watchlist').select('id, user_id, deck_id, created_at, note').eq('user_id', user.id),
+  ])
+  const passesSchemaMissing = isUserDeckPassesSchemaMissing(passedDecksResult.error?.message)
+  const watchlistSchemaMissing = isUserDeckWatchlistSchemaMissing(watchedDecksResult.error?.message)
+  const passedDeckIds = new Set(
+    (passesSchemaMissing ? [] : ((passedDecksResult.data ?? []) as UserDeckPassRow[])).map((row) => row.deck_id)
+  )
+  const watchedDeckIds = new Set(
+    (watchlistSchemaMissing ? [] : ((watchedDecksResult.data ?? []) as UserDeckWatchlistRow[])).map((row) => row.deck_id)
+  )
 
   const { data: myDeckRows } = await supabase
     .from('decks')
@@ -204,9 +284,14 @@ export default async function TradeMatchesPage({
         .order('id', { ascending: false })
         .limit(80)
 
-  const otherDecks = ((otherDeckRows ?? []) as DeckRow[]).filter(
-    (deck) => deck.user_id !== user.id && Number(deck.price_total_usd_foil ?? 0) > 0
-  )
+  const otherDecks = ((otherDeckRows ?? []) as DeckRow[]).filter((deck) => {
+    if (deck.user_id === user.id) return false
+    if (Number(deck.price_total_usd_foil ?? 0) <= 0) return false
+    if (targetDeckId && deck.id === targetDeckId) return true
+    if (passedDeckIds.has(deck.id)) return false
+    if (watchedDeckIds.has(deck.id)) return false
+    return true
+  })
 
   const allDeckIds = [...new Set([...myDecks, ...otherDecks].map((deck) => deck.id))]
   const { data: deckCardsRows } = allDeckIds.length
@@ -350,6 +435,18 @@ export default async function TradeMatchesPage({
             </div>
           )}
 
+          {(passesSchemaMissing || watchlistSchemaMissing) && (
+            <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
+              {passesSchemaMissing ? (
+                <span>Run <code>docs/sql/user-deck-passes.sql</code> to enable rejected decks here.</span>
+              ) : null}
+              {passesSchemaMissing && watchlistSchemaMissing ? <span> </span> : null}
+              {watchlistSchemaMissing ? (
+                <span>Run <code>docs/sql/user-deck-watchlist.sql</code> to enable watchlist actions here.</span>
+              ) : null}
+            </div>
+          )}
+
           {targetDeckId && !focusedDeck && (
             <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
               That listing is not available for direct comparison right now. It may no longer be live for trade.
@@ -437,6 +534,24 @@ export default async function TradeMatchesPage({
                           >
                             View listing
                           </Link>
+                          {!watchlistSchemaMissing ? (
+                            <form action={watchDeckAction}>
+                              <input type="hidden" name="deck_id" value={deck.id} />
+                              <input type="hidden" name="return_to" value={focusHref} />
+                              <button className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 hover:bg-amber-400/15">
+                                Add to watchlist
+                              </button>
+                            </form>
+                          ) : null}
+                          {!passesSchemaMissing ? (
+                            <form action={rejectDeckAction}>
+                              <input type="hidden" name="deck_id" value={deck.id} />
+                              <input type="hidden" name="return_to" value={focusHref} />
+                              <button className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 hover:bg-rose-400/15">
+                                Reject
+                              </button>
+                            </form>
+                          ) : null}
                           <Link
                             href={`/trade-offers/propose?deckId=${deck.id}`}
                             className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"

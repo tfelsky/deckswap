@@ -275,32 +275,37 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
     <>
       <section className="pb-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="deckswap-glass rounded-[2rem] p-6 md:p-8">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">
-                  Find Your Next Deck
+          <div className="deckswap-glass relative z-10 rounded-[1.75rem] px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                  <span className="text-sm font-semibold text-primary">WUBRG</span>
                 </div>
-                <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
-                  Find decks that match the colors you actually want to play
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  Skip the noise and jump straight to the mana identities, play patterns, and deck styles that fit your table.
-                </p>
+                <div>
+                  <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-primary/75">
+                    Color Chooser
+                  </div>
+                  <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground sm:text-lg">
+                    Jump straight to the decks in your colors
+                  </h2>
+                  <p className="mt-1 text-xs leading-6 text-muted-foreground sm:text-sm">
+                    A tiny filter bar for browsing mana identity first.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {selectedColor ? (
-                  <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
-                    <div className="text-xs uppercase tracking-[0.18em] text-primary/80">
+                  <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs text-foreground">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-primary/80">
                       Active Filter
                     </div>
-                    <div className="mt-1 font-medium">{selectedColor}</div>
+                    <div className="mt-0.5 font-medium">{selectedColor}</div>
                   </div>
                 ) : null}
                 <Link
                   href="/"
-                  className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                  className={`rounded-full border px-3 py-2 text-xs font-medium transition ${
                     selectedColor
                       ? "border-border bg-card text-foreground hover:bg-secondary"
                       : "border-border/70 bg-secondary/30 text-muted-foreground hover:bg-secondary/50"
@@ -311,27 +316,17 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
               </div>
             </div>
 
-            <div className="mt-8 space-y-6">
+            <div className="mt-4 space-y-3">
               {[
-                { title: "Mono / Colorless", items: MONO_COLOR_FILTERS },
-                { title: "Color Pairs", items: PAIR_COLOR_FILTERS },
-                { title: "Three-Color", items: TRI_COLOR_FILTERS },
-                { title: "Four-Color", items: FOUR_COLOR_FILTERS },
-                { title: "Five-Color", items: FIVE_COLOR_FILTERS },
+                { title: "Mono", items: MONO_COLOR_FILTERS },
+                { title: "Pairs", items: PAIR_COLOR_FILTERS },
+                { title: "Trios+", items: [...TRI_COLOR_FILTERS, ...FOUR_COLOR_FILTERS, ...FIVE_COLOR_FILTERS] },
               ].map((group) => (
-                <details
-                  key={group.title}
-                  className="rounded-2xl border border-border/70 bg-black/10 px-4 py-3"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {group.title}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {group.items.reduce((sum, item) => sum + (colorCounts.get(item.code) ?? 0), 0)} decks
-                    </span>
-                  </summary>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div key={group.title} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <div className="w-16 pt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {group.title}
+                  </div>
+                  <div className="flex flex-1 flex-wrap gap-2">
                     {group.items.map((item) => {
                       const active = selectedColor === item.code
                       const count = colorCounts.get(item.code) ?? 0
@@ -340,52 +335,41 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
                         <Link
                           key={item.code}
                           href={`/?color=${item.code}`}
-                          className={`group rounded-2xl border px-3 py-3 transition ${
+                          title={`${item.label} - ${count} decks`}
+                          className={`group inline-flex min-h-11 items-center gap-2 rounded-full border px-2.5 py-2 transition ${
                             active
-                              ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
-                              : "border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
+                              ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
+                              : "border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                                {item.code}
-                              </div>
-                              <div className="mt-1.5 text-sm font-semibold text-foreground sm:text-base">
-                                {item.label}
-                              </div>
-                            </div>
-                            <div className="rounded-full border border-white/10 bg-black/15 px-2.5 py-0.5 text-[11px] text-foreground/80">
-                              {count}
-                            </div>
-                          </div>
-
-                          <div className="mt-3 flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             {getColorSwatches(item.code).map((symbol) => (
                               <span
                                 key={`${item.code}-${symbol}`}
-                                className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/15 text-[10px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
+                                className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/15 text-[9px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
                               >
                                 {symbol}
                               </span>
                             ))}
                           </div>
-
-                          <div className="mt-3 text-xs text-muted-foreground transition group-hover:text-foreground/80">
-                            See {item.label.toLowerCase()} decks that are ready to trade, buy, or inspire your next build.
-                          </div>
-
-                          {COLOR_FILTER_FLAVOR[item.code] ? (
-                            <div className="mt-2 text-[11px] leading-5 text-foreground/65">
-                              {COLOR_FILTER_FLAVOR[item.code]}
-                            </div>
-                          ) : null}
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/90">
+                            {item.code}
+                          </span>
+                          <span className="rounded-full border border-white/10 bg-black/15 px-1.5 py-0.5 text-[10px] text-foreground/70">
+                            {count}
+                          </span>
                         </Link>
                       )
                     })}
                   </div>
-                </details>
+                </div>
               ))}
+
+              {selectedColor && COLOR_FILTER_FLAVOR[selectedColor] ? (
+                <p className="pt-1 text-xs text-muted-foreground">
+                  {COLOR_FILTER_FLAVOR[selectedColor]}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -393,6 +377,7 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
 
       <FeaturedDeckShelf
         id="latest-decks"
+        className="pt-10 pb-20 sm:pt-12 sm:pb-24"
         decks={latestDecks}
         title="Latest Decks"
         subtitle="Fresh arrivals that just hit the marketplace"

@@ -22,6 +22,8 @@ type ImportNormalizedDeckArgs = {
   actorUserId?: string | null
   guestDraftPresent?: boolean
   guestDraftToken?: string
+  initialIsSealed?: boolean
+  initialIsCompletePrecon?: boolean
 }
 
 export function toFriendlyImportError(message?: string) {
@@ -102,6 +104,8 @@ export async function importNormalizedDeckToCollection({
   actorUserId,
   guestDraftPresent = false,
   guestDraftToken = '',
+  initialIsSealed = false,
+  initialIsCompletePrecon = false,
 }: ImportNormalizedDeckArgs) {
   const normalizedCards = normalizeImportedCommanderOverlap(parsedCards)
   const detectedFormat = normalizeDeckFormat(
@@ -141,8 +145,8 @@ export async function importNormalizedDeckToCollection({
         wanted_formats: [],
         is_sleeved: false,
         is_boxed: false,
-        is_sealed: false,
-        is_complete_precon: false,
+        is_sealed: initialIsSealed,
+        is_complete_precon: initialIsCompletePrecon,
         box_type: null,
       },
     ])

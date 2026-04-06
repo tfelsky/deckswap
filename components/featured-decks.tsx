@@ -29,6 +29,7 @@ type FeaturedDeckShelfProps = {
   subtitle?: string
   emptyTitle?: string
   emptyDescription?: string
+  className?: string
 }
 
 export function FeaturedDeckShelf({
@@ -38,9 +39,10 @@ export function FeaturedDeckShelf({
   subtitle = "A quick read on live decks worth opening first",
   emptyTitle = "No live inventory yet",
   emptyDescription = "Import the first deck and start shaping the marketplace.",
+  className = "py-20 sm:py-32",
 }: FeaturedDeckShelfProps) {
   return (
-    <section id={id} className="py-20 sm:py-32">
+    <section id={id} className={className}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>

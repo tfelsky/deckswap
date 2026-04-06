@@ -166,7 +166,7 @@ export default function CreateDeckPage() {
             <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
               <h2 className="text-lg font-semibold text-white">Listing presentation</h2>
               <p className="mt-2 text-sm text-zinc-400">
-                Show buyers how the deck is packaged, whether it is sealed, and whether a Wizards Commander precon is still complete.
+                Show buyers how the deck is packaged, whether it is sealed, and whether an original precon is still complete.
               </p>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -205,7 +205,7 @@ export default function CreateDeckPage() {
                     onChange={(e) => setIsCompletePrecon(e.target.checked)}
                     className="h-4 w-4 rounded border-white/20 bg-zinc-900 text-emerald-400"
                   />
-                  Complete Commander precon
+                  Complete precon
                 </label>
               </div>
 
