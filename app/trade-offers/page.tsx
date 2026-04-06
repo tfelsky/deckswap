@@ -138,11 +138,14 @@ export default async function TradeOffersPage() {
                     const requestedDeck = decks.get(offer.requested_deck_id)
                     const unread = isUnreadTradeOffer(offer, user.id)
                     const signal = getTradeOfferSignal(offer, user.id)
+                    const href = offer.accepted_trade_transaction_id
+                      ? `/trade-drafts/${offer.accepted_trade_transaction_id}?acceptedOffer=1&offerId=${offer.id}`
+                      : `/trade-offers/${offer.id}`
 
                     return (
                       <Link
                         key={offer.id}
-                        href={`/trade-offers/${offer.id}`}
+                        href={href}
                         className={`block rounded-3xl border p-5 hover:bg-white/10 ${
                           unread
                             ? 'border-emerald-400/30 bg-emerald-400/10'

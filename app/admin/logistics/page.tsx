@@ -185,7 +185,7 @@ export default async function AdminLogisticsPage() {
                     <div>
                       <div className="text-sm font-medium text-white">{country.countryLabel}</div>
                       <div className="mt-1 text-xs text-zinc-500">
-                        Value in users’ hands {formatUsd(country.totalValueUsd)}
+                        Value in users' hands {formatUsd(country.totalValueUsd)}
                       </div>
                     </div>
                     <div className="text-2xl font-semibold text-amber-200">{country.count}</div>

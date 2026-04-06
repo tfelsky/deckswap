@@ -22,6 +22,22 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+function buildAcceptedTradeHref(tradeId: number, offerId: number) {
+  return `/trade-drafts/${tradeId}?acceptedOffer=1&offerId=${offerId}`
+}
+
+function buildOfferContinuationHref(offer: TradeOfferRow) {
+  if (offer.accepted_trade_transaction_id) {
+    return buildAcceptedTradeHref(offer.accepted_trade_transaction_id, offer.id)
+  }
+
+  if (offer.superseded_by_offer_id) {
+    return `/trade-offers/${offer.superseded_by_offer_id}`
+  }
+
+  return `/trade-offers/${offer.id}`
+}
+
 type DeckSummary = {
   id: number
   user_id?: string | null
@@ -207,6 +223,7 @@ export default async function TradeOfferDetailPage({
   const requestedDeck = decks.get(offer.requested_deck_id)
   const offerSignal = getTradeOfferSignal(offer, user.id)
   const signalTone = getSignalToneClasses(offerSignal.tone)
+  const continuationHref = buildOfferContinuationHref(offer)
   const canRespond = offer.requested_user_id === user.id && offer.status === 'pending'
   const canCancel = offer.offered_by_user_id === user.id && offer.status === 'pending'
   const canCounter =
@@ -251,7 +268,7 @@ export default async function TradeOfferDetailPage({
 
     const currentOffer = currentOfferResult.data as TradeOfferRow
     if (currentOffer.accepted_trade_transaction_id) {
-      redirect(`/trade-offers/${offerId}?accepted=1`)
+      redirect(buildAcceptedTradeHref(currentOffer.accepted_trade_transaction_id, offerId))
     }
 
     if (currentOffer.requested_user_id !== user.id || currentOffer.status !== 'pending') {
@@ -280,7 +297,7 @@ export default async function TradeOfferDetailPage({
         redirect(`/trade-offers/${offerId}?schemaMissing=1`)
       }
 
-      redirect(`/trade-offers/${offerId}?accepted=1`)
+      redirect(buildAcceptedTradeHref(existingTrade.transactionId, offerId))
     }
 
     const [decksResult, profileResult] = await Promise.all([
@@ -495,7 +512,7 @@ export default async function TradeOfferDetailPage({
       console.error('Failed to send trade deal email:', error)
     }
 
-    redirect(`/trade-offers/${offerId}?accepted=1`)
+    redirect(buildAcceptedTradeHref(transactionId, offerId))
   }
 
   async function declineOfferAction() {
@@ -818,10 +835,21 @@ export default async function TradeOfferDetailPage({
             <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
               Trade deal #{offer.accepted_trade_transaction_id} is already open for this offer.
               <Link
-                href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
+                href={continuationHref}
                 className="ml-2 font-medium text-emerald-300 hover:underline"
               >
                 Open trade deal
+              </Link>
+            </div>
+          )}
+          {offer.superseded_by_offer_id && !offer.accepted_trade_transaction_id && (
+            <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5 text-sm text-amber-100">
+              This thread was replaced by a newer counteroffer.
+              <Link
+                href={continuationHref}
+                className="ml-2 font-medium text-amber-200 hover:underline"
+              >
+                Open the latest live offer
               </Link>
             </div>
           )}
@@ -875,7 +903,7 @@ export default async function TradeOfferDetailPage({
                 <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
                   This offer has been superseded by a counteroffer.
                   <Link
-                    href={`/trade-offers/${offer.superseded_by_offer_id}`}
+                    href={continuationHref}
                     className="ml-2 font-medium text-emerald-300 hover:underline"
                   >
                     Open latest offer
@@ -1002,6 +1030,14 @@ export default async function TradeOfferDetailPage({
                 <p className="mt-2 text-sm text-zinc-400">
                   This offer has already been resolved or is being viewed by a participant without a pending action.
                 </p>
+                {(offer.accepted_trade_transaction_id || offer.superseded_by_offer_id) && (
+                  <Link
+                    href={continuationHref}
+                    className="mt-5 inline-block rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
+                  >
+                    Continue from the live thread
+                  </Link>
+                )}
               </div>
             )}
 
@@ -1012,7 +1048,7 @@ export default async function TradeOfferDetailPage({
                   Once accepted, this offer became a trade deal with both decks attached.
                 </p>
                 <Link
-                  href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
+                  href={continuationHref}
                   className="mt-5 inline-block rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
                 >
                   Open Trade Deal

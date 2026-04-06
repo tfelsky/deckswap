@@ -10,6 +10,7 @@ import {
 } from '@/lib/auction/prototype'
 import {
   auctionMinimumIncrement,
+  formatAuctionSettlementMode,
   formatAuctionType,
   getAuctionEligibility,
   isAuctionSchemaMissing,
@@ -32,6 +33,11 @@ function parseFormat(value: string | string[] | undefined): AuctionFormat {
 function parseDuration(value: string | string[] | undefined): AuctionDuration {
   const candidate = Number(Array.isArray(value) ? value[0] : value)
   return candidate === 3 || candidate === 5 ? candidate : 7
+}
+
+function parseSettlementMode(value: string | string[] | undefined) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return candidate === 'self_cleared' ? 'self_cleared' : 'managed'
 }
 
 function formatUsd(value: number) {
@@ -61,6 +67,7 @@ export default async function AuctionPrototypePage({
   const deckId = Number(Array.isArray(params.deckId) ? params.deckId[0] : params.deckId)
   const format = parseFormat(params.format)
   const durationDays = parseDuration(params.durationDays)
+  const settlementMode = parseSettlementMode(params.settlementMode)
 
   const supabase = await createClient()
   const {
@@ -136,6 +143,10 @@ export default async function AuctionPrototypePage({
     const deckId = Number(formData.get('deckId'))
     const auctionType = String(formData.get('format') || 'reserve') === 'no_reserve' ? 'no_reserve' : 'reserve'
     const durationDays = Number(formData.get('durationDays'))
+    const settlementMode =
+      String(formData.get('settlementMode') || 'managed') === 'self_cleared'
+        ? 'self_cleared'
+        : 'managed'
     const deckValue = Math.max(0, Number(formData.get('deckValue') || 0))
     const reservePrice =
       auctionType === 'reserve' ? Math.max(0, Number(formData.get('reservePrice') || 0)) : 0
@@ -199,6 +210,7 @@ export default async function AuctionPrototypePage({
         seller_user_id: user.id,
         status: 'active',
         auction_type: auctionType,
+        settlement_mode: settlementMode,
         starting_bid_usd: modeled.suggestedStartingBid,
         reserve_price_usd: auctionType === 'reserve' ? modeled.reservePrice : null,
         current_bid_usd: 0,
@@ -228,6 +240,7 @@ export default async function AuctionPrototypePage({
       event_data: {
         deckId,
         auctionType,
+        settlementMode,
         durationDays,
         startingBidUsd: modeled.suggestedStartingBid,
         reservePriceUsd: auctionType === 'reserve' ? modeled.reservePrice : null,
@@ -269,7 +282,7 @@ export default async function AuctionPrototypePage({
             </h1>
             <p className="mt-4 max-w-3xl text-lg text-zinc-400">
               Auctions now launch into a real direct-sale workflow with late-bid time extensions,
-              manual winner confirmation, and payout only after delivery.
+              manual winner confirmation, and either managed follow-through or self-cleared settlement with arbitration support.
             </p>
           </div>
 
@@ -348,6 +361,12 @@ export default async function AuctionPrototypePage({
                         {formatAuctionType(result.format)}
                       </div>
                     </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-sm text-zinc-400">Settlement lane</div>
+                      <div className="mt-2 text-2xl font-semibold text-white">
+                        {formatAuctionSettlementMode(settlementMode)}
+                      </div>
+                    </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="text-sm text-zinc-400">Duration</div>
                       <div className="mt-2 text-2xl font-semibold text-white">
@@ -411,6 +430,22 @@ export default async function AuctionPrototypePage({
                     inputMode="decimal"
                     className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-amber-400/40"
                   />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm text-zinc-400">Settlement lane</label>
+                  <select
+                    name="settlementMode"
+                    defaultValue={settlementMode}
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-amber-400/40"
+                  >
+                    <option value="managed" className="bg-zinc-900 text-white">
+                      Managed by DeckSwap
+                    </option>
+                    <option value="self_cleared" className="bg-zinc-900 text-white">
+                      Self-cleared between users
+                    </option>
+                  </select>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-zinc-400">Duration</label>
@@ -491,7 +526,7 @@ export default async function AuctionPrototypePage({
                   Auction winners do not pay instantly. The listing moves into manual confirmation first.
                 </p>
                 <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  Fulfillment follows a direct sale path, and seller payout only releases after delivery.
+                  Managed auctions keep the current payment and delivery checkpoints. Self-cleared auctions use buyer and seller attestations plus arbitration when either side disputes the settlement.
                 </p>
               </div>
             </div>

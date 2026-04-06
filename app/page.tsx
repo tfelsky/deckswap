@@ -316,54 +316,77 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
               </div>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-2">
               {[
                 { title: "Mono", items: MONO_COLOR_FILTERS },
                 { title: "Pairs", items: PAIR_COLOR_FILTERS },
                 { title: "Trios+", items: [...TRI_COLOR_FILTERS, ...FOUR_COLOR_FILTERS, ...FIVE_COLOR_FILTERS] },
-              ].map((group) => (
-                <div key={group.title} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                  <div className="w-16 pt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {group.title}
-                  </div>
-                  <div className="flex flex-1 flex-wrap gap-2">
-                    {group.items.map((item) => {
-                      const active = selectedColor === item.code
-                      const count = colorCounts.get(item.code) ?? 0
+              ].map((group, index) => {
+                const groupDeckCount = group.items.reduce(
+                  (sum, item) => sum + (colorCounts.get(item.code) ?? 0),
+                  0
+                )
 
-                      return (
-                        <Link
-                          key={item.code}
-                          href={`/?color=${item.code}`}
-                          title={`${item.label} - ${count} decks`}
-                          className={`group inline-flex min-h-11 items-center gap-2 rounded-full border px-2.5 py-2 transition ${
-                            active
-                              ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
-                              : "border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {getColorSwatches(item.code).map((symbol) => (
-                              <span
-                                key={`${item.code}-${symbol}`}
-                                className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/15 text-[9px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
-                              >
-                                {symbol}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/90">
-                            {item.code}
-                          </span>
-                          <span className="rounded-full border border-white/10 bg-black/15 px-1.5 py-0.5 text-[10px] text-foreground/70">
-                            {count}
-                          </span>
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
+                return (
+                  <details
+                    key={group.title}
+                    name="homepage-color-groups"
+                    className="rounded-2xl border border-border/70 bg-black/10 px-3 py-2.5"
+                    open={index === 0}
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          {group.title}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground/65">
+                          {group.items.length}
+                        </span>
+                      </div>
+                      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        {groupDeckCount} decks
+                      </span>
+                    </summary>
+
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.items.map((item) => {
+                        const active = selectedColor === item.code
+                        const count = colorCounts.get(item.code) ?? 0
+
+                        return (
+                          <Link
+                            key={item.code}
+                            href={`/?color=${item.code}`}
+                            title={`${item.label} - ${count} decks`}
+                            className={`group inline-flex min-h-9 items-center gap-2 rounded-full border px-2 py-1.5 transition ${
+                              active
+                                ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
+                                : "border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              {getColorSwatches(item.code).map((symbol) => (
+                                <span
+                                  key={`${item.code}-${symbol}`}
+                                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[8px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
+                                >
+                                  {symbol}
+                                </span>
+                              ))}
+                            </div>
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/90">
+                              {item.code}
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-black/15 px-1.5 py-0.5 text-[9px] text-foreground/70">
+                              {count}
+                            </span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </details>
+                )
+              })}
 
               {selectedColor && COLOR_FILTER_FLAVOR[selectedColor] ? (
                 <p className="pt-1 text-xs text-muted-foreground">

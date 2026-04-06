@@ -3,6 +3,7 @@ import Link from 'next/link'
 import AppHeader from '@/components/app-header'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
+  formatAuctionSettlementMode,
   formatAuctionStatus,
   formatAuctionTimestamp,
   formatAuctionType,
@@ -29,6 +30,7 @@ type AuctionListingRow = {
   seller_user_id: string
   status: string
   auction_type: string
+  settlement_mode?: string | null
   starting_bid_usd?: number | null
   reserve_price_usd?: number | null
   current_bid_usd?: number | null
@@ -64,7 +66,7 @@ export default async function AuctionsPage() {
 
   const auctionsResult = await supabase
     .from('auction_listings')
-    .select('id, deck_id, seller_user_id, status, auction_type, starting_bid_usd, reserve_price_usd, current_bid_usd, bid_count, ends_at, decks!inner(name, commander, image_url)')
+    .select('id, deck_id, seller_user_id, status, auction_type, settlement_mode, starting_bid_usd, reserve_price_usd, current_bid_usd, bid_count, ends_at, decks!inner(name, commander, image_url)')
     .order('created_at', { ascending: false })
 
   if (auctionsResult.error) {
@@ -119,7 +121,7 @@ export default async function AuctionsPage() {
                 Live auctions and sale-stage follow-through
               </h1>
               <p className="mt-4 text-lg text-zinc-400">
-                Browse reserve and no-reserve auctions, watch late-bid extensions, and follow listings through payment, shipping, delivery, and payout.
+                Browse reserve and no-reserve auctions, watch late-bid extensions, and follow listings through either managed delivery checkpoints or self-cleared settlement with arbitration coverage.
               </p>
             </div>
 
@@ -196,6 +198,9 @@ export default async function AuctionsPage() {
                         Reserve {isAuctionReserveMet(auction.auction_type, auction.reserve_price_usd, auction.current_bid_usd) ? 'met' : 'open'}
                       </span>
                     )}
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      {formatAuctionSettlementMode(auction.settlement_mode)}
+                    </span>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                       Ends {formatAuctionTimestamp(auction.ends_at)}
                     </span>

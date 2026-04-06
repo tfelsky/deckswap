@@ -215,8 +215,10 @@ export default async function TradeReviewPage({
                       ? 'Internal next step: confirm both decks land at the hub and mark receipt side-by-side.'
                       : currentStatus === 'in_inspection'
                         ? 'Internal next step: inspect both decks against the recorded obligations and log pass/fail notes.'
-                        : currentStatus === 'ready_to_release'
+                      : currentStatus === 'ready_to_release'
                           ? 'Internal next step: finalize review and close the transaction once both decks are cleared.'
+                          : currentStatus === 'disputed'
+                            ? 'Internal next step: keep the user draft paused, review the latest notes and timeline, and route the case through support before release or completion.'
                           : 'This trade is currently being handled in the admin operations lane.'}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -406,6 +408,12 @@ export default async function TradeReviewPage({
                           Test-only override. This bypasses the normal payment and shipping prerequisites and is meant for admin QA flows.
                         </div>
                       ) : null}
+
+                      {!participant.user_id ? (
+                        <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                          This side is not attached to a user yet. Keep the draft in admin review, then repair the accepted-offer linkage before expecting user-side progress.
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -475,6 +483,14 @@ export default async function TradeReviewPage({
                     </FormActionButton>
                   </form>
                 ) : null}
+                {(currentStatus === 'disputed' || participants.some((participant) => !participant.user_id)) && (
+                  <Link
+                    href={`/trade-drafts/${trade.id}`}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                  >
+                    Open user-facing draft state
+                  </Link>
+                )}
               </div>
             </div>
 

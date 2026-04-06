@@ -4,6 +4,38 @@ Status: Execution plan drafted on April 5, 2026.
 
 This file turns the internal workflow roadmap into concrete slices we can ship in order.
 
+## Completed This Pass
+
+- Trade, Checkout, And Escrow Follow-Through
+  - Slice 1 completed: lifecycle communication coverage
+  - Slice 2 completed: checkout policy consolidation
+
+- Admin Logistics And Operations
+  - Slice 1 completed: shipping override audit trail
+
+- Profiles, Trust, And Verification
+  - Slice 1 completed: verification request completion rules
+
+- Notifications, Email, And Internal Visibility
+  - Slice 1 completed: escrow milestone coverage
+  - Slice 2 completed: inbox quality pass
+
+## Current Highest-Value Loose Ends
+
+- Trade, Checkout, And Escrow Follow-Through
+  - Slice 3: accepted-trade continuity audit
+
+- Admin Logistics And Operations
+  - Slice 2: intake workflow polish
+  - Slice 3: source-of-truth metrics
+
+- Profiles, Trust, And Verification
+  - Slice 2: seller trust rendering pass
+  - Slice 3: secure ID intake transition
+
+- Notifications, Email, And Internal Visibility
+  - Slice 3: admin communication visibility
+
 ## 1. Import Reliability And Onboarding
 
 ### Refinement Goals

@@ -278,10 +278,13 @@ async function repairTradeDraftFromAcceptedOffer(
 
 export default async function TradeDraftPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { id } = await params
+  const resolvedSearchParams = searchParams ? await searchParams : {}
   const tradeId = Number(id)
 
   if (!Number.isFinite(tradeId)) {
@@ -351,6 +354,10 @@ export default async function TradeDraftPage({
   const events = (eventResult.data ?? []) as EscrowEventRow[]
   const currentStatus = deriveTradeStatus(trade, participants)
   const currentUserParticipant = participants.find((participant) => participant.user_id === user.id) ?? null
+  const acceptedOffer = resolvedSearchParams.acceptedOffer === '1'
+  const acceptedOfferId =
+    typeof resolvedSearchParams.offerId === 'string' ? Number(resolvedSearchParams.offerId) : null
+  const repaired = resolvedSearchParams.repaired === '1'
 
   if (!currentUserParticipant) {
     if (access.isAdmin) {
@@ -388,6 +395,18 @@ export default async function TradeDraftPage({
               <p className="mt-3 max-w-3xl text-zinc-400">
                 Your checkout and shipping workspace. You only see your own charges here, while the other side only sees theirs.
               </p>
+              {acceptedOffer && (
+                <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                  {acceptedOfferId
+                    ? `Offer #${acceptedOfferId} was accepted and handed off into this trade deal.`
+                    : 'This trade deal was just created from an accepted offer.'}
+                </div>
+              )}
+              {repaired && (
+                <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                  This trade deal was repaired from an accepted offer link so you can continue from the live workspace.
+                </div>
+              )}
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
@@ -396,6 +415,11 @@ export default async function TradeDraftPage({
               <div className="mt-4 rounded-2xl border border-sky-400/15 bg-sky-400/10 p-4 text-sm text-sky-100">
                 {userStatusMessage(currentStatus, currentUserParticipant)}
               </div>
+              {currentStatus === 'disputed' && (
+                <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+                  This trade is paused for review. Keep using this page for context, but wait for DeckSwap support before sending anything else.
+                </div>
+              )}
               <div className="mt-4 grid gap-3 text-sm text-zinc-300 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-wide text-zinc-500">Your payment</div>
@@ -465,7 +489,9 @@ export default async function TradeDraftPage({
                   </div>
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-zinc-400">We are still waiting to attach the other trader to this draft.</p>
+                <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                  The other trader is not fully attached to this deal yet. Your side is saved, but the shared workflow will stay limited until the second participant is connected.
+                </div>
               )}
             </div>
 
@@ -534,6 +560,12 @@ export default async function TradeDraftPage({
                     </FormActionButton>
                   </form>
                 ) : null}
+
+                {!otherParticipant && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                    Next step: wait for the other trader to be attached through the accepted offer handoff or ask support/admin to repair the trade linkage.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -569,6 +601,11 @@ export default async function TradeDraftPage({
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   Tracking is optional in this prototype, but adding it makes status updates clearer for everyone.
                 </div>
+                {currentStatus === 'disputed' ? (
+                  <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-100">
+                    Because this trade is disputed, do not ship, release, or alter anything further until support review is complete.
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
