@@ -28,6 +28,10 @@ type DeckRow = {
   image_url?: string | null
   color_identity?: string[] | null
   is_listed_for_trade?: boolean | null
+  trade_goal?: string | null
+  trade_wanted_profile?: string | null
+  wanted_color_identities?: string[] | null
+  wanted_formats?: string[] | null
 }
 
 type DeckCardForBracket = {
@@ -61,6 +65,10 @@ function toTradeMatchDeck(
     format: normalizeDeckFormat(deck.format),
     bracket: bracket.bracket,
     bracketLabel: bracket.label,
+    trade_goal: deck.trade_goal ?? null,
+    trade_wanted_profile: deck.trade_wanted_profile ?? null,
+    wanted_color_identities: deck.wanted_color_identities ?? null,
+    wanted_formats: deck.wanted_formats?.map((value) => normalizeDeckFormat(value)) ?? null,
     owner_display_name: ownerProfile?.display_name ?? null,
     owner_location_country: ownerProfile?.location_country ?? null,
     owner_can_ship_international: ownerProfile?.can_ship_international ?? null,
@@ -210,7 +218,7 @@ export default async function TradeMatchesPage({
 
   const { data: myDeckRows } = await supabase
     .from('decks')
-    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade')
+    .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
 
@@ -266,7 +274,7 @@ export default async function TradeMatchesPage({
   const targetDeckResult = targetDeckId
     ? await supabase
         .from('decks')
-        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
         .eq('id', targetDeckId)
         .eq('is_listed_for_trade', true)
         .maybeSingle()
@@ -278,7 +286,7 @@ export default async function TradeMatchesPage({
     ? { data: targetDeck ? [targetDeck] : [] }
     : await supabase
         .from('decks')
-        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
         .neq('user_id', user.id)
         .eq('is_listed_for_trade', true)
         .order('id', { ascending: false })
@@ -292,8 +300,15 @@ export default async function TradeMatchesPage({
     if (watchedDeckIds.has(deck.id)) return false
     return true
   })
+  const signalDeckIds = [...new Set([...passedDeckIds, ...watchedDeckIds])]
+  const { data: signalDeckRows } = signalDeckIds.length
+    ? await supabase
+        .from('decks')
+        .select('id, user_id, name, commander, format, price_total_usd_foil, image_url, color_identity, is_listed_for_trade, trade_goal, trade_wanted_profile, wanted_color_identities, wanted_formats')
+        .in('id', signalDeckIds)
+    : { data: [] as DeckRow[] }
 
-  const allDeckIds = [...new Set([...myDecks, ...otherDecks].map((deck) => deck.id))]
+  const allDeckIds = [...new Set([...myDecks, ...otherDecks, ...((signalDeckRows ?? []) as DeckRow[])].map((deck) => deck.id))]
   const { data: deckCardsRows } = allDeckIds.length
     ? await supabase
         .from('deck_cards')
@@ -332,6 +347,12 @@ export default async function TradeMatchesPage({
   const candidateDecks = otherDecks.map((deck) =>
     toTradeMatchDeck(deck, cardsByDeck, profilesByUser, summariesByUser)
   )
+  const watchSignalDecks = ((signalDeckRows ?? []) as DeckRow[])
+    .filter((deck) => watchedDeckIds.has(deck.id))
+    .map((deck) => toTradeMatchDeck(deck, cardsByDeck, profilesByUser, summariesByUser))
+  const rejectedSignalDecks = ((signalDeckRows ?? []) as DeckRow[])
+    .filter((deck) => passedDeckIds.has(deck.id))
+    .map((deck) => toTradeMatchDeck(deck, cardsByDeck, profilesByUser, summariesByUser))
   const focusedDeck = targetDeckId
     ? candidateDecks.find((deck) => deck.id === targetDeckId) ?? null
     : null
@@ -345,6 +366,8 @@ export default async function TradeMatchesPage({
           deck: candidate,
           result: calculateTradeMatch(myDeck, candidate, {
             myCountry: myProfile?.location_country ?? null,
+            watchedDecks: watchSignalDecks,
+            rejectedDecks: rejectedSignalDecks,
           }),
         }))
         .sort((a, b) => b.result.score - a.result.score)
