@@ -2,6 +2,7 @@ import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatNotificationTimestamp,
+  getNotificationCopy,
   getNotificationPresentation,
   getUnreadNotificationsCount,
   isNotificationsSchemaMissing,
@@ -246,6 +247,7 @@ export default async function NotificationsPage() {
                     {section.items.map((notification) => {
                       const unread = !notification.read_at
                       const presentation = getNotificationPresentation(notification.type)
+                      const copy = getNotificationCopy(notification)
 
                       return (
                         <div
@@ -268,9 +270,9 @@ export default async function NotificationsPage() {
                                   {presentation.typeLabel}
                                 </span>
                               </div>
-                              <h3 className="mt-3 text-lg font-semibold text-white">{notification.title}</h3>
-                              {notification.body && (
-                                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">{notification.body}</p>
+                              <h3 className="mt-3 text-lg font-semibold text-white">{copy.title}</h3>
+                              {copy.body && (
+                                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">{copy.body}</p>
                               )}
                               <div className="mt-3 text-xs text-zinc-500">
                                 {formatNotificationTimestamp(notification.created_at)}

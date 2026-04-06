@@ -20,6 +20,11 @@ export type NotificationPresentation = {
   actionLabel: string
 }
 
+type NotificationCopy = {
+  title?: string | null
+  body?: string | null
+}
+
 type CreateNotificationArgs = {
   userId: string
   actorUserId?: string | null
@@ -112,7 +117,7 @@ export function getNotificationPresentation(type: string): NotificationPresentat
       group: 'escrow',
       groupLabel: 'Trade and escrow',
       typeLabel: formatNotificationType(type),
-      actionLabel: 'Open trade',
+      actionLabel: 'Open trade deal',
     }
   }
 
@@ -135,6 +140,8 @@ export function getNotificationPresentation(type: string): NotificationPresentat
 
 export function formatNotificationType(type: string) {
   switch (type) {
+    case 'trade_draft_created':
+      return 'Trade deal ready'
     case 'trade_payment_requested':
       return 'Payment requested'
     case 'trade_payment_marked_paid':
@@ -167,5 +174,22 @@ export function formatNotificationType(type: string) {
       return 'Deck comment'
     default:
       return type.replace(/_/g, ' ')
+  }
+}
+
+function replaceTradeDraftLanguage(value?: string | null) {
+  if (!value) return value ?? null
+
+  return value
+    .replace(/\bTrade Draft\b/g, 'Trade Deal')
+    .replace(/\btrade draft\b/g, 'trade deal')
+    .replace(/\btrade drafts\b/g, 'trade deals')
+    .replace(/\bdraft page\b/g, 'trade deal page')
+}
+
+export function getNotificationCopy(notification: NotificationCopy) {
+  return {
+    title: replaceTradeDraftLanguage(notification.title),
+    body: replaceTradeDraftLanguage(notification.body),
   }
 }

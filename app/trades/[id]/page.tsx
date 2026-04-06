@@ -28,8 +28,35 @@ import {
   type TradeParticipantRow,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
+import { formatShipFrom, isProfileSchemaMissing, type PublicProfile, type ReputationSummary } from '@/lib/profiles'
 
 export const dynamic = 'force-dynamic'
+
+type AdminTradeDeckSummary = {
+  id: number
+  name: string
+  commander?: string | null
+  image_url?: string | null
+}
+
+type AdminTradeProfileSummary = PublicProfile & {
+  created_at?: string | null
+}
+
+type AdminTradeReputationSummary = Pick<
+  ReputationSummary,
+  | 'user_id'
+  | 'last_seen_at'
+  | 'internal_validation_score'
+  | 'internal_validation_tier'
+  | 'approved_at'
+  | 'completed_trades_count'
+  | 'avg_trade_reply_hours'
+  | 'last_login_ip_country'
+  | 'is_manually_verified'
+  | 'is_known_user'
+  | 'banned_status'
+>
 
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
@@ -48,6 +75,67 @@ function formatTimestamp(value?: string | null) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+function formatDateOnly(value?: string | null) {
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatLastActive(value?: string | null) {
+  if (!value) return 'Not recorded'
+  const timestamp = new Date(value).getTime()
+  if (Number.isNaN(timestamp)) return 'Not recorded'
+
+  const deltaMs = Date.now() - timestamp
+  const deltaHours = Math.floor(deltaMs / (1000 * 60 * 60))
+  const deltaDays = Math.floor(deltaHours / 24)
+
+  if (deltaHours < 1) return 'Within the last hour'
+  if (deltaHours < 24) return `${deltaHours}h ago`
+  if (deltaDays < 30) return `${deltaDays}d ago`
+
+  return formatDateOnly(value)
+}
+
+function formatUserLabel(profile?: PublicProfile | null, userId?: string | null) {
+  if (profile?.display_name?.trim()) return profile.display_name.trim()
+  if (profile?.username?.trim()) return `@${profile.username.trim()}`
+  if (userId) return `${userId.slice(0, 8)}...`
+  return 'Unassigned trader'
+}
+
+function getMemberSince(
+  profile?: AdminTradeProfileSummary | null,
+  summary?: AdminTradeReputationSummary | null
+) {
+  return summary?.approved_at ?? profile?.created_at ?? null
+}
+
+function getDeckHeadline(deck?: AdminTradeDeckSummary | null) {
+  if (!deck) return 'Deck not linked yet'
+  return deck.commander?.trim() || deck.name
+}
+
+function getDeckSubline(deck?: AdminTradeDeckSummary | null) {
+  if (!deck) return 'No deck metadata recorded'
+  if (deck.commander?.trim() && deck.name.trim() !== deck.commander.trim()) {
+    return deck.name
+  }
+  return `Deck #${deck.id}`
+}
+
+function getParticipantNextStep(participant: TradeParticipantRow) {
+  if (!participant.user_id) return 'Repair the user linkage before this side can progress.'
+  if (participant.payment_status !== 'paid') return 'Waiting for payment confirmation before shipping can start.'
+  if (participant.shipment_status === 'not_shipped') return 'Prompt this trader to ship to the hub and upload tracking.'
+  if (participant.shipment_status === 'shipped') return 'Watch for intake and mark the deck received when it arrives.'
+  if (participant.inspection_status !== 'passed') return 'Run warehouse intake and inspection before release.'
+  return 'This side is clear and waiting on the other side or final release.'
 }
 
 function eventTitle(eventType: string) {
@@ -171,6 +259,45 @@ export default async function TradeReviewPage({
   const currentStatus = deriveTradeStatus(trade, participants)
   const isParticipant = participants.some((participant) => participant.user_id === user.id)
 
+  const participantUserIds = Array.from(
+    new Set(participants.map((participant) => participant.user_id).filter((value): value is string => !!value))
+  )
+  const deckIds = Array.from(
+    new Set(participants.map((participant) => Number(participant.deck_id)).filter((value) => Number.isFinite(value)))
+  )
+
+  const [profilesResult, reputationResult, decksResult] = await Promise.all([
+    participantUserIds.length > 0
+      ? adminSupabase
+          .from('profiles')
+          .select('user_id, display_name, username, location_country, location_region, created_at')
+          .in('user_id', participantUserIds)
+      : Promise.resolve({ data: [] as AdminTradeProfileSummary[], error: null as { message?: string } | null }),
+    participantUserIds.length > 0
+      ? adminSupabase
+          .from('profile_reputation_summary')
+          .select('user_id, last_seen_at, internal_validation_score, internal_validation_tier, approved_at, completed_trades_count, avg_trade_reply_hours, last_login_ip_country, is_manually_verified, is_known_user, banned_status')
+          .in('user_id', participantUserIds)
+      : Promise.resolve({ data: [] as AdminTradeReputationSummary[], error: null as { message?: string } | null }),
+    deckIds.length > 0
+      ? adminSupabase.from('decks').select('id, name, commander, image_url').in('id', deckIds)
+      : Promise.resolve({ data: [] as AdminTradeDeckSummary[], error: null as { message?: string } | null }),
+  ])
+
+  const profilesByUser = new Map<string, AdminTradeProfileSummary>(
+    isProfileSchemaMissing(profilesResult.error?.message)
+      ? []
+      : ((profilesResult.data ?? []) as AdminTradeProfileSummary[]).map((profile) => [profile.user_id, profile])
+  )
+  const reputationByUser = new Map<string, AdminTradeReputationSummary>(
+    isProfileSchemaMissing(reputationResult.error?.message)
+      ? []
+      : ((reputationResult.data ?? []) as AdminTradeReputationSummary[]).map((summary) => [summary.user_id, summary])
+  )
+  const decksById = new Map<number, AdminTradeDeckSummary>(
+    ((decksResult.data ?? []) as AdminTradeDeckSummary[]).map((deck) => [deck.id, deck])
+  )
+
   if (!access.isAdmin) {
     if (isParticipant) {
       redirect(`/trade-drafts/${tradeId}`)
@@ -208,7 +335,7 @@ export default async function TradeReviewPage({
               <div className="mt-2 text-3xl font-semibold text-white">{formatTradeStatus(currentStatus)}</div>
               <div className="mt-4 rounded-2xl border border-amber-400/15 bg-amber-400/10 p-4 text-sm text-amber-50/90">
                 {currentStatus === 'awaiting_payment' || currentStatus === 'draft'
-                  ? 'Internal next step: open or monitor checkout, confirm both sides understand the payment lane, and keep user-facing details contained to the draft page.'
+                  ? 'Internal next step: open or monitor checkout, confirm both sides understand the payment lane, and keep user-facing details contained to the trade deal page.'
                   : currentStatus === 'awaiting_shipments'
                     ? 'Internal next step: wait for both shipment confirmations, then track inbound receipt at the hub.'
                     : currentStatus === 'in_transit'
@@ -254,9 +381,99 @@ export default async function TradeReviewPage({
               <div className="mt-5 grid gap-4 lg:grid-cols-2">
                 {participants.map((participant) => (
                   <div key={participant.side} className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    {(() => {
+                      const profile = profilesByUser.get(participant.user_id ?? '')
+                      const reputation = reputationByUser.get(participant.user_id ?? '')
+                      const deck = participant.deck_id ? decksById.get(Number(participant.deck_id)) : null
+                      const trustScore =
+                        typeof reputation?.internal_validation_score === 'number'
+                          ? Math.round(reputation.internal_validation_score)
+                          : null
+                      const profileHref = profile?.username?.trim() ? `/u/${profile.username.trim()}` : null
+
+                      return (
+                        <>
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-lg font-semibold text-white">{sideLabel(participant.side)}</div>
                       <div className="text-sm text-zinc-400">{formatPaymentStatus(participant.payment_status)}</div>
+                    </div>
+                    <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+                      <div className="flex gap-4">
+                        <div className="h-24 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
+                          {deck?.image_url ? (
+                            <img
+                              src={deck.image_url}
+                              alt={getDeckHeadline(deck)}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {profileHref ? (
+                              <Link href={profileHref} className="text-base font-semibold text-white hover:text-sky-200">
+                                {formatUserLabel(profile, participant.user_id)}
+                              </Link>
+                            ) : (
+                              <div className="text-base font-semibold text-white">
+                                {formatUserLabel(profile, participant.user_id)}
+                              </div>
+                            )}
+                            {trustScore != null ? (
+                              <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[11px] uppercase tracking-wide text-sky-100">
+                                Trust {trustScore}/100
+                              </span>
+                            ) : null}
+                            {reputation?.banned_status && reputation.banned_status !== 'active' ? (
+                              <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-[11px] uppercase tracking-wide text-red-100">
+                                {reputation.banned_status}
+                              </span>
+                            ) : null}
+                            {reputation?.is_manually_verified ? (
+                              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] uppercase tracking-wide text-emerald-100">
+                                Verified
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 text-sm text-zinc-300">{getDeckHeadline(deck)}</div>
+                          <div className="mt-1 text-xs text-zinc-500">{getDeckSubline(deck)}</div>
+                          <div className="mt-3 text-sm text-zinc-400">{getParticipantNextStep(participant)}</div>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Last active</div>
+                          <div className="mt-1 text-sm text-white">{formatLastActive(reputation?.last_seen_at)}</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Member since</div>
+                          <div className="mt-1 text-sm text-white">{formatDateOnly(getMemberSince(profile, reputation))}</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Completed trades</div>
+                          <div className="mt-1 text-sm text-white">{reputation?.completed_trades_count ?? 0}</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Avg. reply time</div>
+                          <div className="mt-1 text-sm text-white">
+                            {reputation?.avg_trade_reply_hours != null
+                              ? `${reputation.avg_trade_reply_hours}h`
+                              : 'Not recorded'}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Ship from</div>
+                          <div className="mt-1 text-sm text-white">{formatShipFrom(profile)}</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-3">
+                          <div className="text-xs uppercase tracking-wide text-zinc-500">Last login IP country</div>
+                          <div className="mt-1 text-sm text-white">{reputation?.last_login_ip_country || 'Not recorded'}</div>
+                        </div>
+                      </div>
                     </div>
                     <div className="mt-4 space-y-2 text-sm text-zinc-300">
                       <div className="flex items-center justify-between">
@@ -295,6 +512,12 @@ export default async function TradeReviewPage({
                         {participant.tracking_code ? (
                           <div className="mt-1 text-xs text-zinc-500">Tracking: {participant.tracking_code}</div>
                         ) : null}
+                        {participant.shipped_at ? (
+                          <div className="mt-1 text-xs text-zinc-500">Shipped: {formatTimestamp(participant.shipped_at)}</div>
+                        ) : null}
+                        {participant.received_at ? (
+                          <div className="mt-1 text-xs text-zinc-500">Received: {formatTimestamp(participant.received_at)}</div>
+                        ) : null}
                         {participant.label_box_requested ? (
                           <div className="mt-1 text-xs text-zinc-500">Prepaid flat box kit requested</div>
                         ) : null}
@@ -302,6 +525,9 @@ export default async function TradeReviewPage({
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
                         <div className="text-xs uppercase tracking-wide text-zinc-500">Inspection</div>
                         <div className="mt-1 text-white">{formatInspectionStatus(participant.inspection_status)}</div>
+                        {participant.payment_marked_at ? (
+                          <div className="mt-1 text-xs text-zinc-500">Payment logged: {formatTimestamp(participant.payment_marked_at)}</div>
+                        ) : null}
                         {participant.inspection_notes ? (
                           <div className="mt-1 text-xs text-zinc-500">{participant.inspection_notes}</div>
                         ) : null}
@@ -411,10 +637,13 @@ export default async function TradeReviewPage({
 
                       {!participant.user_id ? (
                         <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-                          This side is not attached to a user yet. Keep the draft in admin review, then repair the accepted-offer linkage before expecting user-side progress.
+                          This side is not attached to a user yet. Keep the trade deal in admin review, then repair the accepted-offer linkage before expecting user-side progress.
                         </div>
                       ) : null}
                     </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>
@@ -488,7 +717,7 @@ export default async function TradeReviewPage({
                     href={`/trade-drafts/${trade.id}`}
                     className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
                   >
-                    Open user-facing draft state
+                    Open user-facing trade deal
                   </Link>
                 )}
               </div>
