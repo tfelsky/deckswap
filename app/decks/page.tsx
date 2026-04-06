@@ -601,7 +601,7 @@ export default async function DecksPage({
     [...bracketCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
 
   return (
-    <main className="min-h-screen bg-zinc-950 pt-28 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-24 text-white">
       <AppHeader
         current="decks"
         isSignedIn={!!user}
@@ -609,8 +609,8 @@ export default async function DecksPage({
         unreadTradeOffers={unreadTradeOffers}
         unreadNotifications={unreadNotifications}
       />
-      <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
-        <div className="mx-auto max-w-7xl px-6 py-8">
+      <section className="mx-auto max-w-7xl px-6 py-6">
+        <div className="rounded-3xl border border-white/10 bg-zinc-900/55 p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
@@ -618,12 +618,11 @@ export default async function DecksPage({
               </div>
 
               <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Browse live decks faster
+                Browse live decks
               </h1>
 
               <p className="mt-3 text-sm text-zinc-400 sm:text-base">
-                Search commanders, deck names, and contained cards, then narrow by format,
-                listing type, bracket, and readiness without pushing the listings below the fold.
+                Search by deck or card, narrow the list with lightweight filters, and jump straight into live listings.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -631,12 +630,6 @@ export default async function DecksPage({
                 <span className="text-zinc-500">Live</span>{' '}
                 <span className="font-semibold text-white">{availableDeckViews.length}</span>
               </div>
-              {dominantBracketEntry ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
-                  <span className="text-zinc-500">Common bracket</span>{' '}
-                  <span className="font-semibold text-white">Bracket {dominantBracketEntry[0]}</span>
-                </div>
-              ) : null}
               <Link
                 href="/completed-sales"
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
@@ -651,7 +644,7 @@ export default async function DecksPage({
               </Link>
             </div>
           </div>
-          <form method="get" className="mt-6 rounded-2xl border border-white/10 bg-zinc-900/75 p-4 space-y-3">
+          <form method="get" className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 space-y-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
               <input
                 type="search"
@@ -933,40 +926,26 @@ export default async function DecksPage({
               ) : null}
             </div>
           ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {topValueDeck ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+                Top value: <span className="font-medium text-white">{topValueDeck.name}</span>
+              </div>
+            ) : null}
+            {dominantBracketEntry ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+                Common bracket: <span className="font-medium text-white">Bracket {dominantBracketEntry[0]}</span>
+              </div>
+            ) : null}
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+              Rated decks: <span className="font-medium text-white">{ratedDecks.length}/{availableDeckViews.length}</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-6">
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Available Decks</h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Live public listings with format labels, Commander bracket signals, and blended value.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Top Value Deck</div>
-              <div className="mt-1 text-sm font-medium text-white">
-                {topValueDeck?.name || 'N/A'}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Most Common Bracket</div>
-              <div className="mt-1 text-sm font-medium text-white">
-                {dominantBracketEntry ? `Bracket ${dominantBracketEntry[0]}` : 'N/A'}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Bracket Coverage</div>
-              <div className="mt-1 text-sm font-medium text-white">
-                {ratedDecks.length}/{availableDeckViews.length} rated
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <section className="mx-auto max-w-7xl px-6 py-4">
         {availableDeckViews.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
             <h3 className="text-xl font-semibold">
