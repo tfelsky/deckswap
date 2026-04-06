@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import Image from 'next/image'
+import { Header } from '@/components/header'
 import MarketplaceNav from '@/components/marketplace-nav'
 
 type AppHeaderProps = {
@@ -30,34 +29,10 @@ export default function AppHeader({
   unreadNotifications = 0,
 }: AppHeaderProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <div className="mb-3 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/mythiverse-shield.png"
-              alt="Mythiverse Exchange shield logo"
-              width={52}
-              height={52}
-              className="h-[52px] w-[52px] rounded-2xl object-cover shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
-            />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-              ME
-            </div>
-            <div>
-              <div className="text-base font-semibold text-foreground">Mythiverse Exchange</div>
-              <div className="text-xs text-muted-foreground">Marketplace app</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/"
-            className="rounded-2xl border border-border/80 bg-card/60 px-3.5 py-2 text-sm text-foreground hover:bg-secondary/80"
-          >
-            Back to landing
-          </Link>
-        </div>
-
+    <>
+      <Header />
+      <div className="fixed inset-x-0 top-16 z-40 border-b border-border/70 bg-background/75 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
         <MarketplaceNav
           current={current}
           isSignedIn={isSignedIn}
@@ -65,7 +40,8 @@ export default function AppHeader({
           unreadTradeOffers={unreadTradeOffers}
           unreadNotifications={unreadNotifications}
         />
+        </div>
       </div>
-    </header>
+    </>
   )
 }

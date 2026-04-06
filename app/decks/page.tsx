@@ -651,258 +651,249 @@ export default async function DecksPage({
               </Link>
             </div>
           </div>
-          <form method="get" className="mt-6 rounded-3xl border border-white/10 bg-zinc-900/90 p-5 space-y-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="text-sm text-zinc-400">
-                {availableDeckViews.length} match{availableDeckViews.length === 1 ? '' : 'es'}
-                {user && watchedDeckViews.length > 0
-                  ? ` | ${watchedDeckViews.length} watched`
-                  : ''}
-                {user && passedDeckViews.length > 0
-                  ? ` | ${passedDeckViews.length} rejected`
-                  : ''}
-              </div>
-              <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
-                Search Marketplace
+          <form method="get" className="mt-6 rounded-2xl border border-white/10 bg-zinc-900/75 p-4 space-y-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+              <input
+                type="search"
+                name="q"
+                defaultValue={query}
+                placeholder="Search decks or cards"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-zinc-950/80 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500"
+              />
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
+                <label className="block">
+                  <span className="sr-only">Search scope</span>
+                  <select
+                    name="scope"
+                    defaultValue={searchScope}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white xl:w-44"
+                  >
+                    {SEARCH_SCOPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="sr-only">Sort</span>
+                  <select
+                    name="sort"
+                    defaultValue={sortOption}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white xl:w-44"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90">
+                  Search
+                </button>
+
+                <Link
+                  href="/decks"
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-center text-sm text-white hover:bg-white/10"
+                >
+                  Reset
+                </Link>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_220px_220px]">
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-400">Search query</span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={query}
-                  placeholder="Try Atraxa, Smothering Tithe, Dockside, or Mono-Red"
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-400">Search scope</span>
-                <select
-                  name="scope"
-                  defaultValue={searchScope}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                >
-                  {SEARCH_SCOPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-400">Sort</span>
-                <select
-                  name="sort"
-                  defaultValue={sortOption}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <details
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-              open={advancedFiltersOpen}
-            >
-              <summary className="cursor-pointer list-none text-sm font-medium text-white">
-                Advanced filters
-              </summary>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Format</span>
-                  <select
-                    name="format"
-                    defaultValue={selectedFormat}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    <option value="unknown">Any format</option>
-                    {SUPPORTED_DECK_FORMATS.filter((format) => format !== 'unknown').map((format) => (
-                      <option key={format} value={format}>
-                        {getDeckFormatLabel(format)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Listing type</span>
-                  <select
-                    name="listing"
-                    defaultValue={selectedListingType}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    {LISTING_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Inventory status</span>
-                  <select
-                    name="inventory"
-                    defaultValue={selectedInventoryStatus}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    <option value="any">Any public status</option>
-                    {PUBLIC_INVENTORY_FILTERS.map((status) => (
-                      <option key={status} value={status}>
-                        {getInventoryStatusLabel(status)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Color identity</span>
-                  <select
-                    name="color"
-                    defaultValue={selectedColorIdentity}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    <option value="">Any color identity</option>
-                    {ALL_COLOR_FILTERS.map((filter) => (
-                      <option key={filter.code} value={filter.code}>
-                        {filter.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Min value</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="minPrice"
-                    defaultValue={minPrice ?? ''}
-                    placeholder="0"
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Max value</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    name="maxPrice"
-                    defaultValue={maxPrice ?? ''}
-                    placeholder="500"
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Commander bracket</span>
-                  <select
-                    name="bracket"
-                    defaultValue={selectedBracket ?? ''}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    <option value="">Any bracket</option>
-                    {[1, 2, 3, 4, 5].map((bracket) => (
-                      <option key={bracket} value={bracket}>
-                        Bracket {bracket}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-400">Tokens</span>
-                  <select
-                    name="tokens"
-                    defaultValue={tokenFilter}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    {TOKEN_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block md:col-span-2 xl:col-span-4">
-                  <span className="mb-2 block text-sm text-zinc-400">Game Changers</span>
-                  <select
-                    name="gameChangers"
-                    defaultValue={gameChangerFilter}
-                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
-                  >
-                    {GAME_CHANGER_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input type="checkbox" name="sleeved" value="1" defaultChecked={requireSleeved} />
-                  Sleeved only
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input type="checkbox" name="boxed" value="1" defaultChecked={requireBoxed} />
-                  Boxed only
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input type="checkbox" name="sealed" value="1" defaultChecked={requireSealed} />
-                  Sealed only
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input
-                    type="checkbox"
-                    name="completePrecon"
-                    value="1"
-                    defaultChecked={requireCompletePrecon}
-                  />
-                  Complete precons only
-                </label>
-              </div>
-            </details>
-
-            <div className="flex flex-wrap gap-3">
-              <button className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
-                Apply search
-              </button>
-              <Link
-                href="/decks"
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white hover:bg-white/10"
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <details
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5"
+                open={advancedFiltersOpen}
               >
-                Reset
-              </Link>
+                <summary className="cursor-pointer list-none text-sm font-medium text-zinc-200">
+                  Advanced filters
+                </summary>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Format</span>
+                    <select
+                      name="format"
+                      defaultValue={selectedFormat}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      <option value="unknown">Any format</option>
+                      {SUPPORTED_DECK_FORMATS.filter((format) => format !== 'unknown').map((format) => (
+                        <option key={format} value={format}>
+                          {getDeckFormatLabel(format)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Listing</span>
+                    <select
+                      name="listing"
+                      defaultValue={selectedListingType}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      {LISTING_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Status</span>
+                    <select
+                      name="inventory"
+                      defaultValue={selectedInventoryStatus}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      <option value="any">Any public status</option>
+                      {PUBLIC_INVENTORY_FILTERS.map((status) => (
+                        <option key={status} value={status}>
+                          {getInventoryStatusLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Color</span>
+                    <select
+                      name="color"
+                      defaultValue={selectedColorIdentity}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      <option value="">Any color identity</option>
+                      {ALL_COLOR_FILTERS.map((filter) => (
+                        <option key={filter.code} value={filter.code}>
+                          {filter.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Min value</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      name="minPrice"
+                      defaultValue={minPrice ?? ''}
+                      placeholder="0"
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Max value</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      name="maxPrice"
+                      defaultValue={maxPrice ?? ''}
+                      placeholder="500"
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Bracket</span>
+                    <select
+                      name="bracket"
+                      defaultValue={selectedBracket ?? ''}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      <option value="">Any bracket</option>
+                      {[1, 2, 3, 4, 5].map((bracket) => (
+                        <option key={bracket} value={bracket}>
+                          Bracket {bracket}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Tokens</span>
+                    <select
+                      name="tokens"
+                      defaultValue={tokenFilter}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      {TOKEN_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Game Changers</span>
+                    <select
+                      name="gameChangers"
+                      defaultValue={gameChangerFilter}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      {GAME_CHANGER_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-zinc-200">
+                    <input type="checkbox" name="sleeved" value="1" defaultChecked={requireSleeved} />
+                    Sleeved only
+                  </label>
+                  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-zinc-200">
+                    <input type="checkbox" name="boxed" value="1" defaultChecked={requireBoxed} />
+                    Boxed only
+                  </label>
+                  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-zinc-200">
+                    <input type="checkbox" name="sealed" value="1" defaultChecked={requireSealed} />
+                    Sealed only
+                  </label>
+                  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-zinc-200">
+                    <input
+                      type="checkbox"
+                      name="completePrecon"
+                      value="1"
+                      defaultChecked={requireCompletePrecon}
+                    />
+                    Complete precons
+                  </label>
+                </div>
+              </details>
+
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">
+                {availableDeckViews.length} match{availableDeckViews.length === 1 ? '' : 'es'}
+                {user && watchedDeckViews.length > 0 ? ` | ${watchedDeckViews.length} watched` : ''}
+                {user && passedDeckViews.length > 0 ? ` | ${passedDeckViews.length} rejected` : ''}
+              </div>
             </div>
           </form>
 
           {hasActiveSearch ? (
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {query ? (
                 <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
-                  Query: {query}
+                  {query}
                 </span>
               ) : null}
               {searchScope !== 'any' ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Scope: {SEARCH_SCOPE_OPTIONS.find((option) => option.value === searchScope)?.label}
+                  {SEARCH_SCOPE_OPTIONS.find((option) => option.value === searchScope)?.label}
                 </span>
               ) : null}
               {selectedFormat !== 'unknown' ? (
@@ -912,17 +903,17 @@ export default async function DecksPage({
               ) : null}
               {selectedListingType !== 'any' ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Listing: {LISTING_TYPE_OPTIONS.find((option) => option.value === selectedListingType)?.label}
+                  {LISTING_TYPE_OPTIONS.find((option) => option.value === selectedListingType)?.label}
                 </span>
               ) : null}
               {selectedInventoryStatus !== 'any' ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Status: {getInventoryStatusLabel(selectedInventoryStatus)}
+                  {getInventoryStatusLabel(selectedInventoryStatus)}
                 </span>
               ) : null}
               {selectedColorIdentity ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Color: {getColorIdentityLabel(selectedColorIdentity === 'C' ? [] : selectedColorIdentity.split(''))}
+                  {getColorIdentityLabel(selectedColorIdentity === 'C' ? [] : selectedColorIdentity.split(''))}
                 </span>
               ) : null}
               {selectedBracket != null ? (
@@ -938,36 +929,6 @@ export default async function DecksPage({
               {maxPrice != null ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                   Max ${maxPrice}
-                </span>
-              ) : null}
-              {tokenFilter !== 'any' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {TOKEN_FILTER_OPTIONS.find((option) => option.value === tokenFilter)?.label}
-                </span>
-              ) : null}
-              {gameChangerFilter !== 'any' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {GAME_CHANGER_FILTER_OPTIONS.find((option) => option.value === gameChangerFilter)?.label}
-                </span>
-              ) : null}
-              {requireSleeved ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Sleeved
-                </span>
-              ) : null}
-              {requireBoxed ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Boxed
-                </span>
-              ) : null}
-              {requireSealed ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Sealed
-                </span>
-              ) : null}
-              {requireCompletePrecon ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Complete precon
                 </span>
               ) : null}
             </div>
