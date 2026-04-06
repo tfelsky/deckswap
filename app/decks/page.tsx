@@ -14,11 +14,6 @@ import {
   isInventoryStatusLocked,
   isInventoryStatusPublic,
 } from '@/lib/decks/inventory-status'
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card'
 import AppHeader from '@/components/app-header'
 import {
   SUPPORTED_DECK_FORMATS,
@@ -35,7 +30,6 @@ import {
   isUserDeckWatchlistSchemaMissing,
   type UserDeckWatchlistRow,
 } from '@/lib/user-deck-watchlist'
-import { Info } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -593,28 +587,8 @@ export default async function DecksPage({
   const ratedDecks = availableDeckViews.filter(
     (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
   )
-  const averageBracket =
-    ratedDecks.length > 0
-      ? (
-          ratedDecks.reduce(
-            (sum, deck) => sum + (deck.bracket.bracket ?? 0),
-            0
-          ) / ratedDecks.length
-        ).toFixed(1)
-      : '0.0'
   const topValueDeck = [...availableDeckViews].sort(
     (a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
-  )[0]
-  const mostCardsDeck = [...availableDeckViews].sort(
-    (a, b) =>
-      Number((b.commander_count ?? 0) + (b.mainboard_count ?? 0) + (b.token_count ?? 0)) -
-      Number((a.commander_count ?? 0) + (a.mainboard_count ?? 0) + (a.token_count ?? 0))
-  )[0]
-  const mostGameChangersDeck = [...ratedDecks].sort(
-    (a, b) => b.bracket.gameChangerCount - a.bracket.gameChangerCount
-  )[0]
-  const highestBracketDeck = [...ratedDecks].sort(
-    (a, b) => (b.bracket.bracket ?? 0) - (a.bracket.bracket ?? 0)
   )[0]
   const bracketCounts = new Map<number, number>()
 
@@ -625,10 +599,9 @@ export default async function DecksPage({
 
   const dominantBracketEntry =
     [...bracketCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
-  const tokenReadyDecks = availableDeckViews.filter((deck) => Number(deck.token_count ?? 0) > 0).length
 
   return (
-    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-28 text-white">
       <AppHeader
         current="decks"
         isSignedIn={!!user}
@@ -637,200 +610,63 @@ export default async function DecksPage({
         unreadNotifications={unreadNotifications}
       />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="max-w-3xl">
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
               <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
                 Deck Marketplace
               </div>
 
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Browse decks across formats
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Browse live decks faster
               </h1>
 
-              <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-                Discover deck inventory across Commander, Standard, Pauper, Canadian Highlander, Legacy, Modern, and Premodern with blended pricing and format-aware details.
+              <p className="mt-3 text-sm text-zinc-400 sm:text-base">
+                Search commanders, deck names, and contained cards, then narrow by format,
+                listing type, bracket, and readiness without pushing the listings below the fold.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                <span className="text-zinc-500">Live</span>{' '}
+                <span className="font-semibold text-white">{availableDeckViews.length}</span>
+              </div>
+              {dominantBracketEntry ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-200">
+                  <span className="text-zinc-500">Common bracket</span>{' '}
+                  <span className="font-semibold text-white">Bracket {dominantBracketEntry[0]}</span>
+                </div>
+              ) : null}
               <Link
                 href="/completed-sales"
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
               >
                 Completed Sales
               </Link>
+              <Link
+                href="/import-deck"
+                className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
+              >
+                Import Deck
+              </Link>
             </div>
           </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Live Decks</div>
-              <div className="mt-2 text-3xl font-semibold">{availableDeckViews.length}</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center gap-2 text-sm text-zinc-400">
-                Avg. Bracket
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <button type="button" className="text-zinc-500 hover:text-white">
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="border-white/10 bg-zinc-900 text-zinc-100">
-                    <div className="space-y-2 text-sm">
-                      <p className="font-medium text-white">Commander bracket help</p>
-                      <p>
-                        Brackets are a pregame matching signal for Commander decks. Lower brackets
-                        tend to be more casual, while higher brackets reflect stronger optimization
-                        and more powerful card signals.
-                      </p>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
+          <form method="get" className="mt-6 rounded-3xl border border-white/10 bg-zinc-900/90 p-5 space-y-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="text-sm text-zinc-400">
+                {availableDeckViews.length} match{availableDeckViews.length === 1 ? '' : 'es'}
+                {user && watchedDeckViews.length > 0
+                  ? ` | ${watchedDeckViews.length} watched`
+                  : ''}
+                {user && passedDeckViews.length > 0
+                  ? ` | ${passedDeckViews.length} rejected`
+                  : ''}
               </div>
-              <div className="mt-2 text-3xl font-semibold">{averageBracket}</div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Top Value</div>
-              <div className="mt-2 text-3xl font-semibold">
-                $
-                {Math.max(
-                  0,
-                  ...availableDeckViews.map((deck) => Number(deck.price_total_usd_foil ?? 0))
-                ).toFixed(2)}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Token Ready</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                {tokenReadyDecks}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 lg:col-span-4">
-              <div className="text-sm text-zinc-400">Visibility Rules</div>
-              <div className="mt-2 text-sm text-zinc-300">
-                Only decks in public live statuses appear here. Staged, donation, checkout, and escrow-management statuses stay out of the live marketplace.
-                {user && watchedDeckViews.length > 0 ? ` You are watching ${watchedDeckViews.length} deck${watchedDeckViews.length === 1 ? '' : 's'} in a separate list.` : ''}
-                {user && passedDeckViews.length > 0 ? ` You have rejected ${passedDeckViews.length} deck${passedDeckViews.length === 1 ? '' : 's'}, so they are hidden from your available list.` : ''}
-                {completedDeckCount > 0 ? ` ${completedDeckCount} deck${completedDeckCount === 1 ? ' has' : 's have'} already moved into completed status.` : ''}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
-            <div className="rounded-3xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/15 via-emerald-400/5 to-transparent p-6">
-              <div className="text-sm uppercase tracking-[0.2em] text-emerald-300/80">
-                Marketplace Snapshot
-              </div>
-              <h2 className="mt-3 text-2xl font-semibold text-white">
-                Decks are trending around Bracket {dominantBracketEntry?.[0] ?? 2}
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm text-zinc-300">
-                {dominantBracketEntry
-                  ? `${dominantBracketEntry[1]} current listings sit in the most common bracket. Use bracket labels, Game Changer counts, and blended pricing to find pods that feel right faster.`
-                  : 'Import a few more decks to build out bracket and pricing insight across the marketplace.'}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-              <div className="text-sm text-zinc-400">Highest Bracket Listing</div>
-              <div className="mt-3 text-xl font-semibold text-white">
-                {highestBracketDeck?.name || 'N/A'}
-              </div>
-              <p className="mt-2 text-sm text-zinc-400">
-                {highestBracketDeck?.bracket.label || 'No bracket data yet'}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-              <div className="text-sm text-zinc-400">Most Game Changers</div>
-              <div className="mt-3 text-xl font-semibold text-white">
-                {mostGameChangersDeck?.name || 'N/A'}
-              </div>
-              <p className="mt-2 text-sm text-zinc-400">
-                {mostGameChangersDeck
-                  ? `${mostGameChangersDeck.bracket.gameChangerCount} Game Changers`
-                  : 'No Game Changer data yet'}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-5">
-              <div className="text-sm text-zinc-400">How to scan this page</div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-wide text-zinc-500">Bracket Fit</div>
-                  <p className="mt-2 text-sm text-zinc-300">
-                    Use the bracket badge first to narrow to the table speed you want.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-wide text-zinc-500">Price Signal</div>
-                  <p className="mt-2 text-sm text-zinc-300">
-                    Value is blended from foil flags, so it tracks deck cost more honestly.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-wide text-zinc-500">Table Setup</div>
-                  <p className="mt-2 text-sm text-zinc-300">
-                    Card and token counts help spot decks that are ready to sleeve and play.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-              <div className="text-sm text-emerald-200">Bring your own list</div>
-              <h2 className="mt-3 text-2xl font-semibold text-white">
-                Import from text, file, or Moxfield
-              </h2>
-              <p className="mt-3 text-sm text-emerald-50/80">
-                Paste a list, upload a `.txt` or Archidekt export, or point the app at a public Moxfield deck.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link
-                  href="/import-deck"
-                  className="rounded-2xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
-                >
-                  Import Deck
-                </Link>
-                <Link
-                  href="/create-deck"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-                >
-                  Start manual listing
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="mb-8 rounded-3xl border border-white/10 bg-zinc-900/90 p-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="text-sm uppercase tracking-[0.2em] text-emerald-300/80">
+              <div className="text-xs uppercase tracking-[0.2em] text-emerald-300/80">
                 Search Marketplace
               </div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-                Find decks by deck details or by cards inside them
-              </h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Search commanders, deck names, and contained cards, then narrow with format,
-                bracket, pricing, listing type, and readiness filters.
-              </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              {availableDeckViews.length} match{availableDeckViews.length === 1 ? '' : 'es'}
-            </div>
-          </div>
 
-          <form method="get" className="mt-6 space-y-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_220px_220px]">
               <label className="block">
                 <span className="mb-2 block text-sm text-zinc-400">Search query</span>
@@ -1137,16 +973,18 @@ export default async function DecksPage({
             </div>
           ) : null}
         </div>
+      </section>
 
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <section className="mx-auto max-w-7xl px-6 py-6">
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Available Decks</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Marketplace grid with format-aware labels, Commander bracket signals where available, and blended value.
+              Live public listings with format labels, Commander bracket signals, and blended value.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex flex-wrap gap-2">
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="text-xs uppercase tracking-wide text-zinc-500">Top Value Deck</div>
               <div className="mt-1 text-sm font-medium text-white">
@@ -1163,14 +1001,6 @@ export default async function DecksPage({
               <div className="text-xs uppercase tracking-wide text-zinc-500">Bracket Coverage</div>
               <div className="mt-1 text-sm font-medium text-white">
                 {ratedDecks.length}/{availableDeckViews.length} rated
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">Largest List</div>
-              <div className="mt-1 text-sm font-medium text-white">
-                {mostCardsDeck
-                  ? `${(mostCardsDeck.commander_count ?? 0) + (mostCardsDeck.mainboard_count ?? 0) + (mostCardsDeck.token_count ?? 0)} cards`
-                  : 'N/A'}
               </div>
             </div>
           </div>
