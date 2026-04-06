@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import AuthCodeExchange from "@/components/auth-code-exchange"
+import { HomepageColorChooser } from "@/components/homepage-color-chooser"
 import { Header } from "@/components/header"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturedDeckShelf, FeaturedDecks } from "@/components/featured-decks"
@@ -122,11 +123,6 @@ function countByColorCode(decks: Array<{ color_identity?: string[] | null }>) {
   }
 
   return counts
-}
-
-function getColorSwatches(code: string) {
-  if (code === "C") return ["C"]
-  return code.split("").filter(Boolean)
 }
 
 function toDeckShelfCard(
@@ -316,84 +312,19 @@ async function DeferredHomeSections({ selectedColor }: { selectedColor: string |
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
-              {[
-                { title: "Mono", items: MONO_COLOR_FILTERS },
-                { title: "Pairs", items: PAIR_COLOR_FILTERS },
-                { title: "Trios+", items: [...TRI_COLOR_FILTERS, ...FOUR_COLOR_FILTERS, ...FIVE_COLOR_FILTERS] },
-              ].map((group, index) => {
-                const groupDeckCount = group.items.reduce(
-                  (sum, item) => sum + (colorCounts.get(item.code) ?? 0),
-                  0
-                )
-
-                return (
-                  <details
-                    key={group.title}
-                    name="homepage-color-groups"
-                    className="rounded-2xl border border-border/70 bg-black/10 px-3 py-2.5"
-                    open={index === 0}
-                  >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                          {group.title}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground/65">
-                          {group.items.length}
-                        </span>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                        {groupDeckCount} decks
-                      </span>
-                    </summary>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {group.items.map((item) => {
-                        const active = selectedColor === item.code
-                        const count = colorCounts.get(item.code) ?? 0
-
-                        return (
-                          <Link
-                            key={item.code}
-                            href={`/?color=${item.code}`}
-                            title={`${item.label} - ${count} decks`}
-                            className={`group inline-flex min-h-9 items-center gap-2 rounded-full border px-2 py-1.5 transition ${
-                              active
-                                ? "border-primary/30 bg-[linear-gradient(135deg,rgba(71,202,157,0.22),rgba(234,190,94,0.12))] shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
-                                : "border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] hover:border-primary/20 hover:bg-[linear-gradient(135deg,rgba(71,202,157,0.12),rgba(234,190,94,0.06))]"
-                            }`}
-                          >
-                            <div className="flex items-center gap-1">
-                              {getColorSwatches(item.code).map((symbol) => (
-                                <span
-                                  key={`${item.code}-${symbol}`}
-                                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[8px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] ${MANA_SWATCHES[symbol]}`}
-                                >
-                                  {symbol}
-                                </span>
-                              ))}
-                            </div>
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/90">
-                              {item.code}
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-black/15 px-1.5 py-0.5 text-[9px] text-foreground/70">
-                              {count}
-                            </span>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </details>
-                )
-              })}
-
-              {selectedColor && COLOR_FILTER_FLAVOR[selectedColor] ? (
-                <p className="pt-1 text-xs text-muted-foreground">
-                  {COLOR_FILTER_FLAVOR[selectedColor]}
-                </p>
-              ) : null}
-            </div>
+            <HomepageColorChooser
+              groups={[
+                { id: "mono", title: "Mono", items: MONO_COLOR_FILTERS },
+                { id: "pairs", title: "2 Color", items: PAIR_COLOR_FILTERS },
+                { id: "tri", title: "3 Color", items: TRI_COLOR_FILTERS },
+                { id: "four", title: "4 Color", items: FOUR_COLOR_FILTERS },
+              ]}
+              fiveColorItem={FIVE_COLOR_FILTERS[0]}
+              selectedColor={selectedColor}
+              colorCounts={Object.fromEntries(colorCounts)}
+              manaSwatches={MANA_SWATCHES}
+              colorFlavor={COLOR_FILTER_FLAVOR}
+            />
           </div>
         </div>
       </section>
