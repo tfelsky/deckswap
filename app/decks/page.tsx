@@ -1,6 +1,11 @@
 import type { Metadata } from 'next'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
+import {
+  ALL_COLOR_FILTERS,
+  colorIdentityCode,
+  getColorIdentityLabel,
+} from '@/lib/decks/color-identity'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import {
   isInventoryStatusCompleted,
@@ -15,7 +20,12 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import AppHeader from '@/components/app-header'
-import { formatSupportsCommanderRules, getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import {
+  SUPPORTED_DECK_FORMATS,
+  formatSupportsCommanderRules,
+  getDeckFormatLabel,
+  normalizeDeckFormat,
+} from '@/lib/decks/formats'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
@@ -44,6 +54,7 @@ type Deck = {
   name: string
   commander?: string | null
   format?: string | null
+  imported_at?: string | null
   price_total_usd_foil?: number | null
   buy_now_price_usd?: number | null
   buy_now_currency?: string | null
@@ -58,6 +69,7 @@ type Deck = {
   is_complete_precon?: boolean | null
   is_listed_for_trade?: boolean | null
   box_type?: string | null
+  color_identity?: string[] | null
 }
 
 type DeckCardForBracket = {
@@ -69,8 +81,236 @@ type DeckCardForBracket = {
   mana_cost?: string | null
 }
 
-export default async function DecksPage() {
+type DeckSearchScope = 'any' | 'deck' | 'card'
+type DeckSortOption =
+  | 'newest'
+  | 'value_desc'
+  | 'value_asc'
+  | 'bracket_desc'
+  | 'cards_desc'
+  | 'name_asc'
+type ListingTypeFilter = 'any' | 'trade' | 'buy_now' | 'auction'
+type TokenFilter = 'any' | 'with_tokens' | 'without_tokens'
+type GameChangerFilter = 'any' | 'with_game_changers' | 'without_game_changers'
+
+type DeckView = Deck & {
+  bracket: ReturnType<typeof getCommanderBracketSummary>
+  format: ReturnType<typeof normalizeDeckFormat>
+}
+
+const SEARCH_SCOPE_OPTIONS: Array<{ value: DeckSearchScope; label: string }> = [
+  { value: 'any', label: 'Decks and cards' },
+  { value: 'deck', label: 'Deck names and commanders' },
+  { value: 'card', label: 'Cards inside decks' },
+]
+
+const SORT_OPTIONS: Array<{ value: DeckSortOption; label: string }> = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'value_desc', label: 'Highest value' },
+  { value: 'value_asc', label: 'Lowest value' },
+  { value: 'bracket_desc', label: 'Highest bracket' },
+  { value: 'cards_desc', label: 'Largest list' },
+  { value: 'name_asc', label: 'Alphabetical' },
+]
+
+const LISTING_TYPE_OPTIONS: Array<{ value: ListingTypeFilter; label: string }> = [
+  { value: 'any', label: 'Any listing type' },
+  { value: 'trade', label: 'Deck swap live' },
+  { value: 'buy_now', label: 'Buy it now' },
+  { value: 'auction', label: 'Auction' },
+]
+
+const TOKEN_FILTER_OPTIONS: Array<{ value: TokenFilter; label: string }> = [
+  { value: 'any', label: 'Any token state' },
+  { value: 'with_tokens', label: 'Has tokens' },
+  { value: 'without_tokens', label: 'No tokens' },
+]
+
+const GAME_CHANGER_FILTER_OPTIONS: Array<{ value: GameChangerFilter; label: string }> = [
+  { value: 'any', label: 'Any Game Changer count' },
+  { value: 'with_game_changers', label: 'Includes Game Changers' },
+  { value: 'without_game_changers', label: 'No Game Changers' },
+]
+
+const PUBLIC_INVENTORY_FILTERS = [
+  'deck_swap_live',
+  'buy_it_now_live',
+  'auction_live',
+  'auction_pending',
+] as const
+
+function readSearchParam(
+  value: string | string[] | undefined,
+  fallback = ''
+) {
+  if (Array.isArray(value)) return value[0] ?? fallback
+  return value ?? fallback
+}
+
+function readNumericSearchParam(value: string | string[] | undefined) {
+  const raw = readSearchParam(value).trim()
+  if (!raw) return null
+
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function readBooleanSearchParam(value: string | string[] | undefined) {
+  const raw = readSearchParam(value).trim().toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+}
+
+function readDeckSearchScope(value: string | string[] | undefined): DeckSearchScope {
+  const raw = readSearchParam(value, 'any')
+  return SEARCH_SCOPE_OPTIONS.some((option) => option.value === raw)
+    ? (raw as DeckSearchScope)
+    : 'any'
+}
+
+function readDeckSortOption(value: string | string[] | undefined): DeckSortOption {
+  const raw = readSearchParam(value, 'newest')
+  return SORT_OPTIONS.some((option) => option.value === raw)
+    ? (raw as DeckSortOption)
+    : 'newest'
+}
+
+function readListingType(value: string | string[] | undefined): ListingTypeFilter {
+  const raw = readSearchParam(value, 'any')
+  return LISTING_TYPE_OPTIONS.some((option) => option.value === raw)
+    ? (raw as ListingTypeFilter)
+    : 'any'
+}
+
+function readTokenFilter(value: string | string[] | undefined): TokenFilter {
+  const raw = readSearchParam(value, 'any')
+  return TOKEN_FILTER_OPTIONS.some((option) => option.value === raw)
+    ? (raw as TokenFilter)
+    : 'any'
+}
+
+function readGameChangerFilter(value: string | string[] | undefined): GameChangerFilter {
+  const raw = readSearchParam(value, 'any')
+  return GAME_CHANGER_FILTER_OPTIONS.some((option) => option.value === raw)
+    ? (raw as GameChangerFilter)
+    : 'any'
+}
+
+function normalizeSearchTerms(query: string) {
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter(Boolean)
+}
+
+function matchesSearchText(haystackParts: Array<string | null | undefined>, query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return true
+
+  const haystack = haystackParts
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (!haystack) return false
+  if (haystack.includes(normalizedQuery)) return true
+
+  return normalizeSearchTerms(normalizedQuery).every((term) => haystack.includes(term))
+}
+
+function matchesDeckSearch(
+  deck: DeckView,
+  cards: DeckCardForBracket[],
+  query: string,
+  scope: DeckSearchScope
+) {
+  if (!query.trim()) return true
+
+  const matchDeck = matchesSearchText(
+    [
+      deck.name,
+      deck.commander,
+      getDeckFormatLabel(deck.format),
+      getColorIdentityLabel(deck.color_identity),
+      deck.box_type,
+    ],
+    query
+  )
+
+  const matchCard = matchesSearchText(
+    cards.flatMap((card) => [card.card_name, card.section]),
+    query
+  )
+
+  if (scope === 'deck') return matchDeck
+  if (scope === 'card') return matchCard
+  return matchDeck || matchCard
+}
+
+function sortDeckViews(deckViews: DeckView[], sort: DeckSortOption) {
+  return [...deckViews].sort((a, b) => {
+    switch (sort) {
+      case 'value_desc':
+        return Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
+      case 'value_asc':
+        return Number(a.price_total_usd_foil ?? 0) - Number(b.price_total_usd_foil ?? 0)
+      case 'bracket_desc':
+        return (b.bracket.bracket ?? 0) - (a.bracket.bracket ?? 0)
+      case 'cards_desc':
+        return (
+          Number((b.commander_count ?? 0) + (b.mainboard_count ?? 0) + (b.token_count ?? 0)) -
+          Number((a.commander_count ?? 0) + (a.mainboard_count ?? 0) + (a.token_count ?? 0))
+        )
+      case 'name_asc':
+        return a.name.localeCompare(b.name)
+      case 'newest':
+      default:
+        return (
+          new Date(b.imported_at ?? 0).getTime() - new Date(a.imported_at ?? 0).getTime()
+        )
+    }
+  })
+}
+
+export default async function DecksPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {}
   const supabase = await createClient()
+  const query = readSearchParam(resolvedSearchParams.q).trim()
+  const searchScope = readDeckSearchScope(resolvedSearchParams.scope)
+  const selectedFormat = normalizeDeckFormat(readSearchParam(resolvedSearchParams.format))
+  const selectedListingType = readListingType(resolvedSearchParams.listing)
+  const selectedInventoryStatus = readSearchParam(resolvedSearchParams.inventory, 'any')
+  const selectedColorIdentity = readSearchParam(resolvedSearchParams.color).trim().toUpperCase()
+  const minPrice = readNumericSearchParam(resolvedSearchParams.minPrice)
+  const maxPrice = readNumericSearchParam(resolvedSearchParams.maxPrice)
+  const selectedBracket = readNumericSearchParam(resolvedSearchParams.bracket)
+  const tokenFilter = readTokenFilter(resolvedSearchParams.tokens)
+  const gameChangerFilter = readGameChangerFilter(resolvedSearchParams.gameChangers)
+  const requireSleeved = readBooleanSearchParam(resolvedSearchParams.sleeved)
+  const requireBoxed = readBooleanSearchParam(resolvedSearchParams.boxed)
+  const requireSealed = readBooleanSearchParam(resolvedSearchParams.sealed)
+  const requireCompletePrecon = readBooleanSearchParam(resolvedSearchParams.completePrecon)
+  const sortOption = readDeckSortOption(resolvedSearchParams.sort)
+  const advancedFiltersOpen =
+    selectedFormat !== 'unknown' ||
+    selectedListingType !== 'any' ||
+    selectedInventoryStatus !== 'any' ||
+    !!selectedColorIdentity ||
+    minPrice != null ||
+    maxPrice != null ||
+    selectedBracket != null ||
+    tokenFilter !== 'any' ||
+    gameChangerFilter !== 'any' ||
+    requireSleeved ||
+    requireBoxed ||
+    requireSealed ||
+    requireCompletePrecon ||
+    sortOption !== 'newest'
+  const hasActiveSearch = !!query || searchScope !== 'any' || advancedFiltersOpen
 
   const {
     data: { user },
@@ -197,9 +437,9 @@ export default async function DecksPage() {
   const { data, error } = await supabase
     .from('decks')
     .select(
-      'id, name, commander, format, price_total_usd_foil, buy_now_price_usd, buy_now_currency, inventory_status, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type'
+      'id, name, commander, format, imported_at, price_total_usd_foil, buy_now_price_usd, buy_now_currency, inventory_status, image_url, commander_count, mainboard_count, token_count, is_sleeved, is_boxed, is_sealed, is_complete_precon, is_listed_for_trade, box_type, color_identity'
     )
-    .order('id', { ascending: true })
+    .order('imported_at', { ascending: false })
 
   if (error) {
     return (
@@ -254,15 +494,101 @@ export default async function DecksPage() {
     const format = normalizeDeckFormat(deck.format)
     return { ...deck, bracket, format }
   })
-  const availableDeckViews = user
-    ? deckViews.filter((deck) => !passedDeckIds.has(deck.id) && !watchedDeckIds.has(deck.id))
-    : deckViews
-  const watchedDeckViews = user
-    ? deckViews.filter((deck) => watchedDeckIds.has(deck.id) && !passedDeckIds.has(deck.id))
-    : []
-  const passedDeckViews = user
-    ? deckViews.filter((deck) => passedDeckIds.has(deck.id))
-    : []
+  const matchesMarketplaceFilters = (deck: DeckView) => {
+    const deckCardsForSearch = cardsByDeck.get(deck.id) ?? []
+    const normalizedInventoryStatus = String(deck.inventory_status ?? '')
+    const deckValue = Number(deck.price_total_usd_foil ?? 0)
+    const tokenCount = Number(deck.token_count ?? 0)
+    const deckColorCode = colorIdentityCode(deck.color_identity)
+    const bracketValue = deck.bracket.bracket
+
+    if (!matchesDeckSearch(deck, deckCardsForSearch, query, searchScope)) return false
+    if (selectedFormat !== 'unknown' && deck.format !== selectedFormat) return false
+    if (
+      selectedInventoryStatus !== 'any' &&
+      normalizedInventoryStatus !== selectedInventoryStatus
+    ) {
+      return false
+    }
+    if (
+      selectedListingType === 'trade' &&
+      normalizedInventoryStatus !== 'deck_swap_live'
+    ) {
+      return false
+    }
+    if (
+      selectedListingType === 'buy_now' &&
+      normalizedInventoryStatus !== 'buy_it_now_live'
+    ) {
+      return false
+    }
+    if (
+      selectedListingType === 'auction' &&
+      normalizedInventoryStatus !== 'auction_live' &&
+      normalizedInventoryStatus !== 'auction_pending'
+    ) {
+      return false
+    }
+    if (selectedColorIdentity && deckColorCode !== selectedColorIdentity) return false
+    if (minPrice != null && deckValue < minPrice) return false
+    if (maxPrice != null && deckValue > maxPrice) return false
+    if (
+      selectedBracket != null &&
+      (bracketValue == null || bracketValue !== selectedBracket)
+    ) {
+      return false
+    }
+    if (tokenFilter === 'with_tokens' && tokenCount <= 0) return false
+    if (tokenFilter === 'without_tokens' && tokenCount > 0) return false
+    if (
+      gameChangerFilter === 'with_game_changers' &&
+      deck.bracket.gameChangerCount <= 0
+    ) {
+      return false
+    }
+    if (
+      gameChangerFilter === 'without_game_changers' &&
+      deck.bracket.gameChangerCount > 0
+    ) {
+      return false
+    }
+    if (requireSleeved && !deck.is_sleeved) return false
+    if (requireBoxed && !deck.is_boxed) return false
+    if (requireSealed && !deck.is_sealed) return false
+    if (requireCompletePrecon && !deck.is_complete_precon) return false
+
+    return true
+  }
+  const availableDeckViews = sortDeckViews(
+    user
+      ? deckViews.filter(
+          (deck) =>
+            !passedDeckIds.has(deck.id) &&
+            !watchedDeckIds.has(deck.id) &&
+            matchesMarketplaceFilters(deck)
+        )
+      : deckViews.filter(matchesMarketplaceFilters),
+    sortOption
+  )
+  const watchedDeckViews = sortDeckViews(
+    user
+      ? deckViews.filter(
+          (deck) =>
+            watchedDeckIds.has(deck.id) &&
+            !passedDeckIds.has(deck.id) &&
+            (!hasActiveSearch || matchesMarketplaceFilters(deck))
+        )
+      : [],
+    sortOption
+  )
+  const passedDeckViews = sortDeckViews(
+    user
+      ? deckViews.filter(
+          (deck) => passedDeckIds.has(deck.id) && (!hasActiveSearch || matchesMarketplaceFilters(deck))
+        )
+      : [],
+    sortOption
+  )
 
   const ratedDecks = availableDeckViews.filter(
     (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
@@ -485,12 +811,339 @@ export default async function DecksPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-8 rounded-3xl border border-white/10 bg-zinc-900/90 p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="text-sm uppercase tracking-[0.2em] text-emerald-300/80">
+                Search Marketplace
+              </div>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                Find decks by deck details or by cards inside them
+              </h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Search commanders, deck names, and contained cards, then narrow with format,
+                bracket, pricing, listing type, and readiness filters.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
+              {availableDeckViews.length} match{availableDeckViews.length === 1 ? '' : 'es'}
+            </div>
+          </div>
+
+          <form method="get" className="mt-6 space-y-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_220px_220px]">
+              <label className="block">
+                <span className="mb-2 block text-sm text-zinc-400">Search query</span>
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Try Atraxa, Smothering Tithe, Dockside, or Mono-Red"
+                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm text-zinc-400">Search scope</span>
+                <select
+                  name="scope"
+                  defaultValue={searchScope}
+                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                >
+                  {SEARCH_SCOPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm text-zinc-400">Sort</span>
+                <select
+                  name="sort"
+                  defaultValue={sortOption}
+                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <details
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+              open={advancedFiltersOpen}
+            >
+              <summary className="cursor-pointer list-none text-sm font-medium text-white">
+                Advanced filters
+              </summary>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Format</span>
+                  <select
+                    name="format"
+                    defaultValue={selectedFormat}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    <option value="unknown">Any format</option>
+                    {SUPPORTED_DECK_FORMATS.filter((format) => format !== 'unknown').map((format) => (
+                      <option key={format} value={format}>
+                        {getDeckFormatLabel(format)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Listing type</span>
+                  <select
+                    name="listing"
+                    defaultValue={selectedListingType}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    {LISTING_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Inventory status</span>
+                  <select
+                    name="inventory"
+                    defaultValue={selectedInventoryStatus}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    <option value="any">Any public status</option>
+                    {PUBLIC_INVENTORY_FILTERS.map((status) => (
+                      <option key={status} value={status}>
+                        {getInventoryStatusLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Color identity</span>
+                  <select
+                    name="color"
+                    defaultValue={selectedColorIdentity}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    <option value="">Any color identity</option>
+                    {ALL_COLOR_FILTERS.map((filter) => (
+                      <option key={filter.code} value={filter.code}>
+                        {filter.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Min value</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="minPrice"
+                    defaultValue={minPrice ?? ''}
+                    placeholder="0"
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Max value</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="maxPrice"
+                    defaultValue={maxPrice ?? ''}
+                    placeholder="500"
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-500"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Commander bracket</span>
+                  <select
+                    name="bracket"
+                    defaultValue={selectedBracket ?? ''}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    <option value="">Any bracket</option>
+                    {[1, 2, 3, 4, 5].map((bracket) => (
+                      <option key={bracket} value={bracket}>
+                        Bracket {bracket}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-zinc-400">Tokens</span>
+                  <select
+                    name="tokens"
+                    defaultValue={tokenFilter}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    {TOKEN_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block md:col-span-2 xl:col-span-4">
+                  <span className="mb-2 block text-sm text-zinc-400">Game Changers</span>
+                  <select
+                    name="gameChangers"
+                    defaultValue={gameChangerFilter}
+                    className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white"
+                  >
+                    {GAME_CHANGER_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input type="checkbox" name="sleeved" value="1" defaultChecked={requireSleeved} />
+                  Sleeved only
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input type="checkbox" name="boxed" value="1" defaultChecked={requireBoxed} />
+                  Boxed only
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input type="checkbox" name="sealed" value="1" defaultChecked={requireSealed} />
+                  Sealed only
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                  <input
+                    type="checkbox"
+                    name="completePrecon"
+                    value="1"
+                    defaultChecked={requireCompletePrecon}
+                  />
+                  Complete precons only
+                </label>
+              </div>
+            </details>
+
+            <div className="flex flex-wrap gap-3">
+              <button className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90">
+                Apply search
+              </button>
+              <Link
+                href="/decks"
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white hover:bg-white/10"
+              >
+                Reset
+              </Link>
+            </div>
+          </form>
+
+          {hasActiveSearch ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {query ? (
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+                  Query: {query}
+                </span>
+              ) : null}
+              {searchScope !== 'any' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Scope: {SEARCH_SCOPE_OPTIONS.find((option) => option.value === searchScope)?.label}
+                </span>
+              ) : null}
+              {selectedFormat !== 'unknown' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  {getDeckFormatLabel(selectedFormat)}
+                </span>
+              ) : null}
+              {selectedListingType !== 'any' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Listing: {LISTING_TYPE_OPTIONS.find((option) => option.value === selectedListingType)?.label}
+                </span>
+              ) : null}
+              {selectedInventoryStatus !== 'any' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Status: {getInventoryStatusLabel(selectedInventoryStatus)}
+                </span>
+              ) : null}
+              {selectedColorIdentity ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Color: {getColorIdentityLabel(selectedColorIdentity === 'C' ? [] : selectedColorIdentity.split(''))}
+                </span>
+              ) : null}
+              {selectedBracket != null ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Bracket {selectedBracket}
+                </span>
+              ) : null}
+              {minPrice != null ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Min ${minPrice}
+                </span>
+              ) : null}
+              {maxPrice != null ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Max ${maxPrice}
+                </span>
+              ) : null}
+              {tokenFilter !== 'any' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  {TOKEN_FILTER_OPTIONS.find((option) => option.value === tokenFilter)?.label}
+                </span>
+              ) : null}
+              {gameChangerFilter !== 'any' ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  {GAME_CHANGER_FILTER_OPTIONS.find((option) => option.value === gameChangerFilter)?.label}
+                </span>
+              ) : null}
+              {requireSleeved ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Sleeved
+                </span>
+              ) : null}
+              {requireBoxed ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Boxed
+                </span>
+              ) : null}
+              {requireSealed ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Sealed
+                </span>
+              ) : null}
+              {requireCompletePrecon ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                  Complete precon
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Available Decks</h2>
             <p className="mt-1 text-sm text-zinc-400">
-                Marketplace grid with format-aware labels, Commander bracket signals where available, and blended value.
-              </p>
+              Marketplace grid with format-aware labels, Commander bracket signals where available, and blended value.
+            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -525,12 +1178,26 @@ export default async function DecksPage() {
 
         {availableDeckViews.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
-            <h3 className="text-xl font-semibold">No available decks right now</h3>
+            <h3 className="text-xl font-semibold">
+              {hasActiveSearch ? 'No decks match this search yet' : 'No available decks right now'}
+            </h3>
             <p className="mt-2 text-zinc-400">
-              {user && passedDeckViews.length > 0
+              {hasActiveSearch
+                ? 'Try a broader search term, switch from card search to deck search, or clear a few advanced filters.'
+                : user && passedDeckViews.length > 0
                 ? 'Everything currently visible has been moved into your watchlist or rejected list. You can restore any of them below.'
                 : 'Your connection works. Now seed the table with more decks and metadata.'}
             </p>
+            {hasActiveSearch ? (
+              <div className="mt-5">
+                <Link
+                  href="/decks"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+                >
+                  Clear search
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -712,7 +1379,9 @@ export default async function DecksPage() {
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">Watchlist</h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Decks you want to keep an eye on without leaving them in the main browsing grid.
+                  {hasActiveSearch
+                    ? 'Watched decks that also match the current marketplace search.'
+                    : 'Decks you want to keep an eye on without leaving them in the main browsing grid.'}
                 </p>
               </div>
               <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
@@ -778,7 +1447,9 @@ export default async function DecksPage() {
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">Rejected</h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Decks you have rejected and hidden from your available list. Restore them if you want to reconsider later.
+                  {hasActiveSearch
+                    ? 'Rejected decks that also match the current marketplace search.'
+                    : 'Decks you have rejected and hidden from your available list. Restore them if you want to reconsider later.'}
                 </p>
               </div>
               <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
