@@ -15,6 +15,7 @@ type AppHeaderProps = {
     | 'profile'
     | 'trade-offers'
     | 'notifications'
+    | 'support'
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number

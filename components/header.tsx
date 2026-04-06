@@ -32,6 +32,9 @@ export function Header() {
           <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Learn More
           </Link>
+          <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Support
+          </Link>
           <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             My Decks
           </Link>
@@ -66,6 +69,9 @@ export function Header() {
               </Link>
               <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Learn More
+              </Link>
+              <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Support
               </Link>
               <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 My Decks

@@ -92,6 +92,12 @@ export default async function AdminLayout({
                 Email Ops
               </Link>
               <Link
+                href="/admin/support"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Support Queue
+              </Link>
+              <Link
                 href="/admin/paper-power-9"
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
               >

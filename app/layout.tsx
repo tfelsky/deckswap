@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ActionFeedback } from '@/components/action-feedback'
 import { AnalyticsConsentGate } from '@/components/analytics-consent'
+import { SupportFab } from '@/components/support-fab'
 import { Toaster } from '@/components/ui/sonner'
 import { getSiteUrl } from '@/lib/site'
 import './globals.css'
@@ -68,6 +69,7 @@ export default function RootLayout({
         <ActionFeedback />
         <Toaster richColors position="top-right" />
         <AnalyticsConsentGate />
+        <SupportFab />
       </body>
     </html>
   )

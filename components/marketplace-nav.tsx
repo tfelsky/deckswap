@@ -16,6 +16,7 @@ type MarketplaceNavProps = {
     | 'profile'
     | 'trade-offers'
     | 'notifications'
+    | 'support'
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number
@@ -30,6 +31,7 @@ const ITEMS = [
   { key: 'trade-matches', href: '/trade-matches', label: 'Deck Swap' },
   { key: 'trade-offers', href: '/trade-offers', label: 'Trade Offers' },
   { key: 'notifications', href: '/notifications', label: 'Notifications' },
+  { key: 'support', href: '/support', label: 'Support' },
   { key: 'profile', href: '/settings/profile', label: 'Profile' },
 ] as const
 
@@ -64,7 +66,7 @@ export default function MarketplaceNav({
 
   const visibleItems = ITEMS.filter((item) => {
     if (!detectedSignedIn) {
-      return ['home', 'decks', 'import'].includes(item.key)
+      return ['home', 'decks', 'import', 'support'].includes(item.key)
     }
 
     return true
