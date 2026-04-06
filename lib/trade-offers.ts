@@ -72,7 +72,7 @@ export function getTradeOfferSignal(offer: TradeOfferRow, userId: string): Trade
   if (tradeOpened) {
     return {
       label: 'Trade Opened',
-      description: 'This offer has already been turned into a live trade draft.',
+      description: 'This offer has already been turned into a live trade deal.',
       tone: 'emerald',
     }
   }

@@ -333,7 +333,7 @@ export default async function ProposeTradeOfferPage({
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-                  If this offer is accepted, DeckSwap can turn it into a draft escrow transaction with both decks and the value difference already attached.
+                  If this offer is accepted, DeckSwap can turn it into a trade deal with both decks and the value difference already attached.
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">

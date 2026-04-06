@@ -446,7 +446,7 @@ export default async function TradeOfferDetailPage({
       actorUserId: user.id,
       type: 'trade_offer_accepted',
       title: 'Your trade offer was accepted',
-      body: 'Your accepted offer is live. Review the trade draft, choose any shipping add-ons, and pay your side to move into shipment.',
+      body: 'Your accepted offer is live. Review the trade deal, choose any shipping add-ons, and pay your side to move into shipment.',
       href: `/trade-drafts/${transactionId}`,
       metadata: {
         offerId,
@@ -458,9 +458,9 @@ export default async function TradeOfferDetailPage({
       await sendUserTransactionalEmailById({
         userId: currentOffer.offered_by_user_id,
         subject: 'Your trade offer was accepted',
-        body: 'Your accepted offer is live. Review the trade draft, choose any shipping add-ons, and pay your side to move into shipment.',
+      body: 'Your accepted offer is live. Review the trade deal, choose any shipping add-ons, and pay your side to move into shipment.',
         href: `/trade-drafts/${transactionId}`,
-        ctaLabel: 'Open trade draft',
+        ctaLabel: 'Open trade deal',
         idempotencyKey: `trade-offer-accepted:${offerId}:${currentOffer.offered_by_user_id}`,
         eyebrow: 'Trade accepted',
       })
@@ -487,12 +487,12 @@ export default async function TradeOfferDetailPage({
         subject: 'Trade accepted and payment opened',
         body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
         href: `/trade-drafts/${transactionId}`,
-        ctaLabel: 'Open trade draft',
+        ctaLabel: 'Open trade deal',
         idempotencyKey: `trade-draft-created:${offerId}:${currentOffer.requested_user_id}`,
-        eyebrow: 'Trade draft',
+        eyebrow: 'Trade deal',
       })
     } catch (error) {
-      console.error('Failed to send trade draft email:', error)
+      console.error('Failed to send trade deal email:', error)
     }
 
     redirect(`/trade-offers/${offerId}?accepted=1`)
@@ -750,7 +750,7 @@ export default async function TradeOfferDetailPage({
             </Link>
             {offer.accepted_trade_transaction_id && (
               <Link href={`/trade-drafts/${offer.accepted_trade_transaction_id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
-                View Trade Draft
+                View Trade Deal
               </Link>
             )}
           </div>
@@ -761,7 +761,7 @@ export default async function TradeOfferDetailPage({
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">Offer #{offer.id}</h1>
             <p className="mt-3 max-w-3xl text-zinc-400">
-              Created {formatTradeOfferTimestamp(offer.created_at)}. This is the negotiation step before the trade becomes a draft escrow transaction.
+              Created {formatTradeOfferTimestamp(offer.created_at)}. This is the negotiation step before the offer becomes a live trade deal.
             </p>
             <div className={`mt-4 rounded-2xl border px-4 py-4 text-sm ${signalTone.panel}`}>
               <div className={`text-sm font-semibold uppercase tracking-[0.16em] ${signalTone.emphasis}`}>
@@ -799,7 +799,7 @@ export default async function TradeOfferDetailPage({
           )}
           {schemaMissing && (
             <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
-              Run <code>docs/sql/escrow-transaction-foundation.sql</code> in Supabase before accepting offers into the trade draft flow.
+              Run <code>docs/sql/escrow-transaction-foundation.sql</code> in Supabase before accepting offers into the trade deal flow.
             </div>
           )}
           {error && (
@@ -816,12 +816,12 @@ export default async function TradeOfferDetailPage({
           )}
           {offer.accepted_trade_transaction_id && (
             <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
-              Trade draft #{offer.accepted_trade_transaction_id} is already open for this offer.
+              Trade deal #{offer.accepted_trade_transaction_id} is already open for this offer.
               <Link
                 href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
                 className="ml-2 font-medium text-emerald-300 hover:underline"
               >
-                Open trade draft
+                Open trade deal
               </Link>
             </div>
           )}
@@ -897,15 +897,15 @@ export default async function TradeOfferDetailPage({
               <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
                 <h2 className="text-2xl font-semibold">Respond to Offer</h2>
                 <p className="mt-2 text-sm text-emerald-50/80">
-                  Accept to create a draft trade transaction, or decline to close this offer cleanly.
+                  Accept to create a trade deal, or decline to close this offer cleanly.
                 </p>
                 <div className="mt-5 grid gap-3">
                   <form action={acceptOfferAction}>
                     <FormActionButton
-                      pendingLabel="Creating trade draft..."
+                      pendingLabel="Creating trade deal..."
                       className="w-full rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-wait disabled:opacity-80"
                     >
-                      Accept and Create Trade Draft
+                      Accept and Create Trade Deal
                     </FormActionButton>
                   </form>
                   <form action={declineOfferAction}>
@@ -1009,13 +1009,13 @@ export default async function TradeOfferDetailPage({
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
                 <h2 className="text-2xl font-semibold">Escrow Handoff</h2>
                 <p className="mt-2 text-sm text-zinc-400">
-                  Once accepted, this offer became a draft escrow transaction with both decks attached.
+                  Once accepted, this offer became a trade deal with both decks attached.
                 </p>
                 <Link
                   href={`/trade-drafts/${offer.accepted_trade_transaction_id}`}
                   className="mt-5 inline-block rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
                 >
-                  Open Trade Draft
+                  Open Trade Deal
                 </Link>
               </div>
             )}

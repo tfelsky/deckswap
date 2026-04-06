@@ -10,11 +10,13 @@ import { getAdminAccessForUser } from '@/lib/admin/access'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {
+  buildTradeDraftRows,
   deriveTradeStatus,
   formatPaymentStatus,
   formatShipmentStatus,
   formatTradeStatus,
   isEscrowSchemaMissing,
+  normalizeSupportedCountry,
   type EscrowEventRow,
   type TradeParticipantRow,
   type TradeTransactionRow,
@@ -22,6 +24,27 @@ import {
 import { buildCheckoutBreakdownFromParticipant } from '@/lib/escrow/checkout'
 
 export const dynamic = 'force-dynamic'
+
+type AcceptedOfferRow = {
+  id: number
+  offered_by_user_id: string
+  requested_user_id: string
+  offered_deck_id: number
+  requested_deck_id: number
+  cash_equalization_usd?: number | null
+  accepted_trade_transaction_id?: number | null
+  status: string
+}
+
+type RepairDeckRow = {
+  id: number
+  price_total_usd_foil?: number | null
+}
+
+type RepairProfileRow = {
+  user_id: string
+  shipping_country?: string | null
+}
 
 function formatUsd(value?: number | null) {
   return `$${Number(value ?? 0).toFixed(2)}`
@@ -41,7 +64,7 @@ function formatTimestamp(value?: string | null) {
 function eventCopy(eventType: string) {
   switch (eventType) {
     case 'draft_created':
-      return 'Trade draft created'
+      return 'Trade deal created'
     case 'payment_requested':
       return 'Checkout opened'
     case 'payment_marked_paid':
@@ -99,7 +122,158 @@ function userStatusMessage(
     return 'This trade is complete.'
   }
 
-  return 'Your trade draft is active.'
+  return 'Your trade deal is active.'
+}
+
+async function repairTradeDraftFromAcceptedOffer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  adminSupabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  tradeId: number
+) {
+  const acceptedOfferResult = await supabase
+    .from('trade_offers')
+    .select(
+      'id, offered_by_user_id, requested_user_id, offered_deck_id, requested_deck_id, cash_equalization_usd, accepted_trade_transaction_id, status'
+    )
+    .eq('accepted_trade_transaction_id', tradeId)
+    .eq('status', 'accepted')
+    .or(`offered_by_user_id.eq.${userId},requested_user_id.eq.${userId}`)
+    .maybeSingle()
+
+  const acceptedOffer = (acceptedOfferResult.data ?? null) as AcceptedOfferRow | null
+  if (!acceptedOffer) {
+    return null
+  }
+
+  const existingTradeEvent = await adminSupabase
+    .from('escrow_events')
+    .select('transaction_id')
+    .eq('event_type', 'trade_offer_accepted')
+    .contains('event_data', { offerId: acceptedOffer.id, source: 'trade_offer' })
+    .order('created_at', { ascending: false })
+    .maybeSingle()
+
+  const existingTransactionId = Number(existingTradeEvent.data?.transaction_id ?? 0) || null
+  if (existingTransactionId) {
+    const existingTradeResult = await adminSupabase
+      .from('trade_transactions')
+      .select('id')
+      .eq('id', existingTransactionId)
+      .maybeSingle()
+
+    if (existingTradeResult.data) {
+      await adminSupabase
+        .from('trade_offers')
+        .update({
+          accepted_trade_transaction_id: existingTransactionId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', acceptedOffer.id)
+
+      return existingTransactionId
+    }
+  }
+
+  const [decksResult, profileResult] = await Promise.all([
+    supabase
+      .from('decks')
+      .select('id, price_total_usd_foil')
+      .in('id', [acceptedOffer.offered_deck_id, acceptedOffer.requested_deck_id]),
+    supabase
+      .from('profile_private')
+      .select('user_id, shipping_country')
+      .in('user_id', [acceptedOffer.offered_by_user_id, acceptedOffer.requested_user_id]),
+  ])
+
+  const deckMap = new Map<number, RepairDeckRow>(
+    ((decksResult.data ?? []) as RepairDeckRow[]).map((deck) => [deck.id, deck])
+  )
+  const profileMap = new Map<string, RepairProfileRow>(
+    ((profileResult.data ?? []) as RepairProfileRow[]).map((profile) => [profile.user_id, profile])
+  )
+
+  const offeredDeck = deckMap.get(acceptedOffer.offered_deck_id)
+  const requestedDeck = deckMap.get(acceptedOffer.requested_deck_id)
+  if (!offeredDeck || !requestedDeck) {
+    return null
+  }
+
+  const now = new Date().toISOString()
+  const rows = buildTradeDraftRows(
+    {
+      deckAValue: Number(offeredDeck.price_total_usd_foil ?? 0) + Number(acceptedOffer.cash_equalization_usd ?? 0),
+      deckBValue: Number(requestedDeck.price_total_usd_foil ?? 0),
+      countryA: normalizeSupportedCountry(profileMap.get(acceptedOffer.offered_by_user_id)?.shipping_country),
+      countryB: normalizeSupportedCountry(profileMap.get(acceptedOffer.requested_user_id)?.shipping_country),
+    },
+    acceptedOffer.requested_user_id
+  )
+
+  rows.transaction.status = 'awaiting_payment'
+  rows.transaction.payment_requested_at = now
+
+  const transactionInsert = await adminSupabase
+    .from('trade_transactions')
+    .insert(rows.transaction)
+    .select('id')
+    .single()
+
+  if (transactionInsert.error || !transactionInsert.data) {
+    return null
+  }
+
+  const repairedTransactionId = transactionInsert.data.id
+
+  const participantInsert = await adminSupabase.from('trade_transaction_participants').insert([
+    {
+      ...rows.participants[0],
+      transaction_id: repairedTransactionId,
+      deck_id: acceptedOffer.offered_deck_id,
+      user_id: acceptedOffer.offered_by_user_id,
+    },
+    {
+      ...rows.participants[1],
+      transaction_id: repairedTransactionId,
+      deck_id: acceptedOffer.requested_deck_id,
+      user_id: acceptedOffer.requested_user_id,
+    },
+  ])
+
+  if (participantInsert.error) {
+    return null
+  }
+
+  await adminSupabase.from('escrow_events').insert([
+    {
+      ...rows.initialEvent,
+      transaction_id: repairedTransactionId,
+      event_type: 'trade_offer_accepted',
+      event_data: {
+        offerId: acceptedOffer.id,
+        source: 'trade_offer',
+      },
+    },
+    {
+      transaction_id: repairedTransactionId,
+      actor_user_id: acceptedOffer.requested_user_id,
+      event_type: 'payment_requested',
+      event_data: {
+        requestedAt: now,
+        source: 'trade_draft_repair',
+      },
+    },
+  ])
+
+  await adminSupabase
+    .from('trade_offers')
+    .update({
+      accepted_trade_transaction_id: repairedTransactionId,
+      updated_at: now,
+    })
+    .eq('id', acceptedOffer.id)
+
+  return repairedTransactionId
 }
 
 export default async function TradeDraftPage({
@@ -147,6 +321,17 @@ export default async function TradeDraftPage({
   ])
 
   if (!tradeResult.data) {
+    const repairedTradeId = await repairTradeDraftFromAcceptedOffer(
+      supabase,
+      adminSupabase,
+      user.id,
+      tradeId
+    )
+
+    if (repairedTradeId) {
+      redirect(`/trade-drafts/${repairedTradeId}${repairedTradeId !== tradeId ? '?repaired=1' : ''}`)
+    }
+
     return (
       <main className="min-h-screen bg-zinc-950 p-8 text-white">
         <div className="mx-auto max-w-4xl rounded-3xl border border-red-500/20 bg-red-500/10 p-6">
@@ -197,7 +382,7 @@ export default async function TradeDraftPage({
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
               <div className="inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium tracking-wide text-sky-300">
-                User Trade Draft
+                User Trade Deal
               </div>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">Trade #{trade.id}</h1>
               <p className="mt-3 max-w-3xl text-zinc-400">

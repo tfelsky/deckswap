@@ -142,7 +142,7 @@ export async function requestTradePaymentAction(formData: FormData) {
       subject: 'Trade payment requested',
       body: `Trade #${tradeId} is ready for checkout. Review your amount due, decide whether you want the $20 box kit, and confirm payment.`,
       href: getDraftHref(tradeId),
-      ctaLabel: 'Open trade draft',
+      ctaLabel: 'Open trade deal',
       idempotencyKey: `trade-payment-requested:${tradeId}:${participant.user_id}`,
       eyebrow: 'Trade payment',
     })
@@ -219,7 +219,7 @@ export async function markTradePaidAction(formData: FormData) {
       subject: 'Trade payment confirmed',
       body: `${sideLabel(side)} confirmed payment on Trade #${tradeId}.`,
       href: getDraftHref(tradeId),
-      ctaLabel: 'Review trade draft',
+      ctaLabel: 'Review trade deal',
       idempotencyKey: `trade-payment-confirmed:${tradeId}:${side}:${other.user_id}`,
       eyebrow: 'Trade payment',
     })
@@ -323,7 +323,7 @@ export async function markTradeShippedAction(formData: FormData) {
       subject: 'Shipment confirmed',
       body: `${sideLabel(side)} marked their deck as shipped${trackingCode ? ` with tracking ${trackingCode}` : ''}.`,
       href: getDraftHref(tradeId),
-      ctaLabel: 'Review trade draft',
+      ctaLabel: 'Review trade deal',
       idempotencyKey: `trade-shipment-confirmed:${tradeId}:${side}:${other.user_id}`,
       eyebrow: 'Shipment update',
     })

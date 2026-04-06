@@ -210,7 +210,7 @@ export default async function TradeOffersPage() {
 
                         {offer.accepted_trade_transaction_id ? (
                           <div className="mt-3 text-sm font-medium text-emerald-300">
-                            Open trade draft {'->'}
+                            Open trade deal {'->'}
                           </div>
                         ) : offer.superseded_by_offer_id ? (
                           <div className="mt-3 text-sm font-medium text-amber-200">

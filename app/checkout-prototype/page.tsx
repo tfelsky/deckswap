@@ -213,7 +213,7 @@ export default async function CheckoutPrototypePage({
               >
                 {schemaMissing
                   ? 'Persistent trade tables are not in Supabase yet. Run docs/sql/escrow-transaction-foundation.sql before creating drafts from this page.'
-                  : 'Something went wrong while creating the trade draft. The calculator still works, but the transaction record was not saved.'}
+              : 'Something went wrong while creating the trade deal. The calculator still works, but the transaction record was not saved.'}
               </div>
             )}
 
@@ -404,7 +404,7 @@ export default async function CheckoutPrototypePage({
               </form>
 
               <p className="mt-3 text-center text-xs text-zinc-500">
-                This now persists a draft trade foundation, but no real payment is processed yet.
+                This now persists a trade deal foundation, but no real payment is processed yet.
               </p>
             </div>
 
@@ -446,7 +446,7 @@ export default async function CheckoutPrototypePage({
                   Draft transactions can now be stored with participant obligations.
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  Event history is recorded from the moment a trade draft is created.
+                Event history is recorded from the moment a trade deal is created.
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   Next up is mapping draft obligations into real payment intents and shipment states.
