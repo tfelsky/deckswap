@@ -1536,16 +1536,8 @@ export default async function ManageDeckPage({
                   >
                   <div className="text-sm font-medium text-white">Buy It Now</div>
                   <p className="mt-2 text-sm text-amber-50/80">
-                    This is the middle lane: below maximizing value through Deck Swap, but ahead of a full auction. Set a direct-sale price you would accept without running bidding, and keep it between the conservative buylist path and the stronger Deck Swap value.
+                    Set a direct-sale price another user can accept without running an auction.
                   </p>
-
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-amber-50/85">
-                    Value ladder: <span className="font-medium text-emerald-200">1. Deck Swap first</span>, <span className="font-medium text-white">2. Buy It Now second</span>, <span className="font-medium text-amber-200">3. Auction only if the first two paths do not move the deck</span>.
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-50/85">
-                    Buy It Now is for selling this deck directly to another user without running an auction.
-                  </div>
 
                   <BuyNowQuoteGate
                     currency={buyNowCurrency}

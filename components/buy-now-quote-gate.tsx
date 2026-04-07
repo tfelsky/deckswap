@@ -33,15 +33,15 @@ export function BuyNowQuoteGate({
   }, [readiness, speed])
 
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-5">
+    <div className="mt-4 min-w-0 rounded-2xl border border-white/10 bg-black/20 p-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <div className="text-sm font-medium text-white">Buy It Now Quote</div>
           <p className="mt-2 text-sm text-amber-50/80">
-            Answer two quick questions and we&apos;ll suggest a Buy It Now starting point for selling directly to another user in {currency}.
+            Answer two quick questions to get a starting price in {currency}.
           </p>
         </div>
-        <div className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300">
+        <div className="shrink-0 rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300">
           <LockKeyhole className="h-4 w-4" />
         </div>
       </div>
@@ -49,7 +49,7 @@ export function BuyNowQuoteGate({
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
         <div>
           <div className="mb-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
-            How quickly do you want it gone?
+            Speed
           </div>
           <div className="grid gap-2">
             <button
@@ -63,7 +63,7 @@ export function BuyNowQuoteGate({
               )}
             >
               Sell fast
-              <div className="mt-1 text-xs text-zinc-400">I want a stronger certainty option.</div>
+              <div className="mt-1 text-xs text-zinc-400">Price for faster movement.</div>
             </button>
             <button
               type="button"
@@ -75,15 +75,15 @@ export function BuyNowQuoteGate({
                   : 'border-white/10 bg-zinc-950/60 text-zinc-300 hover:bg-white/5'
               )}
             >
-              Hold for a better direct-sale price
-              <div className="mt-1 text-xs text-zinc-400">I can wait for a stronger buyer.</div>
+              Hold for better price
+              <div className="mt-1 text-xs text-zinc-400">Wait for a stronger buyer.</div>
             </button>
           </div>
         </div>
 
         <div>
           <div className="mb-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Is the deck already shipping-ready?
+            Shipping ready
           </div>
           <div className="grid gap-2">
             <button
@@ -97,7 +97,7 @@ export function BuyNowQuoteGate({
               )}
             >
               Yes, sleeved and boxed
-              <div className="mt-1 text-xs text-zinc-400">Ready for the cleaner quote path.</div>
+              <div className="mt-1 text-xs text-zinc-400">Ready to go.</div>
             </button>
             <button
               type="button"
@@ -110,7 +110,7 @@ export function BuyNowQuoteGate({
               )}
             >
               Not yet
-              <div className="mt-1 text-xs text-zinc-400">I may need help with packaging or prep.</div>
+              <div className="mt-1 text-xs text-zinc-400">Still needs prep.</div>
             </button>
           </div>
         </div>
@@ -125,7 +125,7 @@ export function BuyNowQuoteGate({
           disabled={!canReveal}
           className="rounded-xl bg-amber-400 text-black hover:bg-amber-300"
         >
-          Get my buy it now guidance
+          Show quote
         </Button>
         {!canReveal ? (
           <div className="text-xs text-zinc-500">Choose both answers to unlock the quote.</div>
@@ -147,13 +147,13 @@ export function BuyNowQuoteGate({
               <div>
                 <div className="font-medium text-white">
                   {recommendedFocus === 'floor'
-                    ? 'Recommended for you: start near the floor'
-                    : 'Recommended for you: stronger Buy It Now ask'}
+                    ? 'Recommended: start near the floor'
+                    : 'Recommended: stronger ask'}
                 </div>
-                <p className="mt-1 text-xs leading-6">
+                <p className="mt-1 text-xs leading-5">
                   {recommendedFocus === 'floor'
-                    ? 'Because you want a faster or lower-friction direct sale, start closer to the floor so another user can say yes sooner.'
-                    : 'Because you can wait and the deck is shipping-ready, the stronger direct-sale quote is the better starting point.'}
+                    ? 'Faster sale: start closer to the floor.'
+                    : 'You can wait, so start with the stronger quote.'}
                 </p>
               </div>
             </div>
@@ -169,7 +169,7 @@ export function BuyNowQuoteGate({
               )}
             >
               <div className="text-xs uppercase tracking-wide text-zinc-500">Buylist floor</div>
-              <div className="mt-2 text-xl font-semibold text-amber-200">{buylistFloor}</div>
+              <div className="mt-2 break-words text-xl font-semibold text-amber-200">{buylistFloor}</div>
             </div>
             <div
               className={cn(
@@ -180,7 +180,7 @@ export function BuyNowQuoteGate({
               )}
             >
               <div className="text-xs uppercase tracking-wide text-zinc-500">Suggested BIN</div>
-              <div className="mt-2 text-xl font-semibold text-white">{suggestedBuyNow}</div>
+              <div className="mt-2 break-words text-xl font-semibold text-white">{suggestedBuyNow}</div>
             </div>
           </div>
         </div>
