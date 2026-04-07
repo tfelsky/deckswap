@@ -416,7 +416,7 @@ export default async function TradesPage() {
               const deckA = sideA?.deck_id ? decks.get(Number(sideA.deck_id)) : undefined
               const deckB = sideB?.deck_id ? decks.get(Number(sideB.deck_id)) : undefined
               const myParticipant = myParticipantByTradeId.get(trade.id)
-              const href = access.isAdmin ? `/trades/${trade.id}` : `/trade-drafts/${trade.id}`
+              const href = access.isAdmin ? `/trades/${trade.id}` : `/trade-deals/${trade.id}`
               const tradeTitle = getTradeTitle(participants, decks, trade.lane_type)
               const tradeSubtitle = getTradeSubtitle(participants, decks, trade.lane_type)
               const sideAProfile = access.isAdmin ? profilesByUser.get(sideA?.user_id ?? '') : null

@@ -89,6 +89,83 @@ function formatColorIdentity(colors?: string[] | null) {
   return colors.join(', ')
 }
 
+const CARD_TYPE_ORDER = [
+  'Creature',
+  'Instant',
+  'Sorcery',
+  'Artifact',
+  'Enchantment',
+  'Planeswalker',
+  'Battle',
+  'Land',
+  'Kindred',
+  'Other',
+] as const
+
+type CardTypeBucket = (typeof CARD_TYPE_ORDER)[number]
+
+function getPrimaryCardType(card: BaseCard): CardTypeBucket {
+  const typeLine = card.type_line ?? ''
+
+  if (typeLine.includes('Creature')) return 'Creature'
+  if (typeLine.includes('Instant')) return 'Instant'
+  if (typeLine.includes('Sorcery')) return 'Sorcery'
+  if (typeLine.includes('Artifact')) return 'Artifact'
+  if (typeLine.includes('Enchantment')) return 'Enchantment'
+  if (typeLine.includes('Planeswalker')) return 'Planeswalker'
+  if (typeLine.includes('Battle')) return 'Battle'
+  if (typeLine.includes('Land')) return 'Land'
+  if (typeLine.includes('Kindred') || typeLine.includes('Tribal')) return 'Kindred'
+
+  return 'Other'
+}
+
+function TypePreviewCard({ card }: { card: BaseCard | null }) {
+  if (!card) {
+    return (
+      <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-400">
+        Hover a card title to preview the full image here.
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Hover Preview</div>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
+        <div className="aspect-[5/7]">
+          {card.image_url ? (
+            <img
+              src={card.image_url}
+              alt={card.card_name}
+              className="block h-full w-full object-cover object-top"
+            />
+          ) : (
+            <div className="flex h-full items-end p-5">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-emerald-300">
+                  Card Preview
+                </div>
+                <div className="mt-2 text-xl font-semibold text-white">{card.card_name}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-4">
+        <div className="text-lg font-semibold text-white">{card.card_name}</div>
+        <div className="mt-1 text-sm text-zinc-400">{card.type_line || 'Unknown type'}</div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <MetaChip>Qty {card.quantity}</MetaChip>
+          <MetaChip>{getCardConditionMeta(card.condition).shortLabel}</MetaChip>
+          <MetaChip>{formatUsd(getUnitPrice(card))}</MetaChip>
+          {card.mana_cost ? <MetaChip>{card.mana_cost}</MetaChip> : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function summarizeCommanderPlan(card: BaseCard) {
   const oracle = (card.oracle_text ?? '').replace(/\s+/g, ' ').trim()
   const lower = oracle.toLowerCase()
@@ -450,13 +527,38 @@ export default function DeckCardViews({
   sideboard,
   tokens,
 }: DeckCardViewsProps) {
-  const [view, setView] = useState<'table' | 'grid'>('table')
+  const [view, setView] = useState<'table' | 'grid' | 'type'>('table')
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
+  const [hoveredTypeCardId, setHoveredTypeCardId] = useState<number | null>(null)
 
   const modalCards = useMemo(
     () => [...commanders, ...mainboard, ...sideboard, ...tokens],
     [commanders, mainboard, sideboard, tokens]
   )
+  const mainboardByType = useMemo(() => {
+    const grouped = new Map<CardTypeBucket, BaseCard[]>()
+
+    for (const type of CARD_TYPE_ORDER) {
+      grouped.set(type, [])
+    }
+
+    for (const card of mainboard) {
+      const bucket = getPrimaryCardType(card)
+      grouped.get(bucket)?.push(card)
+    }
+
+    return CARD_TYPE_ORDER.map((type) => ({
+      type,
+      cards:
+        grouped.get(type)?.slice().sort((left, right) => {
+          const nameOrder = left.card_name.localeCompare(right.card_name)
+          if (nameOrder !== 0) return nameOrder
+          return (left.cmc ?? 0) - (right.cmc ?? 0)
+        }) ?? [],
+    })).filter((group) => group.cards.length > 0)
+  }, [mainboard])
+  const hoveredTypeCard =
+    mainboard.find((card) => card.id === hoveredTypeCardId) ?? mainboard[0] ?? null
 
   const selectedIndex = modalCards.findIndex((card) => card.id === selectedCardId)
 
@@ -466,6 +568,10 @@ export default function DeckCardViews({
 
   function closeModal() {
     setSelectedCardId(null)
+  }
+
+  function previewTypeCard(card: BaseCard) {
+    setHoveredTypeCardId(card.id)
   }
 
   function goPrev() {
@@ -582,6 +688,16 @@ export default function DeckCardViews({
             >
               Thumbnails
             </button>
+            <button
+              onClick={() => setView('type')}
+              className={`rounded-xl px-4 py-2 text-sm ${
+                view === 'type'
+                  ? 'bg-emerald-400 text-zinc-950'
+                  : 'border border-white/10 bg-white/5 text-white hover:bg-white/10'
+              }`}
+            >
+              By Type
+            </button>
           </div>
         </div>
 
@@ -620,7 +736,7 @@ export default function DeckCardViews({
               </div>
             ))}
           </div>
-        ) : (
+        ) : view === 'grid' ? (
           <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {mainboard.map((card) => (
               <CardTile
@@ -629,6 +745,60 @@ export default function DeckCardViews({
                 onOpen={() => openCard(card)}
               />
             ))}
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              {mainboardByType.map((group) => (
+                <div
+                  key={group.type}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                >
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{group.type}</h3>
+                      <p className="text-xs uppercase tracking-wide text-zinc-500">
+                        {group.cards.length} cards
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {group.cards.map((card) => (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => openCard(card)}
+                        onMouseEnter={() => previewTypeCard(card)}
+                        onFocus={() => previewTypeCard(card)}
+                        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-left transition hover:border-emerald-400/30 hover:bg-white/[0.05]"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-white group-hover:text-emerald-200">
+                            {card.card_name}
+                          </div>
+                          <div className="mt-1 text-xs text-zinc-500">
+                            {card.mana_cost || 'No mana cost'} {card.cmc != null ? `· CMC ${card.cmc}` : ''}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs text-zinc-400">x{card.quantity}</div>
+                          <div className="mt-1 text-xs font-medium text-emerald-300">
+                            {formatUsd(getUnitPrice(card))}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden xl:block">
+              <div className="sticky top-28">
+                <TypePreviewCard card={hoveredTypeCard} />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -707,24 +877,6 @@ export default function DeckCardViews({
               />
             ))
           )}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-        <h2 className="text-2xl font-semibold">Card Condition Reference</h2>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {Object.entries(CARD_CONDITION_DETAILS).map(([key, detail]) => (
-            <div
-              key={key}
-              className="rounded-2xl border border-white/10 bg-white/5 p-4"
-            >
-              <div className="text-xs uppercase tracking-wide text-emerald-300">
-                {detail.shortLabel}
-              </div>
-              <div className="mt-2 text-lg font-semibold text-white">{detail.label}</div>
-              <p className="mt-2 text-sm text-zinc-400">{detail.description}</p>
-            </div>
-          ))}
         </div>
       </div>
 

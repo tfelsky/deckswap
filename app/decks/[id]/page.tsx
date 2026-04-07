@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import DeckCardViews from '@/components/deck-card-views'
-import DeckTradeChallengeCard from '@/components/deck-trade-challenge-card'
 import FormActionButton from '@/components/form-action-button'
 import GuestDraftCleanup from '@/components/guest-draft-cleanup'
 import AppHeader from '@/components/app-header'
@@ -1483,31 +1482,6 @@ export default async function DeckDetailPage({
             )}
           </div>
 
-          {typedDeck.is_listed_for_trade && (
-            <div className="mt-6">
-              <DeckTradeChallengeCard
-                deckId={deckId}
-                deckName={typedDeck.name}
-                commander={typedDeck.commander}
-                format={deckFormat}
-                valueUsd={typedDeck.price_total_usd_foil}
-                bracketLabel={isCommanderDeck ? bracketSummary.label : getDeckFormatLabel(deckFormat)}
-                shareHeadline={typedDeck.share_headline}
-                tradeGoal={typedDeck.trade_goal}
-                wantedProfile={typedDeck.trade_wanted_profile}
-                wantedColors={typedDeck.wanted_color_identities}
-                wantedFormats={typedDeck.wanted_formats}
-                ownerDisplayName={sellerProfile?.display_name ?? null}
-                ownerUsername={sellerProfile?.username ?? null}
-                completedTradesCount={sellerSummary?.completed_trades_count ?? null}
-                successfulShipmentsCount={sellerSummary?.successful_shipments_count ?? null}
-                trustBadges={sellerBadges}
-                compareHref={compareEntryHref}
-                compareLabel={compareCallToAction}
-              />
-            </div>
-          )}
-
           {inventoryStatusLocked && (
             <div className="mt-6 rounded-2xl border border-zinc-600/40 bg-zinc-800/70 p-4 text-sm text-zinc-200">
               <div className="font-medium text-white">{getInventoryStatusLabel(inventoryStatus)}</div>
@@ -2663,53 +2637,13 @@ export default async function DeckDetailPage({
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10">
-        <DeckCardViews
-          commanders={commanders}
-          mainboard={mainboard}
-          sideboard={sideboard}
-          tokens={tokenCards}
-        />
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-10">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
-            <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-400">
-              Listing Guide
-            </div>
-            <h2 className="mt-4 text-2xl font-semibold text-white">How to check card condition before listing</h2>
-            <div className="mt-4 space-y-3 text-sm text-zinc-300">
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                Check cards in bright, indirect light and review the front, back, edges, and corners outside of sleeves.
-              </p>
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                Use the worst visible issue on the card, not the best angle. Whitening, dents, bends, ink wear, and clouding all count.
-              </p>
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                If a card is between two grades, list the lower one. Conservative grading reduces escrow disputes and keeps trust high.
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
-            <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-300">
-              Escrow Review
-            </div>
-            <h2 className="mt-4 text-2xl font-semibold text-white">Arbitration during escrow</h2>
-            <div className="mt-4 space-y-3 text-sm text-zinc-300">
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                DeckSwap compares received cards against the saved list, declared conditions, and any agreed notes before release.
-              </p>
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                If a card arrives materially below the listed condition, release pauses while support reviews photos, timestamps, and the inventory record.
-              </p>
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                Resolution can include proceed as-is, renegotiate equalization, partial credit, or return shipment depending on the severity of the mismatch.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+          <DeckCardViews
+            commanders={commanders}
+            mainboard={mainboard}
+            sideboard={sideboard}
+            tokens={tokenCards}
+          />
+        </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-16">
         <div className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">

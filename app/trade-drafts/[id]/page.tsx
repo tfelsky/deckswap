@@ -93,7 +93,7 @@ function userStatusMessage(
   if (status === 'draft' || status === 'awaiting_payment') {
     return participant.payment_status === 'paid'
       ? 'Your payment is recorded. We are waiting for the other trader to finish checkout.'
-      : 'Your draft is ready for checkout. Review your amount, choose whether you want the $20 box + prepaid label, and confirm payment.'
+      : 'Your trade deal is ready for checkout. Review your amount, choose whether you want the $20 box + prepaid label, and confirm payment.'
   }
 
   if (status === 'awaiting_shipments') {
@@ -332,7 +332,7 @@ export default async function TradeDraftPage({
     )
 
     if (repairedTradeId) {
-      redirect(`/trade-drafts/${repairedTradeId}${repairedTradeId !== tradeId ? '?repaired=1' : ''}`)
+      redirect(`/trade-deals/${repairedTradeId}${repairedTradeId !== tradeId ? '?repaired=1' : ''}`)
     }
 
     return (
@@ -502,7 +502,7 @@ export default async function TradeDraftPage({
                   <form action={markTradePaidAction} className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
                     <input type="hidden" name="trade_id" value={trade.id} />
                     <input type="hidden" name="side" value={currentUserParticipant.side} />
-                    <input type="hidden" name="return_to" value={`/trade-drafts/${trade.id}`} />
+                    <input type="hidden" name="return_to" value={`/trade-deals/${trade.id}`} />
                     <p className="text-sm text-emerald-100">
                       Confirm your payment to unlock the shipping step for your side.
                     </p>
@@ -520,7 +520,7 @@ export default async function TradeDraftPage({
                   <form action={markTradeShippedAction} className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
                     <input type="hidden" name="trade_id" value={trade.id} />
                     <input type="hidden" name="side" value={currentUserParticipant.side} />
-                    <input type="hidden" name="return_to" value={`/trade-drafts/${trade.id}`} />
+                    <input type="hidden" name="return_to" value={`/trade-deals/${trade.id}`} />
                     <p className="text-sm text-sky-100">
                       Your payment is done. Enter tracking if you have it and confirm your deck is on the way to the escrow hub.
                     </p>
@@ -542,7 +542,7 @@ export default async function TradeDraftPage({
                 {currentStatus !== 'completed' && currentStatus !== 'cancelled' ? (
                   <form action={markTradeDisputedAction} className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
                     <input type="hidden" name="trade_id" value={trade.id} />
-                    <input type="hidden" name="return_to" value={`/trade-drafts/${trade.id}`} />
+                    <input type="hidden" name="return_to" value={`/trade-deals/${trade.id}`} />
                     <p className="text-sm text-red-100">
                       Need help or spot something wrong? Flag the trade and we&apos;ll stop the flow for review.
                     </p>
@@ -596,7 +596,7 @@ export default async function TradeDraftPage({
                   Once both sides pay, both traders are prompted to ship decks to the hub.
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  If you chose the box + label add-on, the next-day flat folded box with label is already part of your draft total.
+                  If you chose the box + label add-on, the next-day flat folded box with label is already part of your total.
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   Tracking is optional in this prototype, but adding it makes status updates clearer for everyone.

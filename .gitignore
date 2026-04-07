@@ -14,3 +14,6 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
+.codex-dev.log
+.codex-dev.err.log
+docs/wireframe/chrome-profile/

@@ -300,7 +300,7 @@ export default async function TradeReviewPage({
 
   if (!access.isAdmin) {
     if (isParticipant) {
-      redirect(`/trade-drafts/${tradeId}`)
+      redirect(`/trade-deals/${tradeId}`)
     }
 
     redirect('/trades')
@@ -314,7 +314,7 @@ export default async function TradeReviewPage({
             <Link href="/trades" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10">
               {'<-'} Back to Trade Review
             </Link>
-            <Link href={`/trade-drafts/${trade.id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+            <Link href={`/trade-deals/${trade.id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
                 Open Trade Deal
             </Link>
           </div>
@@ -714,7 +714,7 @@ export default async function TradeReviewPage({
                 ) : null}
                 {(currentStatus === 'disputed' || participants.some((participant) => !participant.user_id)) && (
                   <Link
-                    href={`/trade-drafts/${trade.id}`}
+                    href={`/trade-deals/${trade.id}`}
                     className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
                   >
                     Open user-facing trade deal

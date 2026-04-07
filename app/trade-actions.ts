@@ -26,7 +26,7 @@ function getReviewHref(tradeId: number) {
 }
 
 function getDraftHref(tradeId: number) {
-  return `/trade-drafts/${tradeId}`
+  return `/trade-deals/${tradeId}`
 }
 
 async function sendTradeEmail(input: {

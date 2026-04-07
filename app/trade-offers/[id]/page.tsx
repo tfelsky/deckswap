@@ -23,7 +23,7 @@ import {
 export const dynamic = 'force-dynamic'
 
 function buildAcceptedTradeHref(tradeId: number, offerId: number) {
-  return `/trade-drafts/${tradeId}?acceptedOffer=1&offerId=${offerId}`
+  return `/trade-deals/${tradeId}?acceptedOffer=1&offerId=${offerId}`
 }
 
 function buildOfferContinuationHref(offer: TradeOfferRow) {
@@ -464,7 +464,7 @@ export default async function TradeOfferDetailPage({
       type: 'trade_offer_accepted',
       title: 'Your trade offer was accepted',
       body: 'Your accepted offer is live. Review the trade deal, choose any shipping add-ons, and pay your side to move into shipment.',
-      href: `/trade-drafts/${transactionId}`,
+      href: `/trade-deals/${transactionId}`,
       metadata: {
         offerId,
         tradeTransactionId: transactionId,
@@ -476,7 +476,7 @@ export default async function TradeOfferDetailPage({
         userId: currentOffer.offered_by_user_id,
         subject: 'Your trade offer was accepted',
       body: 'Your accepted offer is live. Review the trade deal, choose any shipping add-ons, and pay your side to move into shipment.',
-        href: `/trade-drafts/${transactionId}`,
+        href: `/trade-deals/${transactionId}`,
         ctaLabel: 'Open trade deal',
         idempotencyKey: `trade-offer-accepted:${offerId}:${currentOffer.offered_by_user_id}`,
         eyebrow: 'Trade accepted',
@@ -491,7 +491,7 @@ export default async function TradeOfferDetailPage({
       type: 'trade_draft_created',
       title: 'Trade accepted and payment opened',
       body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
-      href: `/trade-drafts/${transactionId}`,
+      href: `/trade-deals/${transactionId}`,
       metadata: {
         offerId,
         tradeTransactionId: transactionId,
@@ -503,7 +503,7 @@ export default async function TradeOfferDetailPage({
         userId: currentOffer.requested_user_id,
         subject: 'Trade accepted and payment opened',
         body: 'Your accepted trade is now ready for checkout. Review your obligation summary and pay to unlock shipment instructions.',
-        href: `/trade-drafts/${transactionId}`,
+        href: `/trade-deals/${transactionId}`,
         ctaLabel: 'Open trade deal',
         idempotencyKey: `trade-draft-created:${offerId}:${currentOffer.requested_user_id}`,
         eyebrow: 'Trade deal',
@@ -766,7 +766,7 @@ export default async function TradeOfferDetailPage({
               {'<-'} Back to offers
             </Link>
             {offer.accepted_trade_transaction_id && (
-              <Link href={`/trade-drafts/${offer.accepted_trade_transaction_id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+              <Link href={`/trade-deals/${offer.accepted_trade_transaction_id}`} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
                 View Trade Deal
               </Link>
             )}

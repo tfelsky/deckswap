@@ -88,5 +88,5 @@ export async function createTradeDraftAction(formData: FormData) {
     redirect('/checkout-prototype?saveError=1')
   }
 
-  redirect(`/trade-drafts/${transactionId}`)
+  redirect(`/trade-deals/${transactionId}`)
 }

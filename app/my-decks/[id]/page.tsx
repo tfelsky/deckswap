@@ -26,11 +26,12 @@ import { ALL_COLOR_FILTERS } from '@/lib/decks/color-identity'
 import { getTradeGoalLabel, normalizeTradeGoal, TRADE_GOALS } from '@/lib/decks/trade-challenge'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { calculatePercentChange, findImportSnapshot, findNearestSnapshotBeforeDays, formatPercentChange, type DeckPriceSnapshot } from '@/lib/decks/price-history'
-import { calculateGuaranteedBuyNowOffer, calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
+import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
+import { DeckMarketingGuidance } from '@/components/deck-marketing-guidance'
 import FormActionButton from '@/components/form-action-button'
 import { BuyNowQuoteGate } from '@/components/buy-now-quote-gate'
 
@@ -255,7 +256,6 @@ export default async function ManageDeckPage({
     (deck as typeof deck & { buy_now_currency?: string | null }).buy_now_currency
   )
   const buyNowSuggestionUsd = calculateSuggestedBuyNowPrice(currentPrice)
-  const guaranteedBuyNowUsd = calculateGuaranteedBuyNowOffer(currentPrice)
   const buyNowSuggestion = {
     floor: convertDeckValueForCurrency({
       usdValue: buyNowSuggestionUsd.floor,
@@ -267,17 +267,7 @@ export default async function ManageDeckPage({
       eurValue: buyNowSuggestionUsd.suggested * 0.92,
       currency: buyNowCurrency,
     }),
-    ceiling: convertDeckValueForCurrency({
-      usdValue: buyNowSuggestionUsd.ceiling,
-      eurValue: buyNowSuggestionUsd.ceiling * 0.92,
-      currency: buyNowCurrency,
-    }),
   }
-  const guaranteedBuyNow = convertDeckValueForCurrency({
-    usdValue: guaranteedBuyNowUsd.guaranteedOffer,
-    eurValue: guaranteedBuyNowUsd.guaranteedOffer * 0.92,
-    currency: buyNowCurrency,
-  })
   const selectedWantedColors = new Set(
     ((deck as typeof deck & { wanted_color_identities?: string[] | null }).wanted_color_identities ?? []).map(
       (value: string) => String(value)
@@ -1561,14 +1551,7 @@ export default async function ManageDeckPage({
                     currency={buyNowCurrency}
                     buylistFloor={formatCurrencyAmount(buyNowSuggestion.floor, buyNowCurrency)}
                     suggestedBuyNow={formatCurrencyAmount(buyNowSuggestion.suggested, buyNowCurrency)}
-                    ceiling={formatCurrencyAmount(buyNowSuggestion.ceiling, buyNowCurrency)}
                   />
-
-                  {isAdmin ? (
-                    <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-50/85">
-                      Guaranteed Offer is an internal admin-only DeckSwap purchase lane. Current quote: <span className="font-medium text-white">{formatCurrencyAmount(guaranteedBuyNow, buyNowCurrency)}</span>.
-                    </div>
-                  ) : null}
 
                   <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                     <div>
@@ -1626,6 +1609,8 @@ export default async function ManageDeckPage({
                   Save Settings
                 </FormActionButton>
               </form>
+
+              <DeckMarketingGuidance className="mt-8" />
             </div>
 
             <div className="space-y-6 xl:sticky xl:top-32">

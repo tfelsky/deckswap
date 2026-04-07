@@ -17,6 +17,7 @@ const DISALLOWED_PATHS = [
   '/orders/',
   '/settings/',
   '/sign-in',
+  '/trade-deals/',
   '/trade-drafts/',
   '/trade-matches',
   '/trade-offers',

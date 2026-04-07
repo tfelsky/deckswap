@@ -139,7 +139,7 @@ export default async function TradeOffersPage() {
                     const unread = isUnreadTradeOffer(offer, user.id)
                     const signal = getTradeOfferSignal(offer, user.id)
                     const href = offer.accepted_trade_transaction_id
-                      ? `/trade-drafts/${offer.accepted_trade_transaction_id}?acceptedOffer=1&offerId=${offer.id}`
+                      ? `/trade-deals/${offer.accepted_trade_transaction_id}?acceptedOffer=1&offerId=${offer.id}`
                       : `/trade-offers/${offer.id}`
 
                     return (

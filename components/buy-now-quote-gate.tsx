@@ -11,7 +11,6 @@ type BuyNowQuoteGateProps = {
   currency: string
   buylistFloor: string
   suggestedBuyNow: string
-  ceiling: string
 }
 
 type SpeedChoice = 'fast' | 'patient' | null
@@ -21,7 +20,6 @@ export function BuyNowQuoteGate({
   currency,
   buylistFloor,
   suggestedBuyNow,
-  ceiling,
 }: BuyNowQuoteGateProps) {
   const [revealed, setRevealed] = useState(false)
   const [speed, setSpeed] = useState<SpeedChoice>(null)
@@ -161,7 +159,7 @@ export function BuyNowQuoteGate({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div
               className={cn(
                 'rounded-2xl border p-4',
@@ -183,10 +181,6 @@ export function BuyNowQuoteGate({
             >
               <div className="text-xs uppercase tracking-wide text-zinc-500">Suggested BIN</div>
               <div className="mt-2 text-xl font-semibold text-white">{suggestedBuyNow}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4">
-              <div className="text-xs uppercase tracking-wide text-zinc-500">DeckSwap ceiling</div>
-              <div className="mt-2 text-xl font-semibold text-sky-200">{ceiling}</div>
             </div>
           </div>
         </div>
