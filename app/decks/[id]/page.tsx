@@ -52,6 +52,7 @@ import {
   isInventoryStatusLocked,
   normalizeInventoryStatus,
 } from '@/lib/decks/inventory-status'
+import { sanitizeDeckListingImageRows } from '@/lib/decks/listing-images'
 import { CARD_CONDITION_DETAILS } from '@/lib/decks/conditions'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { buildTradeMatchesHref } from '@/lib/decks/trade-challenge'
@@ -388,6 +389,13 @@ export default async function DeckDetailPage({
     .eq('deck_id', deckId)
     .order('created_at', { ascending: true })
 
+  const { data: listingImageRows } = await supabase
+    .from('deck_listing_images')
+    .select('*')
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+    .order('id', { ascending: true })
+
   if (cardsError || tokensError) {
     return (
       <main className="min-h-screen bg-zinc-950 p-8 text-white">
@@ -413,6 +421,7 @@ export default async function DeckDetailPage({
   const typedDeck = deck as Deck
   const typedCards = (cards ?? []) as DeckCard[]
   const typedTokens = (tokens ?? []) as DeckToken[]
+  const listingImages = sanitizeDeckListingImageRows(listingImageRows)
   const snapshots = (priceHistory ?? []) as DeckPriceSnapshot[]
   const commentsSchemaMissing = isDeckCommentsSchemaMissing(commentsError?.message)
   const typedComments =
@@ -1973,6 +1982,47 @@ export default async function DeckDetailPage({
                   </div>
                 </div>
             </div>
+
+            {listingImages.length > 0 && (
+              <section className="rounded-[2rem] border border-white/10 bg-zinc-900/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Listing gallery
+                    </div>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">Actual deck photos</h2>
+                  </div>
+                  <p className="max-w-xl text-sm text-zinc-400">
+                    Seller-uploaded photos show the real deck presentation beyond the imported card art.
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {listingImages.map((image, index) => (
+                    <figure
+                      key={image.id}
+                      className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70"
+                    >
+                      <div className="aspect-[4/3] bg-black/30">
+                        <img
+                          src={image.public_url}
+                          alt={`${typedDeck.name} listing photo ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <figcaption className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-zinc-400">
+                        <span>{index === 0 ? 'Cover photo' : `Photo ${index + 1}`}</span>
+                        {image.width && image.height && (
+                          <span>
+                            {image.width} x {image.height}
+                          </span>
+                        )}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.95fr)]">
               <div className="min-w-0 space-y-4">

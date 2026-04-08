@@ -14,22 +14,22 @@ export function CTASection() {
           <div className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-3xl border border-primary/20 bg-primary/10 p-6 text-left">
               <div className="text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
-                Value for Value
+                Protection Tiers
               </div>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Keep more of your deck&apos;s real value
+                Choose the premium lane that fits the deal
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-                Start with DeckSwap when you want the strongest value outcome, move to Buy It Now when you want a clean direct sale, and use auction as the last resort when speed matters more than maximizing return.
+                Premium escrow is the upscale, highest-touch service for deals that need maximum control. Direct shipping is the lower-cost offer for players who still want premium coverage through holdback and the DeckSwap self-insurance fund.
               </p>
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6">
               <div className="text-sm text-muted-foreground">Why it matters</div>
               <div className="mt-4 space-y-3 text-sm text-foreground">
-                <p>Trading deck for deck can preserve far more value than cashing out at the first low offer.</p>
-                <p>Buy It Now gives you a simple middle path when you want cash without waiting for the perfect trade.</p>
-                <p>Auction stays available when your priority is moving the deck and clearing space fast.</p>
+                <p>Escrow becomes the flagship service instead of the default for every transaction.</p>
+                <p>Direct shipping opens a more accessible price point without sounding stripped down or exposed.</p>
+                <p>Auction still stays available when your priority is simply moving the deck and clearing space fast.</p>
               </div>
             </div>
           </div>

@@ -21,7 +21,7 @@ import Link from "next/link"
 export const metadata: Metadata = {
   title: 'How DeckSwap Works | Mythiverse Exchange',
   description:
-    'Learn how Mythiverse Exchange approaches protection, escrow timing, shipment intake, and inspection for higher-trust deck transactions.',
+    'Learn how Mythiverse Exchange positions premium escrow and lower-cost direct shipping, with protection built through holdback, reserve coverage, shipment intake, and inspection.',
   alternates: {
     canonical: '/info',
   },
@@ -29,16 +29,16 @@ export const metadata: Metadata = {
 
 const trustStats = [
   {
-    value: "3 layers",
-    label: "insurance, escrow control, and physical inspection before release",
+    value: "2 lanes",
+    label: "premium escrow for white-glove deals and direct shipping for lower-cost premium coverage",
   },
   {
     value: "2 checkpoints",
-    label: "shipment intake and inspection review before anything moves forward",
+    label: "holdback discipline and operational review before completion moves too fast",
   },
   {
     value: "1 clear rule",
-    label: "release only happens after the deal clears the agreed protection flow",
+    label: "release should follow proof, not optimism",
   },
 ]
 
@@ -57,26 +57,26 @@ const protectionPillars = [
   },
   {
     icon: Scale,
-    eyebrow: "Escrow Protection",
-    title: "Funds and release timing stay under platform control.",
+    eyebrow: "Premium Escrow",
+    title: "The upscale service is built for the highest-trust deals.",
     description:
-      "Escrow is the trust layer between agreement and completion. The point is not speed at any cost. The point is making sure neither side is fully exposed while the deal is still unverified.",
+      "Escrow is the white-glove lane between agreement and completion. It is positioned for the deals where platform control, intake, inspection, and release timing should feel meaningfully more hands-on than a standard shipment flow.",
     bullets: [
-      "Payment obligations are held until the transaction clears review",
-      "Equalization only releases after both sides pass inspection",
-      "Sellers are not asked to trust a promise without structure behind it",
+      "Best fit for higher-ticket decks and more delicate trust situations",
+      "Higher-touch control over release timing, equalization, and review",
+      "Designed to feel like the flagship service rather than the base package",
     ],
   },
   {
     icon: ClipboardCheck,
-    eyebrow: "Inspection Protection",
-    title: "The received deck is checked against the agreed record.",
+    eyebrow: "Direct Shipping",
+    title: "The lower-cost lane still keeps a premium protection story.",
     description:
-      "Inspection compares the physical shipment to saved inventory, declared condition, and any notes attached to the deal so the outcome reflects what was actually promised.",
+      "Direct shipping is positioned as the simpler, more affordable option, but not the exposed one. Coverage still comes from structured holdback, clear records, and the self-insurance reserve that backs the lane when something goes sideways.",
     bullets: [
-      "Deck contents and condition are reviewed before release",
-      "Packaging notes and shipment handoff stay part of the record",
-      "Mismatch or damage pauses the flow instead of forcing settlement",
+      "Lower operational cost than full escrow without sounding stripped down",
+      "Holdback slows release until the key delivery proof exists",
+      "Self-insurance reserve supports recovery without needing full escrow overhead",
     ],
   },
 ]
@@ -85,20 +85,20 @@ const timeline = [
   {
     icon: ShieldCheck,
     step: "01",
-    title: "Deal enters the protected lane",
-    body: "The transaction is framed with shipping, insurance, fees, and any equalization before either side is treated as complete.",
+    title: "Choose the lane that fits the deal",
+    body: "Higher-value or more sensitive transactions can enter premium escrow, while cleaner deals can move through direct shipping at a lower cost.",
   },
   {
     icon: Clock3,
     step: "02",
-    title: "Escrow holds the critical obligations",
-    body: "The platform controls the timing of release so the transaction does not outrun the evidence.",
+    title: "Holdback keeps release disciplined",
+    body: "Whichever lane is used, the key rule is the same: release should not outrun the evidence the platform has in hand.",
   },
   {
     icon: Truck,
     step: "03",
     title: "Decks are shipped into the flow",
-    body: "Each shipment moves through a documented handoff rather than a casual peer-to-peer gamble.",
+    body: "Each shipment moves through a documented handoff instead of a casual peer-to-peer gamble with no operational backstop.",
   },
   {
     icon: PackageCheck,
@@ -110,13 +110,13 @@ const timeline = [
     icon: Search,
     step: "05",
     title: "Inspection verifies contents and condition",
-    body: "The platform checks that the deck matches the stored inventory, declared condition bands, and the expectation both sides agreed to.",
+    body: "The platform checks that the deck matches the stored inventory, declared condition bands, and the expectation both sides agreed to when extra review is required.",
   },
   {
     icon: CheckCircle2,
     step: "06",
     title: "Release happens only after clearance",
-    body: "Once both sides pass review, the deck moves onward and any equalization or payout can be released with much higher confidence.",
+    body: "Once delivery or review clears the required threshold, payout or equalization can release with much higher confidence.",
   },
 ]
 
@@ -225,23 +225,25 @@ export default function InfoPage() {
           <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:px-8">
             <div className="max-w-2xl">
               <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-primary/80">
-                Protection And Inspection
+                Protection And Positioning
               </div>
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                A beautiful deck deal still needs a serious trust layer behind it.
+                DeckSwap can offer both an upscale escrow service and a lower-cost protected shipping lane.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
-                This page explains how DeckSwap is designed to protect qualified transactions with
-                three coordinated layers: insurance during transit, escrow control over release,
-                and inspection before anything is finalized.
+                This page explains how the protection story can split cleanly in two: premium
+                escrow as the flagship white-glove service, and direct shipping as the more
+                affordable offer that still feels premium because holdback and reserve coverage sit
+                behind it.
               </p>
 
               <div className="mt-8 rounded-[1.6rem] border border-amber-300/15 bg-amber-300/8 p-5">
                 <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">Important context</div>
                 <p className="mt-2 text-sm leading-7 text-foreground/85">
-                  The protection language here describes the intended protected-flow model for
-                  eligible deals. Specific availability can vary by transaction while the broader
-                  checkout and escrow system continues to mature.
+                  The language here describes the intended service architecture and market
+                  positioning for eligible deals. Specific protection mechanics can vary by
+                  transaction while the broader checkout, direct shipping, and escrow systems
+                  continue to mature.
                 </p>
               </div>
 
@@ -278,10 +280,10 @@ export default function InfoPage() {
         <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="mb-8 max-w-3xl">
             <div className="inline-flex rounded-full border border-border bg-secondary/40 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-              The Three Pillars
+              Protection Design
             </div>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Protection works best when each layer reinforces the next one.
+              The strongest positioning separates the flagship service from the scalable one.
             </h2>
           </div>
 
@@ -319,22 +321,22 @@ export default function InfoPage() {
           <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="deckswap-accent rounded-[2rem] p-8">
               <div className="inline-flex rounded-full border border-white/10 bg-black/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-foreground/80">
-                Why Escrow Exists
+                Why Premium Escrow Exists
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Escrow slows release just enough to make the transaction safer.
+                Escrow should feel like the upscale service, not the baseline checkbox.
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                The core idea is simple: before either side gets the final benefit of the deal,
-                the platform should control the critical obligations, wait for arrival, and confirm
-                that the physical deck matches the agreed record.
+                The core idea is simple: some deals deserve a higher-touch model. Premium escrow
+                earns its place when the value, sensitivity, or trust requirements justify more
+                control over timing, intake, and release.
               </p>
 
               <div className="mt-8 space-y-3">
                 {[
-                  "It reduces the chance that money moves faster than verification.",
-                  "It protects the side trading down in value until equalization is truly earned.",
-                  "It gives inspection real leverage instead of turning review into a cosmetic step.",
+                  "It makes the highest-value deals feel deliberately premium and controlled.",
+                  "It protects equalization and release timing when the downside of a miss is larger.",
+                  "It gives inspection and operations real leverage instead of making them cosmetic.",
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/10 px-4 py-4">
                     <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
@@ -385,15 +387,15 @@ export default function InfoPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
             <div className="rounded-[2rem] border border-border bg-card/70 p-8 backdrop-blur-sm">
               <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-                Inspection Standard
+                Direct Shipping Standard
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Inspection is where trust becomes operational.
+                Lower cost should not mean lower-class positioning.
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                A protected transaction should not settle just because a box arrived. It should
-                settle because the received deck lines up with the saved inventory and the
-                condition expectations that supported the deal in the first place.
+                Direct shipping can still be sold as premium coverage. The difference is that the
+                lane trims operational overhead, while holdback, clear records, and reserve-backed
+                recovery continue to carry the protection story.
               </p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -412,15 +414,15 @@ export default function InfoPage() {
 
             <div className="deckswap-glass rounded-[2rem] p-8">
               <div className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-emerald-100">
-                Release Logic
+                Coverage Logic
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                No inspection pass, no automatic release.
+                Holdback is what keeps the direct lane credible.
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                That single rule is what makes the rest of the system credible. Insurance helps
-                during transit, escrow controls timing, and inspection determines whether the deal
-                has truly earned completion.
+                That single discipline is what lets direct shipping stay premium in the market.
+                Full escrow is not required for every transaction if the platform still controls
+                enough of the release logic and stands behind the lane with a self-insurance fund.
               </p>
 
               <div className="mt-8 space-y-4">
@@ -455,12 +457,13 @@ export default function InfoPage() {
                   The Short Version
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Protected deals should feel calm because the system has real stopping points.
+                  Escrow becomes the flagship. Direct shipping becomes the accessible premium offer.
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-foreground/80 sm:text-base">
-                  Insurance handles transit risk. Escrow controls release timing. Inspection checks
-                  the real deck before completion. When those three pieces work together, buyers
-                  and sellers can move with much more confidence on valuable transactions.
+                  Premium escrow is the upscale service for deals that need the most control.
+                  Direct shipping gives players a lower-cost path that can still feel protected
+                  because holdback and reserve-backed recovery keep real structure behind the
+                  transaction.
                 </p>
               </div>
 

@@ -12,7 +12,12 @@ const faqs = [
   {
     question: "How does escrow help higher-value trades?",
     answer:
-      "Escrow is there to make valuable trades feel safer. It adds structure around the handoff, helps both sides stay aligned on what is being exchanged, and gives higher-value deals a clearer path forward when trust and delivery matter most.",
+      "Escrow is the premium, white-glove lane for higher-value deals. It adds stronger control around release, inspection, and fulfillment so the most expensive transactions get the highest-touch protection model.",
+  },
+  {
+    question: "How does direct shipping stay protected at a lower cost?",
+    answer:
+      "Direct shipping is meant to be the more affordable premium lane, not the unprotected one. The positioning is simpler logistics with premium coverage still supported by a holdback on release and a self-insurance fund that helps backstop the lane.",
   },
   {
     question: "What is the best way to add a deck?",

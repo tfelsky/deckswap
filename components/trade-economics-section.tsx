@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
 const optimalProfilePoints = [
-  "Domestic lane: same-country trades are the cleanest first-class experience for trust, shipping, and support.",
+  "Premium escrow lane: higher-value decks justify the white-glove model because inspection, controlled release, and support matter more at the top end.",
+  "Direct shipping lane: same-country deals are the cleanest lower-cost option because holdback and the self-insurance reserve can cover a simpler path well.",
   "Close in value: the best trades are roughly matched, or need only light equalization instead of a large cash top-up.",
-  "Mid-to-premium decks: once a deck is above roughly $300, shipping and insurance become a much smaller percentage of the total value.",
+  "Mid-to-premium decks: once a deck is above roughly $300, logistics become a smaller share of the value being protected.",
 ]
 
 const exampleRows = [
@@ -57,13 +58,13 @@ export async function TradeEconomicsSection() {
         <div className="grid gap-6 lg:grid-cols-[0.94fr_1.06fr]">
           <div className="deckswap-glass rounded-[2rem] p-8">
             <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-              Optimal Deck Profile
+              Offer Positioning
             </div>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-              The strongest DeckSwap listing is not a random pile of cards
+              The best DeckSwap outcome depends on the lane, not just the list
             </h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              The economics get better when the deck is complete, easy to verify, and strong enough in value that shipping and insurance stay small relative to what is being protected.
+              We can now position the service in two premium tiers: escrow as the highest-touch experience, and direct shipping as the more affordable option that still carries meaningful protection through holdback and the self-insurance reserve.
             </p>
 
             <div className="mt-8 space-y-3">
@@ -88,7 +89,7 @@ export async function TradeEconomicsSection() {
             <div className="mt-8 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-5">
               <div className="text-sm font-medium text-foreground">Best overall fit</div>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                A domestic trade between complete decks in the roughly <span className="font-semibold text-foreground">$300 to $1,000+</span> range is where the model feels most compelling. The parcel is still manageable, the support workflow stays cleaner, and the value preserved versus buylist becomes materially easier to feel.
+                Use <span className="font-semibold text-foreground">escrow</span> when the deck is valuable enough to merit the white-glove experience. Use <span className="font-semibold text-foreground">direct shipping</span> when you want the lower-cost lane but still want a premium backstop through delayed release and reserve-funded recovery.
               </p>
             </div>
           </div>
@@ -101,7 +102,7 @@ export async function TradeEconomicsSection() {
               What the three examples actually prove
             </h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              The trade works best when we preserve deck value instead of collapsing everything down to buylist cash. Higher-value, same-lane trades absorb logistics far better than low-value ones.
+              The trade works best when we preserve deck value instead of collapsing everything down to buylist cash. Higher-value deals can support premium escrow, while cleaner domestic lanes can move through direct shipping at a lower cost without dropping the protection story.
             </p>
 
             <div className="mt-8 grid gap-4">

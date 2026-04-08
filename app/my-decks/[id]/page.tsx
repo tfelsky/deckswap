@@ -32,8 +32,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
 import { DeckMarketingGuidance } from '@/components/deck-marketing-guidance'
+import DeckListingImageManager from '@/components/deck-listing-image-manager'
 import FormActionButton from '@/components/form-action-button'
 import { BuyNowQuoteGate } from '@/components/buy-now-quote-gate'
+import { sanitizeDeckListingImageRows } from '@/lib/decks/listing-images'
 
 export const dynamic = 'force-dynamic'
 
@@ -153,6 +155,13 @@ export default async function ManageDeckPage({
     .limit(1)
     .maybeSingle()
 
+  const { data: listingImageRows } = await supabase
+    .from('deck_listing_images')
+    .select('*')
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+    .order('id', { ascending: true })
+
   const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
     card_name: string
     section: 'commander' | 'mainboard' | 'sideboard' | 'token'
@@ -203,6 +212,7 @@ export default async function ManageDeckPage({
   const unreadTradeOffers = ((tradeOffersData ?? []) as TradeOfferRow[]).filter((offer) =>
     isUnreadTradeOffer(offer, user.id)
   ).length
+  const listingImages = sanitizeDeckListingImageRows(listingImageRows)
   const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
 
   const access = await getAdminAccessForUser(user)
@@ -1180,6 +1190,8 @@ export default async function ManageDeckPage({
           </div>
         ) : (
           <div className="mt-6 space-y-6">
+            <DeckListingImageManager deckId={deckId} initialImages={listingImages} />
+
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_360px] xl:items-start">
             <div className="space-y-6">
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">

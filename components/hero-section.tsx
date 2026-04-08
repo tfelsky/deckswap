@@ -20,7 +20,7 @@ const workflowCards = [
   },
   {
     title: "Choose the best path to move it",
-    subtitle: "Trade first, sell direct next, and use auction when speed matters most",
+    subtitle: "Use premium escrow for white-glove protection or direct shipping for lower-cost premium coverage",
     accent: "from-rose-500/20 to-rose-500/5",
   },
 ]
@@ -58,7 +58,7 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Turn deck lists into premium listings, discover stronger trade matches, and sell with more confidence by showing the whole deck instead of a pile of singles.
+            Turn deck lists into premium listings, choose between white-glove escrow or lower-cost direct shipping, and move complete decks with more confidence than a pile-of-singles marketplace.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -79,13 +79,13 @@ export function HeroSection({ inventory }: HeroSectionProps) {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              More confidence when high-value decks change hands
+              Premium escrow for highest-touch deals
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
+              Direct shipping with holdback-backed coverage
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
               Clearer pricing tied to the full deck
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-              More ways to trade, sell, and keep momentum
             </div>
           </div>
 
