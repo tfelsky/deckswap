@@ -1,0 +1,680 @@
+'use client'
+
+import Link from 'next/link'
+import { useDeferredValue, useEffect, useState } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { formatCurrencyAmount } from '@/lib/currency'
+import { buildSinglesQuote, formatSingleCondition, type PublicSingleListing } from '@/lib/singles/marketplace'
+import { type SinglesCartItem } from '@/lib/singles/pricing'
+
+const SINGLES_CART_STORAGE_KEY = 'deckswap_singles_cart_v1'
+
+type SinglesMarketplaceProps = {
+  listings: PublicSingleListing[]
+  isSignedIn: boolean
+}
+
+type FinishFilter = 'all' | 'foil' | 'nonfoil'
+type SortOption = 'featured' | 'price_desc' | 'price_asc' | 'name_asc'
+
+function readStoredCart() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SINGLES_CART_STORAGE_KEY) ?? '[]')
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function normalizeCart(items: SinglesCartItem[]) {
+  const grouped = new Map<number, number>()
+
+  for (const item of items) {
+    const listingId = Number(item.singleInventoryItemId)
+    const quantity = Math.max(0, Math.floor(Number(item.quantity)))
+    if (!Number.isFinite(listingId) || quantity <= 0) continue
+    grouped.set(listingId, (grouped.get(listingId) ?? 0) + quantity)
+  }
+
+  return Array.from(grouped.entries()).map(([singleInventoryItemId, quantity]) => ({
+    singleInventoryItemId,
+    quantity,
+  }))
+}
+
+function nextDiscountTarget(subtotal: number) {
+  if (subtotal >= 200) return null
+  if (subtotal >= 100) {
+    return { label: '25% off at $200', amountNeeded: Number((200 - subtotal).toFixed(2)) }
+  }
+
+  return { label: '20% off at $100', amountNeeded: Number((100 - subtotal).toFixed(2)) }
+}
+
+export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceProps) {
+  const [cartItems, setCartItems] = useState<SinglesCartItem[]>([])
+  const [selectedListingId, setSelectedListingId] = useState<number | null>(null)
+  const [cartSheetOpen, setCartSheetOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [finishFilter, setFinishFilter] = useState<FinishFilter>('all')
+  const [setFilter, setSetFilter] = useState('all')
+  const [sortOption, setSortOption] = useState<SortOption>('featured')
+  const deferredSearch = useDeferredValue(search)
+
+  useEffect(() => {
+    setCartItems(normalizeCart(readStoredCart()))
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(SINGLES_CART_STORAGE_KEY, JSON.stringify(cartItems))
+  }, [cartItems])
+
+  const listingMap = new Map(listings.map((listing) => [listing.id, listing]))
+  const setOptions = Array.from(
+    new Set(listings.map((listing) => listing.set_name).filter(Boolean))
+  ).sort((a, b) => String(a).localeCompare(String(b)))
+
+  const filteredListings = listings
+    .filter((listing) => {
+      const matchesSearch =
+        !deferredSearch.trim() ||
+        [
+          listing.card_name,
+          listing.set_name,
+          listing.set_code,
+          listing.collector_number,
+          listing.type_line,
+          listing.oracle_text,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(deferredSearch.trim().toLowerCase())
+
+      if (!matchesSearch) return false
+      if (finishFilter === 'foil' && !listing.foil) return false
+      if (finishFilter === 'nonfoil' && listing.foil) return false
+      if (setFilter !== 'all' && listing.set_name !== setFilter) return false
+
+      return true
+    })
+    .sort((left, right) => {
+      if (sortOption === 'price_desc') {
+        return Number(right.marketplace_price_usd ?? 0) - Number(left.marketplace_price_usd ?? 0)
+      }
+
+      if (sortOption === 'price_asc') {
+        return Number(left.marketplace_price_usd ?? 0) - Number(right.marketplace_price_usd ?? 0)
+      }
+
+      if (sortOption === 'name_asc') {
+        return left.card_name.localeCompare(right.card_name)
+      }
+
+      return left.id - right.id
+    })
+
+  const selectedListing =
+    selectedListingId != null ? listingMap.get(selectedListingId) ?? null : null
+  const quote = buildSinglesQuote({ cartItems, listings })
+  const totalItems = quote.items.reduce((sum, item) => sum + item.quantity, 0)
+  const thresholdHint = nextDiscountTarget(quote.pricing.subtotal)
+
+  function setListingQuantity(listing: PublicSingleListing, nextQuantity: number) {
+    const quantity = Math.max(
+      0,
+      Math.min(Math.floor(nextQuantity), Number(listing.marketplace_quantity_available ?? 0))
+    )
+
+    setCartItems((current) => {
+      const withoutListing = current.filter((item) => item.singleInventoryItemId !== listing.id)
+      if (quantity <= 0) return withoutListing
+
+      if (current.length > 0) {
+        const existingSeller = listingMap.get(current[0].singleInventoryItemId)?.user_id
+        if (existingSeller && existingSeller !== listing.user_id) {
+          return [{ singleInventoryItemId: listing.id, quantity }]
+        }
+      }
+
+      return normalizeCart([...withoutListing, { singleInventoryItemId: listing.id, quantity }])
+    })
+
+    if (quantity > 0) {
+      setCartSheetOpen(true)
+    }
+  }
+
+  function getListingQuantity(listingId: number) {
+    return cartItems.find((item) => item.singleInventoryItemId === listingId)?.quantity ?? 0
+  }
+
+  return (
+    <>
+      <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
+        <div className="mx-auto max-w-7xl px-6 py-12">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
+                Singles Marketplace
+              </div>
+              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
+                Fast cart. Native checkout. Volume savings built in.
+              </h1>
+              <p className="mt-4 text-base text-zinc-400 sm:text-lg">
+                Browse live singles listings, stack a cart locally, and unlock automatic savings at
+                $100 and $200.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">Live listings</div>
+                <div className="mt-1 text-2xl font-semibold text-white">{listings.length}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">Tier one</div>
+                <div className="mt-1 text-2xl font-semibold text-amber-200">20%</div>
+                <div className="text-xs text-zinc-500">at $100 subtotal</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">Tier two</div>
+                <div className="mt-1 text-2xl font-semibold text-emerald-300">25%</div>
+                <div className="text-xs text-zinc-500">at $200 subtotal</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem]">
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search cards, sets, oracle text..."
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            />
+            <select
+              value={finishFilter}
+              onChange={(event) => setFinishFilter(event.target.value as FinishFilter)}
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            >
+              <option value="all">All finishes</option>
+              <option value="foil">Foil</option>
+              <option value="nonfoil">Non-foil</option>
+            </select>
+            <select
+              value={setFilter}
+              onChange={(event) => setSetFilter(event.target.value)}
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            >
+              <option value="all">All sets</option>
+              {setOptions.map((setName) => (
+                <option key={setName} value={setName ?? ''}>
+                  {setName}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortOption}
+              onChange={(event) => setSortOption(event.target.value as SortOption)}
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            >
+              <option value="featured">Featured</option>
+              <option value="price_desc">Price: high to low</option>
+              <option value="price_asc">Price: low to high</option>
+              <option value="name_asc">Name A-Z</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-10 lg:pr-[26rem]">
+        {filteredListings.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center text-zinc-300">
+            No singles match that filter set yet.
+          </div>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredListings.map((listing) => {
+              const quantityInCart = getListingQuantity(listing.id)
+              const availableQuantity = Number(listing.marketplace_quantity_available ?? 0)
+              const priceLabel = formatCurrencyAmount(Number(listing.marketplace_price_usd ?? 0), 'USD')
+
+              return (
+                <article
+                  key={listing.id}
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 shadow-[0_20px_40px_rgba(0,0,0,0.18)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedListingId(listing.id)}
+                    className="block w-full text-left"
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                      {listing.image_url ? (
+                        <img
+                          src={listing.image_url}
+                          alt={listing.card_name}
+                          className="h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                          No image
+                        </div>
+                      )}
+                      <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+                        {listing.foil ? 'Foil' : 'Non-foil'}
+                      </div>
+                      <div className="absolute right-4 top-4 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200 backdrop-blur">
+                        Qty {availableQuantity}
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="space-y-4 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-xl font-semibold text-white">{listing.card_name}</h2>
+                        <p className="mt-1 truncate text-sm text-zinc-400">
+                          {listing.set_name || 'Unknown set'}
+                          {listing.collector_number ? ` #${listing.collector_number}` : ''}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
+                        <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Price</div>
+                        <div className="text-lg font-semibold text-emerald-300">{priceLabel}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                        {formatSingleCondition(listing.condition)}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                        {String(listing.language ?? 'en').toUpperCase()}
+                      </span>
+                      {listing.set_code ? (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          {String(listing.set_code).toUpperCase()}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {quantityInCart > 0 ? (
+                      <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setListingQuantity(listing, quantityInCart - 1)}
+                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xl text-white transition hover:bg-white/10"
+                        >
+                          -
+                        </button>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center">
+                          <div className="text-lg font-semibold text-white">{quantityInCart}</div>
+                          <div className="text-xs text-zinc-500">in cart</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setListingQuantity(listing, quantityInCart + 1)}
+                          disabled={quantityInCart >= availableQuantity}
+                          className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xl text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setListingQuantity(listing, 1)}
+                        className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90"
+                      >
+                        Add to cart
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <aside className="fixed right-0 top-16 hidden h-[calc(100vh-4rem)] w-[24rem] border-l border-white/10 bg-zinc-950/95 p-5 backdrop-blur lg:flex lg:flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Singles cart</div>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              {totalItems} item{totalItems === 1 ? '' : 's'}
+            </h2>
+          </div>
+          {quote.items.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCartItems([])}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-5 flex-1 space-y-3 overflow-y-auto pr-1">
+          {quote.items.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-sm text-zinc-400">
+              Your cart is empty. Add singles to start building toward the discount tiers.
+            </div>
+          ) : (
+            quote.items.map((item) => {
+              const listing = listingMap.get(item.listingId)
+              if (!listing) return null
+
+              return (
+                <div key={item.listingId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-16 w-12 overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.cardName} className="h-full w-full object-cover object-top" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-white">{item.cardName}</div>
+                      <div className="mt-1 text-xs text-zinc-400">
+                        {item.setName || 'Unknown set'}
+                        {item.collectorNumber ? ` #${item.collectorNumber}` : ''}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {item.foil ? 'Foil' : 'Non-foil'} · {formatSingleCondition(item.condition)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-emerald-300">
+                        {formatCurrencyAmount(item.lineSubtotalUsd, 'USD')}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {formatCurrencyAmount(item.unitPriceUsd, 'USD')} each
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setListingQuantity(listing, item.quantity - 1)}
+                      className="rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-white transition hover:bg-white/10"
+                    >
+                      -
+                    </button>
+                    <div className="rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-center text-sm text-white">
+                      {item.quantity}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setListingQuantity(listing, item.quantity + 1)}
+                      disabled={item.quantity >= item.availableQuantity}
+                      className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
+          <div className="space-y-3 text-sm text-zinc-300">
+            <div className="flex items-center justify-between">
+              <span>Subtotal</span>
+              <span>{formatCurrencyAmount(quote.pricing.subtotal, 'USD')}</span>
+            </div>
+            <div className="flex items-center justify-between text-emerald-200">
+              <span>{quote.pricing.tierLabel}</span>
+              <span>-{formatCurrencyAmount(quote.pricing.discountAmount, 'USD')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Shipping</span>
+              <span>{formatCurrencyAmount(quote.pricing.shippingAmount, 'USD')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Tax</span>
+              <span>{formatCurrencyAmount(quote.pricing.taxAmount, 'USD')}</span>
+            </div>
+            <div className="border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between text-base font-semibold text-white">
+                <span>Grand total</span>
+                <span>{formatCurrencyAmount(quote.pricing.grandTotal, 'USD')}</span>
+              </div>
+            </div>
+          </div>
+
+          {thresholdHint ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Add {formatCurrencyAmount(thresholdHint.amountNeeded, 'USD')} more to unlock{' '}
+              {thresholdHint.label}.
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Your cart is already in the top volume tier.
+            </div>
+          )}
+
+          <div className="mt-4">
+            {quote.items.length > 0 ? (
+              <Button asChild className="w-full rounded-2xl bg-emerald-400 text-zinc-950 hover:bg-emerald-300">
+                <Link href={isSignedIn ? '/singles/checkout' : '/sign-in?next=/singles/checkout'}>
+                  {isSignedIn ? 'Checkout singles' : 'Sign in to checkout'}
+                </Link>
+              </Button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium text-zinc-500"
+              >
+                Cart is empty
+              </button>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {quote.items.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setCartSheetOpen(true)}
+          className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-2xl bg-emerald-400 px-5 py-4 text-left text-zinc-950 shadow-[0_20px_40px_rgba(0,0,0,0.25)] lg:hidden"
+        >
+          <div>
+            <div className="text-xs uppercase tracking-wide text-zinc-700">Singles cart</div>
+            <div className="text-lg font-semibold">
+              {totalItems} item{totalItems === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-semibold">
+              {formatCurrencyAmount(quote.pricing.grandTotal, 'USD')}
+            </div>
+            <div className="text-xs text-zinc-700">View cart</div>
+          </div>
+        </button>
+      ) : null}
+
+      <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-[2rem] border-white/10 bg-zinc-950 p-0 text-white lg:hidden">
+          <SheetHeader className="border-b border-white/10 px-6 py-5">
+            <SheetTitle className="text-white">Singles cart</SheetTitle>
+            <SheetDescription className="text-zinc-400">
+              {totalItems} item{totalItems === 1 ? '' : 's'} ready for checkout.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-3 px-6 py-5">
+            {quote.items.map((item) => {
+              const listing = listingMap.get(item.listingId)
+              if (!listing) return null
+
+              return (
+                <div key={item.listingId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-white">{item.cardName}</div>
+                      <div className="mt-1 text-xs text-zinc-400">
+                        {item.setName || 'Unknown set'}
+                        {item.collectorNumber ? ` #${item.collectorNumber}` : ''}
+                      </div>
+                    </div>
+                    <div className="text-sm font-semibold text-emerald-300">
+                      {formatCurrencyAmount(item.lineSubtotalUsd, 'USD')}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setListingQuantity(listing, item.quantity - 1)}
+                      className="rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-white"
+                    >
+                      -
+                    </button>
+                    <div className="rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-center text-sm text-white">
+                      {item.quantity}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setListingQuantity(listing, item.quantity + 1)}
+                      disabled={item.quantity >= item.availableQuantity}
+                      className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-emerald-100 disabled:opacity-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="space-y-3 text-sm text-zinc-300">
+                <div className="flex items-center justify-between">
+                  <span>Subtotal</span>
+                  <span>{formatCurrencyAmount(quote.pricing.subtotal, 'USD')}</span>
+                </div>
+                <div className="flex items-center justify-between text-emerald-200">
+                  <span>{quote.pricing.tierLabel}</span>
+                  <span>-{formatCurrencyAmount(quote.pricing.discountAmount, 'USD')}</span>
+                </div>
+                <div className="flex items-center justify-between text-base font-semibold text-white">
+                  <span>Grand total</span>
+                  <span>{formatCurrencyAmount(quote.pricing.grandTotal, 'USD')}</span>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button asChild className="w-full rounded-2xl bg-emerald-400 text-zinc-950 hover:bg-emerald-300">
+                  <Link href={isSignedIn ? '/singles/checkout' : '/sign-in?next=/singles/checkout'}>
+                    {isSignedIn ? 'Checkout singles' : 'Sign in to checkout'}
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog
+        open={selectedListing != null}
+        onOpenChange={(open) => setSelectedListingId(open ? selectedListingId : null)}
+      >
+        <DialogContent className="max-w-4xl border-white/10 bg-zinc-950 p-0 text-white sm:max-w-4xl">
+          {selectedListing ? (
+            <div className="grid gap-0 md:grid-cols-[22rem_minmax(0,1fr)]">
+              <div className="border-b border-white/10 bg-zinc-900 md:border-b-0 md:border-r">
+                {selectedListing.image_url ? (
+                  <img src={selectedListing.image_url} alt={selectedListing.card_name} className="h-full w-full object-cover object-top" />
+                ) : (
+                  <div className="flex h-full min-h-72 items-center justify-center text-zinc-500">No image</div>
+                )}
+              </div>
+              <div className="p-6">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl text-white">{selectedListing.card_name}</DialogTitle>
+                  <DialogDescription className="text-zinc-400">
+                    {selectedListing.set_name || 'Unknown set'}
+                    {selectedListing.collector_number ? ` #${selectedListing.collector_number}` : ''}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-6 flex flex-wrap gap-2 text-xs text-zinc-300">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    {selectedListing.foil ? 'Foil' : 'Non-foil'}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    {formatSingleCondition(selectedListing.condition)}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    Qty {Number(selectedListing.marketplace_quantity_available ?? 0)}
+                  </span>
+                </div>
+
+                {selectedListing.type_line ? (
+                  <div className="mt-6 text-sm text-zinc-300">{selectedListing.type_line}</div>
+                ) : null}
+
+                {selectedListing.oracle_text ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-zinc-300">
+                    {selectedListing.oracle_text}
+                  </div>
+                ) : null}
+
+                {selectedListing.marketplace_notes ? (
+                  <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                    {selectedListing.marketplace_notes}
+                  </div>
+                ) : null}
+
+                <div className="mt-6 flex items-end justify-between gap-4 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-emerald-300/80">Unit price</div>
+                    <div className="mt-1 text-3xl font-semibold text-emerald-300">
+                      {formatCurrencyAmount(Number(selectedListing.marketplace_price_usd ?? 0), 'USD')}
+                    </div>
+                  </div>
+                  <div className="w-full max-w-44">
+                    {getListingQuantity(selectedListing.id) > 0 ? (
+                      <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setListingQuantity(selectedListing, getListingQuantity(selectedListing.id) - 1)}
+                          className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-xl text-white"
+                        >
+                          -
+                        </button>
+                        <div className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-white">
+                          {getListingQuantity(selectedListing.id)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setListingQuantity(selectedListing, getListingQuantity(selectedListing.id) + 1)}
+                          disabled={getListingQuantity(selectedListing.id) >= Number(selectedListing.marketplace_quantity_available ?? 0)}
+                          className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xl text-emerald-100 disabled:opacity-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setListingQuantity(selectedListing, 1)}
+                        className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
+                      >
+                        Add to cart
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}

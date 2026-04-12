@@ -6,10 +6,12 @@ type MarketplaceNavProps = {
   current:
     | 'home'
     | 'decks'
+    | 'singles'
     | 'import'
     | 'create'
     | 'my-decks'
     | 'my-singles'
+    | 'singles-orders'
     | 'trade-matches'
     | 'profile'
     | 'trade-offers'
@@ -23,10 +25,12 @@ type MarketplaceNavProps = {
 
 const NAV_ITEMS = {
   decks: { href: '/decks', label: 'Browse' },
+  singles: { href: '/singles', label: 'Singles' },
   import: { href: '/import-deck', label: 'Import' },
   create: { href: '/create-deck', label: 'Create' },
   'my-decks': { href: '/my-decks', label: 'My Decks' },
   'my-singles': { href: '/my-singles', label: 'My Singles' },
+  'singles-orders': { href: '/singles-orders', label: 'Single Orders' },
   'trade-matches': { href: '/trade-matches', label: 'Swaps' },
   'trade-offers': { href: '/trade-offers', label: 'Offers' },
   notifications: { href: '/notifications', label: 'Alerts' },
@@ -35,12 +39,14 @@ const NAV_ITEMS = {
 } as const
 
 const CONTEXT_GROUPS: Record<MarketplaceNavProps['current'], Array<keyof typeof NAV_ITEMS>> = {
-  home: ['decks', 'trade-matches', 'import'],
-  decks: ['decks', 'trade-matches', 'trade-offers', 'notifications'],
+  home: ['decks', 'singles', 'trade-matches', 'import'],
+  decks: ['decks', 'singles', 'trade-matches', 'trade-offers', 'notifications'],
+  singles: ['singles', 'singles-orders', 'my-singles', 'notifications'],
   import: ['import', 'create', 'decks'],
   create: ['import', 'create', 'my-decks'],
   'my-decks': ['my-decks', 'create', 'decks', 'notifications'],
   'my-singles': ['my-singles', 'my-decks', 'import', 'notifications'],
+  'singles-orders': ['singles-orders', 'singles', 'my-singles', 'notifications'],
   'trade-matches': ['trade-matches', 'trade-offers', 'notifications', 'decks'],
   profile: ['profile', 'my-decks', 'notifications'],
   'trade-offers': ['trade-offers', 'trade-matches', 'notifications', 'decks'],
@@ -59,7 +65,7 @@ export default function MarketplaceNav({
   const contextKeys = CONTEXT_GROUPS[current]
   const visibleItems = contextKeys.filter((key) => {
     if (detectedSignedIn) return true
-    return !['create', 'my-decks', 'my-singles', 'trade-offers', 'notifications', 'profile'].includes(key)
+    return !['create', 'my-decks', 'my-singles', 'singles-orders', 'trade-offers', 'notifications', 'profile'].includes(key)
   })
 
   return (

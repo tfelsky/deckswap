@@ -79,8 +79,8 @@ const PROVIDER_LIBRARY_CAPABILITIES: Record<
     {
       scope: 'full_collection',
       label: 'Whole collection exports',
-      status: 'planned',
-      description: 'Bring in deckless inventory and mixed holdings from full collection exports.',
+      status: 'available',
+      description: 'Use the singles import surface for collection-style CSV uploads and mixed inventory intake.',
     },
   ],
   archidekt: [
@@ -99,8 +99,8 @@ const PROVIDER_LIBRARY_CAPABILITIES: Record<
     {
       scope: 'full_collection',
       label: 'Whole collection exports',
-      status: 'planned',
-      description: 'Support imports that include decks, staples, and unsorted collection inventory.',
+      status: 'available',
+      description: 'Use the singles import surface for Archidekt collection exports and mixed card inventory.',
     },
   ],
 }

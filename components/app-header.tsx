@@ -7,10 +7,12 @@ type AppHeaderProps = {
   current:
     | 'home'
     | 'decks'
+    | 'singles'
     | 'import'
     | 'create'
     | 'my-decks'
     | 'my-singles'
+    | 'singles-orders'
     | 'trade-matches'
     | 'profile'
     | 'trade-offers'

@@ -214,6 +214,21 @@ export default async function ImportLibraryPage({
               source URL when it is available, or upload an Archidekt collection export file
               directly for singles.
             </p>
+
+            {scope === 'singles' ? (
+              <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                <div className="font-medium text-white">Where imported singles go</div>
+                <p className="mt-2">
+                  Imported singles are saved to your private singles inventory.
+                </p>
+                <Link
+                  href="/my-singles"
+                  className="mt-3 inline-block font-medium text-white underline underline-offset-4"
+                >
+                  Open My Singles
+                </Link>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -377,14 +392,28 @@ export default async function ImportLibraryPage({
             ) : null}
 
             {importedSinglesCount ? (
-              <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                {importedSourceName || 'Singles source'} imported {importedSinglesCount} singles rows into private inventory.
-                {warningCount ? ` ${warningCount} imported with warnings.` : ''}
-                {skippedCount ? ` ${skippedCount} duplicate rows were merged in this batch.` : ''}
-                {' '}
-                <Link href="/my-singles" className="font-medium text-white underline">
-                  Review singles inventory
-                </Link>
+              <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-sm text-emerald-200">
+                <div className="text-base font-medium text-white">Singles import complete</div>
+                <p className="mt-2">
+                  {importedSourceName || 'Singles source'} imported {importedSinglesCount} singles
+                  row{importedSinglesCount === '1' ? '' : 's'} into your private singles inventory.
+                  {warningCount ? ` ${warningCount} imported with warnings.` : ''}
+                  {skippedCount ? ` ${skippedCount} duplicate rows were merged in this batch.` : ''}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    href="/my-singles"
+                    className="rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90"
+                  >
+                    Open My Singles
+                  </Link>
+                  <Link
+                    href="/import-library?scope=singles"
+                    className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/15"
+                  >
+                    Import another file
+                  </Link>
+                </div>
               </div>
             ) : null}
 
@@ -404,7 +433,7 @@ export default async function ImportLibraryPage({
             {!deckPreview && !singlesPreview && !previewError ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-zinc-950/60 px-6 py-10 text-center text-zinc-400">
                 {scope === 'singles'
-                  ? 'Enter a supported public singles source URL to preview a private import.'
+                  ? 'Enter a supported public singles source URL or upload a collection file, then open My Singles after import to review the saved rows.'
                   : 'Enter a public Moxfield or Archidekt account to preview the deck inventory available for import today.'}
               </div>
             ) : null}
@@ -546,7 +575,8 @@ export default async function ImportLibraryPage({
                 <div className="mt-6">
                   <div className="text-sm font-medium text-white">Available singles sources</div>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Review the source, then import the singles rows into your inventory.
+                    Review the source, then import the singles rows into your inventory. Imported
+                    rows will appear in My Singles.
                   </p>
                 </div>
 

@@ -26,6 +26,9 @@ export function Header() {
           <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Marketplace
           </Link>
+          <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Singles
+          </Link>
           <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Deck Swap
           </Link>
@@ -64,6 +67,9 @@ export function Header() {
               <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Marketplace
               </Link>
+              <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Singles
+              </Link>
               <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Deck Swap
               </Link>
@@ -75,9 +81,6 @@ export function Header() {
               </Link>
               <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Support
-              </Link>
-              <Link href="/my-singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Singles
               </Link>
               <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Profile
