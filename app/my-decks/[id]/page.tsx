@@ -1050,6 +1050,9 @@ export default async function ManageDeckPage({
                   <p className="mt-2 text-sm text-sky-100/80">
                     Refresh the saved commander-home recommendations for your owned card rows and annotate this deck with the latest cached results.
                   </p>
+                  <p className="mt-2 text-xs text-sky-100/70">
+                    First refresh can take a few minutes on larger catalogs because it fetches and caches EDHREC card pages server-side.
+                  </p>
                 </div>
                 <FormActionButton
                   pendingLabel="Refreshing commander fits..."

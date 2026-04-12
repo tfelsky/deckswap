@@ -3,6 +3,7 @@
 import { refreshCommanderFitsForUser } from '@/lib/edhrec/commander-fits'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 
 function isCommanderFitsSchemaMissing(message?: string | null) {
   if (!message) return false
@@ -61,6 +62,10 @@ export async function refreshCommanderFitsAction(formData: FormData) {
     const result = await refreshCommanderFitsForUser(user.id, { force })
     redirect(buildRefreshRedirect(returnTo, result))
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     const message =
       error instanceof Error ? error.message : 'Commander fit refresh failed.'
 

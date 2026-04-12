@@ -296,6 +296,9 @@ export default async function MyDecksPage({
                 <p className="mt-2 text-sm text-sky-100/80">
                   Cache the most popular commander home for each owned card across your catalog.
                 </p>
+                <p className="mt-2 text-xs text-sky-100/70">
+                  First refresh can take a few minutes on larger catalogs because it fetches and caches EDHREC card pages server-side.
+                </p>
                 <FormActionButton
                   pendingLabel="Refreshing commander fits..."
                   className="mt-4 w-full rounded-xl bg-sky-300 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
