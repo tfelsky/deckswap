@@ -138,48 +138,54 @@ function parseCommanderStatLine(line: string) {
   }
 }
 
-function findTopCommanderWindow(lines: string[]) {
-  const topCommanderIndexes: number[] = []
+const EDHREC_SECTION_HEADINGS = new Set([
+  'Top Commanders',
+  'New Cards',
+  'Top Cards',
+  'Game Changers',
+  'Creatures',
+  'Instants',
+  'Sorceries',
+  'Utility Artifacts',
+  'Enchantments',
+  'Battles',
+  'Planeswalkers',
+  'Utility Lands',
+  'Mana Artifacts',
+  'Lands',
+  'Back to Top',
+  'Group by',
+  'Sort by',
+  'Filters Card Filters',
+])
 
-  for (let index = 0; index < lines.length; index += 1) {
-    if (lines[index] === 'Top Commanders') {
-      topCommanderIndexes.push(index)
-    }
-  }
-
-  let bestWindow: { start: number; end: number; statCount: number } | null = null
-
-  for (const start of topCommanderIndexes) {
-    let end = lines.length
-    for (let index = start + 1; index < lines.length; index += 1) {
-      if (lines[index] === 'New Cards') {
-        end = index
-        break
-      }
-    }
-
-    const statCount = lines.slice(start, end).filter((line) => !!parseCommanderStatLine(line)).length
-    if (!bestWindow || statCount > bestWindow.statCount) {
-      bestWindow = { start, end, statCount }
-    }
-  }
-
-  return bestWindow
+function findTopCommandersStart(lines: string[]) {
+  return lines.findIndex((line) => line === 'Top Commanders')
 }
 
 export function parseEdhrecTopCommandersFromHtml(html: string) {
   const lines = htmlToMeaningfulLines(html)
-  const window = findTopCommanderWindow(lines)
+  const start = findTopCommandersStart(lines)
 
-  if (!window || window.statCount === 0) {
+  if (start === -1) {
     return []
   }
 
   const results: ParsedCommanderRec[] = []
+  let sawStats = false
 
-  for (let index = window.start + 1; index < window.end; index += 1) {
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index]
     const stats = parseCommanderStatLine(lines[index])
-    if (!stats) continue
+
+    if (!stats) {
+      if (sawStats && EDHREC_SECTION_HEADINGS.has(line)) {
+        break
+      }
+      continue
+    }
+
+    sawStats = true
 
     const commanderName = lines[index - 1]?.trim() || ''
     if (!commanderName || commanderName === 'Top Commanders') continue

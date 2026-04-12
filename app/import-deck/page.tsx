@@ -87,6 +87,7 @@ function ImportDeckPageContent() {
   }, [fieldFormatOverride])
 
   const isMoxfield = sourceType === 'moxfield'
+  const isArchidektFile = sourceType === 'archidekt'
   const guestDraftPresent = showGuestBanner || searchParams.get(GUEST_IMPORT_SAVED_QUERY_KEY) === '1'
 
   return (
@@ -168,7 +169,7 @@ function ImportDeckPageContent() {
               <p className="mt-2 text-sm text-zinc-400">
                 Use these buttons like simple navigation. The importer still works from what you actually provide.
               </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   {
                     value: 'paste',
@@ -179,6 +180,11 @@ function ImportDeckPageContent() {
                     value: 'upload',
                     title: 'Upload file',
                     description: 'Use a .txt, .csv, or .tsv export.',
+                  },
+                  {
+                    value: 'archidekt',
+                    title: 'Archidekt CSV',
+                    description: 'Best for Archidekt CSV or TSV exports with columns.',
                   },
                   {
                     value: 'moxfield',
@@ -307,16 +313,19 @@ function ImportDeckPageContent() {
                   </p>
                 </div>
               </div>
-            ) : sourceType === 'upload' ? (
+            ) : sourceType === 'upload' || isArchidektFile ? (
               <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-5">
-                <div className="text-sm font-medium text-white">Upload a file</div>
+                <div className="text-sm font-medium text-white">
+                  {isArchidektFile ? 'Upload an Archidekt export' : 'Upload a file'}
+                </div>
                 <p className="mt-2 text-sm text-zinc-400">
-                  Upload a `.txt`, `.csv`, or `.tsv` deck export if you do not want to paste the
-                  list manually.
+                  {isArchidektFile
+                    ? 'Upload an Archidekt `.csv` or `.tsv` export with quantity and card-name columns. Commander, category, foil, set, and collector-number columns will be used when present.'
+                    : 'Upload a `.txt`, `.csv`, or `.tsv` deck export if you do not want to paste the list manually.'}
                 </p>
                 <div className="mt-4">
                   <label className="mb-2 block text-sm font-medium text-zinc-300">
-                    Deck file
+                    {isArchidektFile ? 'Archidekt export file' : 'Deck file'}
                   </label>
                   <input
                     name="deck_file"
@@ -324,6 +333,11 @@ function ImportDeckPageContent() {
                     accept=".txt,.csv,.tsv"
                     className="block w-full rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-400 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
                   />
+                  <p className="mt-2 text-xs text-zinc-500">
+                    {isArchidektFile
+                      ? 'If you choose the Archidekt option, the importer will prioritize Archidekt column parsing before falling back to plain deck-line parsing.'
+                      : 'Text exports are parsed like plain decklists. CSV and TSV uploads can also work when they include quantity and card columns.'}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -369,8 +383,9 @@ Tokens
             )}
 
             {!isMoxfield && <input type="hidden" name="source_url" value={fields?.sourceUrl ?? ''} />}
-            {sourceType !== 'upload' && <input type="hidden" name="deck_file" value="" />}
+            {sourceType !== 'upload' && !isArchidektFile && <input type="hidden" name="deck_file" value="" />}
             {sourceType === 'upload' && <input type="hidden" name="raw_list" value={fields?.rawList ?? ''} />}
+            {isArchidektFile && <input type="hidden" name="raw_list" value={fields?.rawList ?? ''} />}
 
             {isMoxfield && (
               <>

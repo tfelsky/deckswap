@@ -71,6 +71,29 @@ function getNoCardsParsedError(args: {
   return 'Paste a deck list, upload a .txt file, or provide a supported deck URL.'
 }
 
+function looksLikeArchidektDelimitedExport(input: string) {
+  const firstLine = input
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean)
+
+  if (!firstLine) return false
+
+  const normalized = firstLine.toLowerCase()
+
+  if (!(normalized.includes(',') || normalized.includes('\t'))) {
+    return false
+  }
+
+  const requiredSignals = ['quantity', 'qty', 'count']
+  const nameSignals = ['card', 'name', 'cardname']
+
+  return (
+    requiredSignals.some((signal) => normalized.includes(signal)) &&
+    nameSignals.some((signal) => normalized.includes(signal))
+  )
+}
+
 export async function importDeckAction(
   _prevState: ImportDeckActionState,
   formData: FormData
@@ -96,7 +119,7 @@ export async function importDeckAction(
   const deckFile = formData.get('deck_file')
   const hasUploadedFile = deckFile instanceof File && deckFile.size > 0
   const fields = buildActionFields(deckName, sourceType, formatOverride, sourceUrl, rawList)
-  const effectiveSourceType = sourceUrl ? 'moxfield' : sourceType === 'moxfield' ? 'moxfield' : 'text'
+  let effectiveSourceType = sourceUrl ? 'moxfield' : sourceType === 'moxfield' ? 'moxfield' : 'text'
 
   let resolvedDeckName = deckName
   let resolvedRawList = rawList
@@ -115,6 +138,26 @@ export async function importDeckAction(
       resolvedDeckName = deckFile.name.replace(/\.[^.]+$/, '').trim()
     }
 
+    if (
+      sourceType === 'archidekt' ||
+      (sourceType === 'upload' &&
+        (deckFile.name.toLowerCase().endsWith('.csv') ||
+          deckFile.name.toLowerCase().endsWith('.tsv')) &&
+        looksLikeArchidektDelimitedExport(resolvedRawList))
+    ) {
+      effectiveSourceType = 'archidekt'
+    }
+
+    parsedCards = parseDeckText(resolvedRawList, effectiveSourceType)
+  }
+
+  if (
+    !hasUploadedFile &&
+    sourceType === 'archidekt' &&
+    resolvedRawList &&
+    effectiveSourceType !== 'moxfield'
+  ) {
+    effectiveSourceType = 'archidekt'
     parsedCards = parseDeckText(resolvedRawList, effectiveSourceType)
   }
 
