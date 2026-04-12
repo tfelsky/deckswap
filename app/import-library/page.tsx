@@ -210,10 +210,9 @@ export default async function ImportLibraryPage({
               Import decks and singles into Mythiverse Exchange Ones
             </h1>
             <p className="mt-3 text-zinc-400">
-              Phase 1 now supports public deck-library imports plus private singles intake from
-              supported provider sources. Decks still flow into staging as full listings, while
-              singles land in a private inventory surface that stays out of the marketplace until a
-              later release.
+              Bring in deck libraries or singles inventory from supported sources. Use a public
+              source URL when it is available, or upload an Archidekt collection export file
+              directly for singles.
             </p>
           </div>
         </div>
@@ -222,19 +221,21 @@ export default async function ImportLibraryPage({
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-[24rem_minmax(0,1fr)]">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-            <h2 className="text-xl font-semibold text-white">Preview an inventory source</h2>
+            <h2 className="text-xl font-semibold text-white">
+              {scope === 'singles' ? 'Choose a singles import method' : 'Preview an inventory source'}
+            </h2>
             <p className="mt-2 text-sm text-zinc-400">
-              Choose whether you are bringing in full decks or private singles inventory. Full
-              collection exports remain a later slice.
+              {scope === 'singles'
+                ? 'Use a source URL for live provider fetches, or upload a collection export file when you already have one on hand.'
+                : 'Choose whether you are bringing in full decks or singles inventory.'}
             </p>
 
             {scope === 'singles' ? (
               <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm text-sky-100">
-                <div className="font-medium text-white">Singles import modes</div>
+                <div className="font-medium text-white">Import options</div>
                 <p className="mt-2">
-                  Use a public source URL for live provider fetches, or upload an Archidekt
-                  collection CSV/TSV file directly. File import is currently supported for
-                  Archidekt.
+                  Start with a URL if your source is public. If you exported your collection from
+                  Archidekt, upload the CSV or TSV file below instead.
                 </p>
               </div>
             ) : null}
@@ -304,38 +305,29 @@ export default async function ImportLibraryPage({
                 type="submit"
                 className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
               >
-                {scope === 'singles' ? 'Preview singles source' : 'Preview library'}
+                {scope === 'singles' ? 'Preview from URL' : 'Preview library'}
               </button>
             </form>
-
-            <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-sm text-zinc-400">
-              <div className="font-medium text-white">Phase 1 coverage</div>
-              <p className="mt-2">
-                Deck libraries still import to private deck staging. Singles imports now support
-                direct source URLs and land in a private singles inventory surface with enrichment,
-                pricing snapshots, and import warnings when metadata is incomplete.
-              </p>
-            </div>
 
             {scope === 'singles' && provider === 'archidekt' ? (
               <form
                 action={importLibrarySinglesSourceAction}
                 encType="multipart/form-data"
-                className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4"
+                className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-5"
               >
                 <input type="hidden" name="provider" value={provider} />
                 <input type="hidden" name="scope" value={scope} />
                 <input type="hidden" name="account" value={account} />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-medium text-white">Import an Archidekt collection file</div>
+                    <div className="text-base font-medium text-white">Upload an Archidekt collection file</div>
                     <span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2.5 py-1 text-[11px] font-medium text-amber-100">
                       CSV / TSV upload
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-amber-50/80">
-                    Upload an Archidekt collection export here to import singles directly without
-                    using a public collection URL.
+                    Upload an Archidekt collection export here if you want to import straight from a
+                    file instead of a public collection URL.
                   </p>
                 </div>
                 <div>
@@ -352,7 +344,7 @@ export default async function ImportLibraryPage({
                 </div>
                 <button
                   type="submit"
-                  className="rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90"
+                  className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
                 >
                   Import collection file
                 </button>
@@ -556,7 +548,7 @@ export default async function ImportLibraryPage({
                 <div className="mt-6">
                   <div className="text-sm font-medium text-white">Available singles sources</div>
                   <p className="mt-2 text-sm text-zinc-400">
-                    Singles import stays private in phase 1. Rows are enriched and priced where possible, then saved into your singles inventory for review.
+                    Review the source, then import the singles rows into your inventory.
                   </p>
                 </div>
 

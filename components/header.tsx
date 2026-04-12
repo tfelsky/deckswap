@@ -22,31 +22,28 @@ export function Header() {
           <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-5 lg:flex xl:gap-6">
           <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Marketplace
           </Link>
           <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Deck Swap
           </Link>
+          <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Collection
+          </Link>
           <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Learn More
+            Learn
           </Link>
           <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Support
-          </Link>
-          <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            My Decks
-          </Link>
-          <Link href="/my-singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            My Singles
           </Link>
           <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Profile
           </Link>
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <HeaderAuth />
           <Button size="sm" asChild>
             <Link href="/import-deck">Import Deck</Link>
@@ -70,17 +67,17 @@ export function Header() {
               <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Deck Swap
               </Link>
+              <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Collection
+              </Link>
               <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Learn More
+                Learn
               </Link>
               <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Support
               </Link>
-              <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                My Decks
-              </Link>
               <Link href="/my-singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                My Singles
+                Singles
               </Link>
               <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Profile
