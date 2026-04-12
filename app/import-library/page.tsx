@@ -333,7 +333,7 @@ export default async function ImportLibraryPage({
                 encType="multipart/form-data"
                 className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-5"
               >
-                <input type="hidden" name="provider" value={provider} />
+                <input type="hidden" name="provider" value="archidekt" />
                 <input type="hidden" name="scope" value={scope} />
                 <input type="hidden" name="account" value={account} />
                 <div>
@@ -362,9 +362,7 @@ export default async function ImportLibraryPage({
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-200/85">
-                  {provider === 'archidekt'
-                    ? 'The current file-import path is optimized for Archidekt collection exports.'
-                    : 'File upload is visible here for convenience, but the current parser is optimized for Archidekt collection exports. Switch the provider to Archidekt for the best results.'}
+                  Collection file uploads use the Archidekt parser automatically, regardless of the provider selected above for URL previews.
                 </div>
                 <button
                   type="submit"
