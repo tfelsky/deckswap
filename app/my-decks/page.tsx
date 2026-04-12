@@ -14,9 +14,11 @@ import {
 } from '@/lib/decks/inventory-status'
 import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
+import FormActionButton from '@/components/form-action-button'
 import { createClient } from '@/lib/supabase/server'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
+import { refreshCommanderFitsAction } from './actions'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -47,6 +49,13 @@ type DeckCardForBracket = {
   card_name: string
   cmc?: number | null
   mana_cost?: string | null
+}
+
+type CommanderFitSummaryRow = {
+  matched_commander_name?: string | null
+  normalized_commander_name?: string | null
+  card_quantity?: number | null
+  match_status?: string | null
 }
 
 function parseSectionPage(value: string | string[] | undefined) {
@@ -137,6 +146,11 @@ export default async function MyDecksPage({
   ).length
   const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
   const deckIds = decks.map((deck) => deck.id)
+  const showCommanderFitsRefreshed = params.commanderFitsRefreshed === '1'
+  const refreshedFitRows = Number(params.fitRows ?? 0)
+  const refreshedFitMatched = Number(params.fitMatched ?? 0)
+  const refreshedFitNoMatch = Number(params.fitNoMatch ?? 0)
+  const refreshedFitErrors = Number(params.fitErrors ?? 0)
 
   const { data: deckCards } = deckIds.length
     ? await supabase
@@ -144,6 +158,11 @@ export default async function MyDecksPage({
         .select('deck_id, section, quantity, card_name, cmc, mana_cost')
         .in('deck_id', deckIds)
     : { data: [] as DeckCardForBracket[] }
+
+  const { data: commanderFitSummaryRows } = await supabase
+    .from('deck_card_commander_matches')
+    .select('matched_commander_name, normalized_commander_name, card_quantity, match_status')
+    .eq('user_id', user.id)
 
   const cardsByDeck = new Map<number, DeckCardForBracket[]>()
 
@@ -189,6 +208,26 @@ export default async function MyDecksPage({
       : '0.0'
   const access = await getAdminAccessForUser(user)
   const isAdmin = access.isAdmin
+  const commanderFitSummary = Array.from(
+    (((commanderFitSummaryRows ?? []) as CommanderFitSummaryRow[])
+      .filter((row) => row.match_status === 'matched' && row.matched_commander_name)
+      .reduce((map, row) => {
+        const key = String(
+          row.normalized_commander_name ?? row.matched_commander_name ?? ''
+        )
+        const existing = map.get(key) ?? {
+          commanderName: String(row.matched_commander_name ?? ''),
+          totalQuantity: 0,
+          matchedRows: 0,
+        }
+        existing.totalQuantity += Math.max(1, Number(row.card_quantity ?? 1))
+        existing.matchedRows += 1
+        map.set(key, existing)
+        return map
+      }, new Map<string, { commanderName: string; totalQuantity: number; matchedRows: number }>())).values()
+  )
+    .sort((left, right) => right.totalQuantity - left.totalQuantity || right.matchedRows - left.matchedRows)
+    .slice(0, 6)
   const livePagination = paginateDecks(liveDecks, parseSectionPage(params.livePage))
   const privatePagination = paginateDecks(privateDecks, parseSectionPage(params.privatePage))
   const completedPagination = paginateDecks(completedDecks, parseSectionPage(params.completedPage))
@@ -221,6 +260,12 @@ export default async function MyDecksPage({
       />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">
+          {showCommanderFitsRefreshed && (
+            <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              Commander fits refreshed for {refreshedFitRows} card rows. Matched {refreshedFitMatched}, no match for {refreshedFitNoMatch}, errors on {refreshedFitErrors}.
+            </div>
+          )}
+
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
@@ -235,6 +280,22 @@ export default async function MyDecksPage({
                 View and manage the deck inventory you have listed in the marketplace across supported formats.
               </p>
             </div>
+
+            <form action={refreshCommanderFitsAction} className="w-full max-w-sm">
+              <input type="hidden" name="return_to" value="/my-decks" />
+              <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
+                <div className="text-sm font-medium text-white">EDHREC Commander Fits</div>
+                <p className="mt-2 text-sm text-sky-100/80">
+                  Cache the most popular commander home for each owned card across your catalog.
+                </p>
+                <FormActionButton
+                  pendingLabel="Refreshing commander fits..."
+                  className="mt-4 w-full rounded-xl bg-sky-300 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Refresh Catalog Fits
+                </FormActionButton>
+              </div>
+            </form>
 
           </div>
 
@@ -323,6 +384,45 @@ export default async function MyDecksPage({
                   Average bracket {averageBracket}
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 xl:col-span-3 2xl:col-span-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="text-sm text-zinc-400">Top Commander Fits In Your Catalog</div>
+                  <div className="mt-2 text-xl font-semibold text-white">
+                    Where your owned cards most naturally want to go
+                  </div>
+                  <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+                    This groups the saved per-card EDHREC matches by commander so you can spot the most common build destinations in your current inventory.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
+                  {commanderFitSummary.length > 0
+                    ? `${commanderFitSummary.length} leaders surfaced`
+                    : 'Run the refresh once to populate this'}
+                </div>
+              </div>
+
+              {commanderFitSummary.length > 0 ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {commanderFitSummary.map((fit) => (
+                    <div
+                      key={fit.commanderName}
+                      className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
+                    >
+                      <div className="text-lg font-semibold text-white">{fit.commanderName}</div>
+                      <div className="mt-2 text-sm text-zinc-400">
+                        {fit.totalQuantity} owned card copies across {fit.matchedRows} matched rows
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-zinc-950/60 px-5 py-4 text-sm text-zinc-400">
+                  No commander-fit cache yet. Refresh your catalog to import EDHREC card recommendations.
+                </div>
+              )}
             </div>
           </div>
         </div>

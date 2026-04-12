@@ -30,6 +30,7 @@ import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { refreshCommanderFitsAction } from '../actions'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
 import { DeckMarketingGuidance } from '@/components/deck-marketing-guidance'
 import DeckListingImageManager from '@/components/deck-listing-image-manager'
@@ -38,6 +39,18 @@ import { BuyNowQuoteGate } from '@/components/buy-now-quote-gate'
 import { sanitizeDeckListingImageRows } from '@/lib/decks/listing-images'
 
 export const dynamic = 'force-dynamic'
+
+type CommanderFitRow = {
+  deck_card_id: number
+  matched_commander_name?: string | null
+  edhrec_rank?: number | null
+  inclusion_percent?: number | null
+  card_deck_count?: number | null
+  commander_deck_count?: number | null
+  source_url?: string | null
+  cache_scraped_at?: string | null
+  match_status?: 'matched' | 'no_match' | 'error' | null
+}
 
 function formatImportedAt(value?: string | null) {
   if (!value) return 'Unknown'
@@ -162,6 +175,13 @@ export default async function ManageDeckPage({
     .order('sort_order', { ascending: true })
     .order('id', { ascending: true })
 
+  const { data: commanderFitRows } = await supabase
+    .from('deck_card_commander_matches')
+    .select(
+      'deck_card_id, matched_commander_name, edhrec_rank, inclusion_percent, card_deck_count, commander_deck_count, source_url, cache_scraped_at, match_status'
+    )
+    .eq('deck_id', deckId)
+
   const bracketSummary = getCommanderBracketSummary((deckCards ?? []) as Array<{
     card_name: string
     section: 'commander' | 'mainboard' | 'sideboard' | 'token'
@@ -219,6 +239,11 @@ export default async function ManageDeckPage({
   const isAdmin = access.isAdmin
   const activeTab =
     resolvedSearchParams?.tab === 'settings' ? 'settings' : 'overview'
+  const showCommanderFitsRefreshed = resolvedSearchParams?.commanderFitsRefreshed === '1'
+  const refreshedFitRows = Number(resolvedSearchParams?.fitRows ?? 0)
+  const refreshedFitMatched = Number(resolvedSearchParams?.fitMatched ?? 0)
+  const refreshedFitNoMatch = Number(resolvedSearchParams?.fitNoMatch ?? 0)
+  const refreshedFitErrors = Number(resolvedSearchParams?.fitErrors ?? 0)
   const saveStatus = String(resolvedSearchParams?.saved ?? '').trim()
   const holidayStatus = String(resolvedSearchParams?.holiday ?? '').trim()
   const deckFormat = normalizeDeckFormat(deck.format)
@@ -251,6 +276,9 @@ export default async function ManageDeckPage({
       }
     })
     .sort((a, b) => b.unitPrice - a.unitPrice || a.card_name.localeCompare(b.card_name))
+  const commanderFitsByCardId = new Map<number, CommanderFitRow>(
+    ((commanderFitRows ?? []) as CommanderFitRow[]).map((row) => [Number(row.deck_card_id), row])
+  )
   const currentPrice = Number(deck.price_total_usd_foil ?? 0)
   const importSnapshot = findImportSnapshot(snapshots)
   const change30 = calculatePercentChange(
@@ -877,6 +905,12 @@ export default async function ManageDeckPage({
         </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-zinc-900 p-6">
+          {showCommanderFitsRefreshed && (
+            <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              Commander fits refreshed for {refreshedFitRows} card rows. Matched {refreshedFitMatched}, no match for {refreshedFitNoMatch}, errors on {refreshedFitErrors}.
+            </div>
+          )}
+
           {resolvedSearchParams.imported === '1' && (
             <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
               Deck imported. Review card rows, commander structure, bracket, and listing settings here before sending it live.
@@ -992,6 +1026,30 @@ export default async function ManageDeckPage({
               {getInventoryStatusDescription(inventoryStatus)} Visibility: {getInventoryStatusVisibility(inventoryStatus)}.
             </span>
           </div>
+
+          <form action={refreshCommanderFitsAction} className="mt-5">
+            <input
+              type="hidden"
+              name="return_to"
+              value={activeTab === 'settings' ? `/my-decks/${deckId}?tab=settings` : `/my-decks/${deckId}`}
+            />
+            <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-white">EDHREC Commander Fits</div>
+                  <p className="mt-2 text-sm text-sky-100/80">
+                    Refresh the saved commander-home recommendations for your owned card rows and annotate this deck with the latest cached results.
+                  </p>
+                </div>
+                <FormActionButton
+                  pendingLabel="Refreshing commander fits..."
+                  className="rounded-xl bg-sky-300 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Refresh Catalog Fits
+                </FormActionButton>
+              </div>
+            </div>
+          </form>
 
           <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-5">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Live lanes</div>
@@ -1900,7 +1958,70 @@ export default async function ManageDeckPage({
                                 Manual review suggested
                               </span>
                             )}
+                            {(() => {
+                              const fit = commanderFitsByCardId.get(card.id)
+                              if (!fit) {
+                                return (
+                                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                                    EDHREC fit not synced yet
+                                  </span>
+                                )
+                              }
+
+                              if (fit.match_status === 'matched' && fit.matched_commander_name) {
+                                return (
+                                  <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs text-sky-100">
+                                    Best fit: {fit.matched_commander_name}
+                                  </span>
+                                )
+                              }
+
+                              if (fit.match_status === 'no_match') {
+                                return (
+                                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                                    No EDHREC commander fit found
+                                  </span>
+                                )
+                              }
+
+                              return (
+                                <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
+                                  EDHREC lookup needs retry
+                                </span>
+                              )
+                            })()}
                           </div>
+                          {(() => {
+                            const fit = commanderFitsByCardId.get(card.id)
+                            if (!fit || fit.match_status !== 'matched' || !fit.matched_commander_name) {
+                              return null
+                            }
+
+                            return (
+                              <div className="mt-3 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-3 py-3 text-xs text-sky-100">
+                                Rank #{fit.edhrec_rank ?? 1}
+                                {fit.inclusion_percent != null
+                                  ? ` · ${Number(fit.inclusion_percent).toFixed(1)}% inclusion`
+                                  : ''}
+                                {fit.commander_deck_count != null
+                                  ? ` · ${Number(fit.commander_deck_count).toLocaleString('en-CA')} commander decks`
+                                  : ''}
+                                {fit.source_url ? (
+                                  <>
+                                    {' · '}
+                                    <a
+                                      href={fit.source_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="underline underline-offset-4 hover:text-white"
+                                    >
+                                      EDHREC source
+                                    </a>
+                                  </>
+                                ) : null}
+                              </div>
+                            )
+                          })()}
                         </div>
 
                         <div className="space-y-3">
