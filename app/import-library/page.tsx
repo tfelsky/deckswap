@@ -240,28 +240,30 @@ export default async function ImportLibraryPage({
               </div>
             ) : null}
 
-            <div className="mt-6 grid gap-3">
-              {providerCapabilities.map((capability) => (
-                <div
-                  key={capability.scope}
-                  className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-medium text-white">{capability.label}</div>
-                    <div
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                        capability.status === 'available'
-                          ? 'border border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
-                          : 'border border-white/10 bg-white/5 text-zinc-300'
-                      }`}
-                    >
-                      {capability.status === 'available' ? 'Available now' : 'Planned next'}
+            {scope !== 'singles' ? (
+              <div className="mt-6 grid gap-3">
+                {providerCapabilities.map((capability) => (
+                  <div
+                    key={capability.scope}
+                    className="rounded-2xl border border-white/10 bg-zinc-950/60 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-white">{capability.label}</div>
+                      <div
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                          capability.status === 'available'
+                            ? 'border border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                            : 'border border-white/10 bg-white/5 text-zinc-300'
+                        }`}
+                      >
+                        {capability.status === 'available' ? 'Available now' : 'Planned next'}
+                      </div>
                     </div>
+                    <p className="mt-2 text-sm text-zinc-400">{capability.description}</p>
                   </div>
-                  <p className="mt-2 text-sm text-zinc-400">{capability.description}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : null}
 
             <form method="get" className="mt-6 grid gap-5">
               <div>
@@ -309,7 +311,7 @@ export default async function ImportLibraryPage({
               </button>
             </form>
 
-            {scope === 'singles' && provider === 'archidekt' ? (
+            {scope === 'singles' ? (
               <form
                 action={importLibrarySinglesSourceAction}
                 encType="multipart/form-data"
@@ -320,14 +322,14 @@ export default async function ImportLibraryPage({
                 <input type="hidden" name="account" value={account} />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-base font-medium text-white">Upload an Archidekt collection file</div>
+                    <div className="text-base font-medium text-white">Upload a collection file</div>
                     <span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2.5 py-1 text-[11px] font-medium text-amber-100">
                       CSV / TSV upload
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-amber-50/80">
-                    Upload an Archidekt collection export here if you want to import straight from a
-                    file instead of a public collection URL.
+                    Upload a collection export here if you want to import straight from a file
+                    instead of a public source URL.
                   </p>
                 </div>
                 <div>
@@ -339,8 +341,14 @@ export default async function ImportLibraryPage({
                     className="block w-full rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
                   />
                   <p className="mt-2 text-xs text-amber-50/75">
-                    Best results come from Archidekt CSV/TSV exports that include quantity, card name, condition, language, set, and collector number columns.
+                    Best results currently come from Archidekt CSV/TSV exports with quantity, card
+                    name, condition, language, set, and collector number columns.
                   </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-200/85">
+                  {provider === 'archidekt'
+                    ? 'The current file-import path is optimized for Archidekt collection exports.'
+                    : 'File upload is visible here for convenience, but the current parser is optimized for Archidekt collection exports. Switch the provider to Archidekt for the best results.'}
                 </div>
                 <button
                   type="submit"
@@ -349,16 +357,6 @@ export default async function ImportLibraryPage({
                   Import collection file
                 </button>
               </form>
-            ) : null}
-
-            {scope === 'singles' && provider !== 'archidekt' ? (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-sm text-zinc-400">
-                <div className="font-medium text-white">File upload availability</div>
-                <p className="mt-2">
-                  File-based singles import is currently set up for Archidekt collection exports.
-                  Switch the provider to Archidekt to reveal the CSV/TSV upload form.
-                </p>
-              </div>
             ) : null}
           </div>
 
