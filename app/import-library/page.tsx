@@ -305,6 +305,38 @@ export default async function ImportLibraryPage({
                 pricing snapshots, and import warnings when metadata is incomplete.
               </p>
             </div>
+
+            {scope === 'singles' && provider === 'archidekt' ? (
+              <form action={importLibrarySinglesSourceAction} className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                <input type="hidden" name="provider" value={provider} />
+                <input type="hidden" name="scope" value={scope} />
+                <input type="hidden" name="account" value={account} />
+                <div>
+                  <div className="text-sm font-medium text-white">Import an Archidekt collection CSV</div>
+                  <p className="mt-2 text-sm text-amber-50/80">
+                    Upload an Archidekt collection export to import singles directly without using a public collection URL.
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-zinc-200">Collection export file</label>
+                  <input
+                    name="source_file"
+                    type="file"
+                    accept=".csv,.tsv,text/csv,text/tab-separated-values"
+                    className="block w-full rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-950 hover:file:opacity-90"
+                  />
+                  <p className="mt-2 text-xs text-amber-50/75">
+                    Best results come from Archidekt CSV/TSV exports that include quantity, card name, condition, language, set, and collector number columns.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90"
+                >
+                  Import collection file
+                </button>
+              </form>
+            ) : null}
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">

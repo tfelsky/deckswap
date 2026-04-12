@@ -10,6 +10,7 @@ import {
   type LibraryImportProvider,
 } from '@/lib/deck-sources/library'
 import { importSinglesToCollection } from '@/lib/singles/imports'
+import { looksLikeArchidektCollectionTable, parseArchidektCollectionTable } from '@/lib/singles/parse'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -158,13 +159,48 @@ export async function importLibrarySinglesSourceAction(formData: FormData) {
   const account = String(formData.get('account') || '').trim()
   const scope = String(formData.get('scope') || 'singles').trim()
   const sourceUrl = String(formData.get('source_url') || '').trim()
+  const sourceFile = formData.get('source_file')
 
-  if (!provider || !account || !sourceUrl) {
+  const hasUploadedFile = sourceFile instanceof File && sourceFile.size > 0
+
+  if (!provider || (!sourceUrl && !hasUploadedFile)) {
     redirect('/import-library?error=missing')
   }
 
   try {
-    const source = await fetchLibrarySingles(provider, sourceUrl)
+    let source: Awaited<ReturnType<typeof fetchLibrarySingles>>
+
+    if (hasUploadedFile) {
+      const fileText = (await sourceFile.text()).trim()
+      const fileStem = sourceFile.name.replace(/\.[^.]+$/, '').trim() || 'archidekt-collection'
+
+      if (provider !== 'archidekt') {
+        throw new Error('File-based singles import is only set up for Archidekt collection exports right now.')
+      }
+
+      if (!looksLikeArchidektCollectionTable(fileText)) {
+        throw new Error(
+          'That file does not look like an Archidekt collection export yet. Upload a CSV or TSV with quantity and card-name columns plus collection metadata like condition, language, set, or collector number.'
+        )
+      }
+
+      const items = parseArchidektCollectionTable(fileText)
+
+      if (items.length === 0) {
+        throw new Error('No readable singles rows were found in that Archidekt collection file.')
+      }
+
+      source = {
+        sourceName: fileStem,
+        sourceUrl: '',
+        externalSourceId: `file:${fileStem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'archidekt-collection'}`,
+        accountLabel: account || fileStem,
+        items,
+      }
+    } else {
+      source = await fetchLibrarySingles(provider, sourceUrl)
+    }
+
     const result = await importSinglesToCollection({
       supabase,
       userId: user.id,

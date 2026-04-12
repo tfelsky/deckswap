@@ -17,9 +17,9 @@ export type ImportedSingleRow = {
   foil?: boolean
   condition?: ImportedSingleCondition
   language?: string
-  setCode?: string | null
-  setName?: string | null
-  collectorNumber?: string | null
+  setCode?: string
+  setName?: string
+  collectorNumber?: string
 }
 
 type ImportSinglesArgs = {
@@ -98,9 +98,9 @@ export async function importSinglesToCollection({
       foil: item.foil ?? false,
       condition: item.condition ?? 'near_mint',
       language: String(item.language ?? 'en').trim().toLowerCase() || 'en',
-      setCode: String(item.setCode ?? '').trim().toLowerCase() || null,
-      setName: String(item.setName ?? '').trim() || null,
-      collectorNumber: String(item.collectorNumber ?? '').trim() || null,
+      setCode: String(item.setCode ?? '').trim().toLowerCase() || undefined,
+      setName: String(item.setName ?? '').trim() || undefined,
+      collectorNumber: String(item.collectorNumber ?? '').trim() || undefined,
     })
   }
 
