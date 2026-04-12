@@ -10,6 +10,7 @@ type AppHeaderProps = {
     | 'import'
     | 'create'
     | 'my-decks'
+    | 'my-singles'
     | 'trade-matches'
     | 'profile'
     | 'trade-offers'

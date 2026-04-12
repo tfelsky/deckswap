@@ -9,6 +9,7 @@ type MarketplaceNavProps = {
     | 'import'
     | 'create'
     | 'my-decks'
+    | 'my-singles'
     | 'trade-matches'
     | 'profile'
     | 'trade-offers'
@@ -25,6 +26,7 @@ const NAV_ITEMS = {
   import: { href: '/import-deck', label: 'Import' },
   create: { href: '/create-deck', label: 'Create' },
   'my-decks': { href: '/my-decks', label: 'My Decks' },
+  'my-singles': { href: '/my-singles', label: 'My Singles' },
   'trade-matches': { href: '/trade-matches', label: 'Swaps' },
   'trade-offers': { href: '/trade-offers', label: 'Offers' },
   notifications: { href: '/notifications', label: 'Alerts' },
@@ -38,6 +40,7 @@ const CONTEXT_GROUPS: Record<MarketplaceNavProps['current'], Array<keyof typeof 
   import: ['import', 'create', 'decks'],
   create: ['import', 'create', 'my-decks'],
   'my-decks': ['my-decks', 'create', 'decks', 'notifications'],
+  'my-singles': ['my-singles', 'my-decks', 'import', 'notifications'],
   'trade-matches': ['trade-matches', 'trade-offers', 'notifications', 'decks'],
   profile: ['profile', 'my-decks', 'notifications'],
   'trade-offers': ['trade-offers', 'trade-matches', 'notifications', 'decks'],
@@ -56,7 +59,7 @@ export default function MarketplaceNav({
   const contextKeys = CONTEXT_GROUPS[current]
   const visibleItems = contextKeys.filter((key) => {
     if (detectedSignedIn) return true
-    return !['create', 'my-decks', 'trade-offers', 'notifications', 'profile'].includes(key)
+    return !['create', 'my-decks', 'my-singles', 'trade-offers', 'notifications', 'profile'].includes(key)
   })
 
   return (

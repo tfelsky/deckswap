@@ -1,7 +1,17 @@
-import { fetchArchidektDeck, listArchidektLibraryDecks } from '@/lib/deck-sources/archidekt'
-import { fetchMoxfieldDeck } from '@/lib/deck-sources/moxfield'
+import {
+  fetchArchidektDeck,
+  fetchArchidektSinglesSource,
+  listArchidektLibraryDecks,
+  previewArchidektSinglesSource,
+} from '@/lib/deck-sources/archidekt'
+import {
+  fetchMoxfieldDeck,
+  fetchMoxfieldSinglesSource,
+  previewMoxfieldSinglesSource,
+} from '@/lib/deck-sources/moxfield'
 import { isDeckImportEventsSchemaMissing } from '@/lib/import-events'
 import type { ImportedDeckCard } from '@/lib/commander/types'
+import { isSingleImportSchemaMissing } from '@/lib/singles/import-events'
 
 export type LibraryImportProvider = 'moxfield' | 'archidekt'
 export type LibraryImportScope = 'decks' | 'singles' | 'full_collection'
@@ -24,6 +34,29 @@ export type LibraryDeckSummary = {
   updatedAt?: string | null
 }
 
+export type LibrarySingleSourceSummary = {
+  provider: LibraryImportProvider
+  externalSourceId: string
+  sourceName: string
+  sourceUrl: string
+  sourceKind: 'binder' | 'collection'
+  accountLabel: string
+  itemCount: number
+  updatedAt?: string | null
+}
+
+export type ImportedSingleCard = {
+  sourceItemKey: string
+  cardName: string
+  quantity: number
+  foil?: boolean
+  condition?: 'near_mint' | 'light_play' | 'moderate_play' | 'heavy_play' | 'damaged'
+  language?: string
+  setCode?: string
+  setName?: string
+  collectorNumber?: string
+}
+
 type SupabaseLike = any
 
 const PROVIDER_LIBRARY_CAPABILITIES: Record<
@@ -40,8 +73,8 @@ const PROVIDER_LIBRARY_CAPABILITIES: Record<
     {
       scope: 'singles',
       label: 'Singles binders',
-      status: 'planned',
-      description: 'Track individual cards for Mythiverse Exchange Ones once binder ingest lands.',
+      status: 'available',
+      description: 'Import a public binder-like Moxfield list into private singles inventory.',
     },
     {
       scope: 'full_collection',
@@ -60,8 +93,8 @@ const PROVIDER_LIBRARY_CAPABILITIES: Record<
     {
       scope: 'singles',
       label: 'Singles binders',
-      status: 'planned',
-      description: 'Prepare for one-card listings instead of only complete deck listings.',
+      status: 'available',
+      description: 'Import a public Archidekt collection into private singles inventory.',
     },
     {
       scope: 'full_collection',
@@ -180,6 +213,54 @@ export async function listLibraryDecks(provider: LibraryImportProvider, value: s
   return listMoxfieldLibraryDecks(value)
 }
 
+export async function listLibrarySingleSources(
+  provider: LibraryImportProvider,
+  value: string
+): Promise<{
+  accountLabel: string
+  profileUrl: string
+  sources: LibrarySingleSourceSummary[]
+}> {
+  if (provider === 'archidekt') {
+    const source = await previewArchidektSinglesSource(value)
+    const accountLabel = source.sourceName.replace(/'s Collection$/, '') || source.externalSourceId
+    return {
+      accountLabel,
+      profileUrl: source.sourceUrl,
+      sources: [
+        {
+          provider,
+          externalSourceId: source.externalSourceId,
+          sourceName: source.sourceName,
+          sourceUrl: source.sourceUrl,
+          sourceKind: 'collection',
+          accountLabel,
+          itemCount: source.itemCount,
+          updatedAt: source.updatedAt,
+        },
+      ],
+    }
+  }
+
+  const source = await previewMoxfieldSinglesSource(value)
+  return {
+    accountLabel: source.sourceName,
+    profileUrl: source.sourceUrl,
+    sources: [
+      {
+        provider,
+        externalSourceId: source.externalSourceId,
+        sourceName: source.sourceName,
+        sourceUrl: source.sourceUrl,
+        sourceKind: 'binder',
+        accountLabel: source.sourceName,
+        itemCount: source.itemCount,
+        updatedAt: source.updatedAt,
+      },
+    ],
+  }
+}
+
 export function getLibraryImportCapabilities(provider: LibraryImportProvider) {
   return PROVIDER_LIBRARY_CAPABILITIES[provider]
 }
@@ -201,6 +282,37 @@ export async function fetchLibraryDeck(
   }
 }
 
+export async function fetchLibrarySingles(
+  provider: LibraryImportProvider,
+  sourceValue: string
+): Promise<{
+  sourceName: string
+  sourceUrl: string
+  externalSourceId: string
+  accountLabel: string
+  items: ImportedSingleCard[]
+}> {
+  if (provider === 'archidekt') {
+    const source = await fetchArchidektSinglesSource(sourceValue)
+    return {
+      sourceName: source.sourceName,
+      sourceUrl: source.sourceUrl,
+      externalSourceId: source.externalSourceId,
+      accountLabel: source.accountLabel,
+      items: source.items,
+    }
+  }
+
+  const source = await fetchMoxfieldSinglesSource(sourceValue)
+  return {
+    sourceName: source.sourceName,
+    sourceUrl: source.sourceUrl,
+    externalSourceId: source.externalSourceId,
+    accountLabel: source.sourceName,
+    items: source.items,
+  }
+}
+
 function isExternalImportSchemaMissing(message?: string | null) {
   if (!message) return false
 
@@ -210,6 +322,18 @@ function isExternalImportSchemaMissing(message?: string | null) {
     message.includes("relation 'public.external_deck_imports'") ||
     message.includes('relation "public.external_deck_imports"') ||
     isDeckImportEventsSchemaMissing(message)
+  )
+}
+
+function isExternalSingleImportSchemaMissing(message?: string | null) {
+  if (!message) return false
+
+  return (
+    message.includes("relation 'public.external_single_sources'") ||
+    message.includes('relation "public.external_single_sources"') ||
+    message.includes("relation 'public.external_single_imports'") ||
+    message.includes('relation "public.external_single_imports"') ||
+    isSingleImportSchemaMissing(message)
   )
 }
 
@@ -261,5 +385,69 @@ export async function persistLibraryImportLinkage(
 
   if (importResult.error && !isExternalImportSchemaMissing(importResult.error.message)) {
     console.error('Failed to save external deck import linkage:', importResult.error)
+  }
+}
+
+export async function persistLibrarySinglesImportLinkage(
+  supabase: SupabaseLike,
+  args: {
+    userId: string
+    provider: LibraryImportProvider
+    accountLabel: string
+    sourceScope?: 'singles' | 'full_collection'
+    sourceKey: string
+    sourceName: string
+    sourceUrl: string
+    importedItemCount: number
+    warningCount?: number
+    skippedCount?: number
+    failedCount?: number
+    syncStatus?: string
+    lastError?: string | null
+  }
+) {
+  const scope = args.sourceScope ?? 'singles'
+  const sourceResult = await supabase.from('external_single_sources').upsert(
+    {
+      user_id: args.userId,
+      provider: args.provider,
+      external_account: args.accountLabel,
+      source_scope: scope,
+      source_key: args.sourceKey,
+      source_name: args.sourceName,
+      source_url: args.sourceUrl,
+      status: args.lastError ? 'error' : 'active',
+      imported_item_count: args.importedItemCount,
+      last_synced_at: new Date().toISOString(),
+      last_error: args.lastError ?? null,
+    },
+    { onConflict: 'user_id,provider,source_scope,source_key' }
+  )
+
+  if (sourceResult.error && !isExternalSingleImportSchemaMissing(sourceResult.error.message)) {
+    console.error('Failed to save external single source linkage:', sourceResult.error)
+  }
+
+  const importResult = await supabase.from('external_single_imports').upsert(
+    {
+      user_id: args.userId,
+      provider: args.provider,
+      source_scope: scope,
+      source_key: args.sourceKey,
+      source_name: args.sourceName,
+      source_url: args.sourceUrl,
+      sync_status: args.syncStatus ?? 'imported',
+      imported_item_count: args.importedItemCount,
+      warning_count: args.warningCount ?? 0,
+      skipped_count: args.skippedCount ?? 0,
+      failed_count: args.failedCount ?? 0,
+      last_error: args.lastError ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,provider,source_scope,source_key' }
+  )
+
+  if (importResult.error && !isExternalSingleImportSchemaMissing(importResult.error.message)) {
+    console.error('Failed to save external single import linkage:', importResult.error)
   }
 }

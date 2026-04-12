@@ -34,6 +34,14 @@ type MoxfieldDeckResponse = {
   }
 }
 
+export type MoxfieldSingleSourceSummary = {
+  externalSourceId: string
+  sourceName: string
+  sourceUrl: string
+  itemCount: number
+  updatedAt?: string | null
+}
+
 async function fetchMoxfieldDeckTitle(sourceUrl: string) {
   try {
     const response = await fetch(sourceUrl, {
@@ -118,6 +126,72 @@ export function extractMoxfieldPublicId(url: string) {
     return publicId || null
   } catch {
     return null
+  }
+}
+
+export async function fetchMoxfieldSinglesSource(
+  sourceUrl: string
+): Promise<{
+  sourceName: string
+  sourceUrl: string
+  externalSourceId: string
+  items: Array<{
+    sourceItemKey: string
+    cardName: string
+    quantity: number
+    foil: boolean
+    condition: 'near_mint'
+    language: 'en'
+    setCode?: string
+    setName?: string
+    collectorNumber?: string
+  }>
+}> {
+  const publicId = extractMoxfieldPublicId(sourceUrl)
+
+  if (!publicId) {
+    throw new Error('Enter a public Moxfield deck or binder URL for singles import.')
+  }
+
+  const deck = await fetchMoxfieldDeck(sourceUrl)
+  const items = deck.cards
+    .filter((card) => card.section !== 'token')
+    .map((card) => ({
+      sourceItemKey: [
+        card.section,
+        card.cardName.trim().toLowerCase(),
+        String(card.setCode ?? '').trim().toLowerCase(),
+        String(card.collectorNumber ?? '').trim().toLowerCase(),
+        card.foil ? 'foil' : 'normal',
+      ].join('::'),
+      cardName: card.cardName,
+      quantity: Number(card.quantity ?? 1),
+      foil: card.foil ?? false,
+      condition: 'near_mint' as const,
+      language: 'en' as const,
+      setCode: card.setCode,
+      setName: card.setName,
+      collectorNumber: card.collectorNumber,
+    }))
+
+  return {
+    sourceName: deck.deckName?.trim() || `Moxfield Binder ${publicId}`,
+    sourceUrl,
+    externalSourceId: publicId,
+    items,
+  }
+}
+
+export async function previewMoxfieldSinglesSource(
+  sourceUrl: string
+): Promise<MoxfieldSingleSourceSummary> {
+  const source = await fetchMoxfieldSinglesSource(sourceUrl)
+  return {
+    externalSourceId: source.externalSourceId,
+    sourceName: source.sourceName,
+    sourceUrl: source.sourceUrl,
+    itemCount: source.items.reduce((sum, item) => sum + item.quantity, 0),
+    updatedAt: null,
   }
 }
 

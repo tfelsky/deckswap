@@ -317,6 +317,17 @@ export default async function MyDecksPage({
               <div className="mt-2 text-xs text-zinc-500">Decks currently in your marketplace collection.</div>
             </div>
 
+            <Link
+              href="/my-singles"
+              className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 transition hover:bg-amber-400/15"
+            >
+              <div className="text-sm text-amber-100">Private Singles</div>
+              <div className="mt-2 text-2xl font-semibold text-white">Review imported singles</div>
+              <div className="mt-2 text-xs text-amber-50/80">
+                Phase 1 singles stay private and live in a dedicated inventory surface.
+              </div>
+            </Link>
+
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm text-zinc-400">Total Deck Value</div>
               <div className="mt-2 text-3xl font-semibold text-emerald-300">

@@ -47,6 +47,44 @@ type LibraryDeckSummary = {
   formatHint: string | null
 }
 
+type ArchidektCollectionCardEntry = {
+  id?: number
+  quantity?: number
+  foil?: boolean
+  language?: number | string | null
+  condition?: number | string | null
+  modifier?: string | null
+  card?: {
+    name?: string
+    collectorNumber?: string | number | null
+    edition?: {
+      editioncode?: string | null
+      editionname?: string | null
+    } | null
+    oracleCard?: {
+      name?: string | null
+    } | null
+  } | null
+}
+
+type ArchidektCollectionPayload = {
+  next?: string | null
+  count?: number
+  owner?: {
+    id?: number
+    username?: string
+  } | null
+  results?: ArchidektCollectionCardEntry[]
+}
+
+export type ArchidektSingleSourceSummary = {
+  externalSourceId: string
+  sourceName: string
+  sourceUrl: string
+  itemCount: number
+  updatedAt?: string | null
+}
+
 function cleanText(value?: string | null) {
   return value?.trim() || ''
 }
@@ -111,6 +149,209 @@ export function extractArchidektUsername(value: string) {
   }
 
   return trimmed.replace(/^@/, '').replace(/\s+/g, '')
+}
+
+export function extractArchidektCollectionId(value: string) {
+  const trimmed = value.trim()
+
+  if (!trimmed) return null
+
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    if (!/archidekt\.com$/i.test(parsed.hostname)) return null
+
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    const collectionIndex = segments.findIndex((segment) => segment === 'collection')
+    if (collectionIndex === -1) return null
+    if (segments[collectionIndex + 1] === 'v2' && segments[collectionIndex + 2]) {
+      return segments[collectionIndex + 2]
+    }
+
+    return segments[collectionIndex + 1] || null
+  } catch {
+    return null
+  }
+}
+
+function mapArchidektLanguage(value?: number | string | null) {
+  const normalized = String(value ?? '').trim().toLowerCase()
+
+  switch (normalized) {
+    case '2':
+    case 'fr':
+      return 'fr'
+    case '3':
+    case 'de':
+      return 'de'
+    case '4':
+    case 'it':
+      return 'it'
+    case '5':
+    case 'jp':
+    case 'ja':
+      return 'ja'
+    case '6':
+    case 'pt':
+      return 'pt'
+    case '7':
+    case 'es':
+      return 'es'
+    case '8':
+    case 'ru':
+      return 'ru'
+    case '9':
+    case 'zhs':
+    case 'zh':
+      return 'zh'
+    default:
+      return 'en'
+  }
+}
+
+function mapArchidektCondition(value?: number | string | null) {
+  const normalized = String(value ?? '').trim().toLowerCase()
+
+  switch (normalized) {
+    case '2':
+    case 'light_play':
+      return 'light_play' as const
+    case '3':
+    case 'moderate_play':
+      return 'moderate_play' as const
+    case '4':
+    case 'heavy_play':
+      return 'heavy_play' as const
+    case '5':
+    case 'damaged':
+      return 'damaged' as const
+    default:
+      return 'near_mint' as const
+  }
+}
+
+async function fetchArchidektCollectionPage(url: string) {
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; Mythiverse Exchange/1.0; +https://mythivex.com)',
+    },
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(`Archidekt singles lookup failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as ArchidektCollectionPayload
+}
+
+export async function previewArchidektSinglesSource(
+  value: string
+): Promise<ArchidektSingleSourceSummary> {
+  const collectionId = extractArchidektCollectionId(value)
+
+  if (!collectionId) {
+    throw new Error('Enter an Archidekt public collection URL for singles import.')
+  }
+
+  const payload = await fetchArchidektCollectionPage(`https://archidekt.com/api/collection/${collectionId}/`)
+  const username = cleanText(payload.owner?.username)
+
+  return {
+    externalSourceId: collectionId,
+    sourceName: username ? `${username}'s Collection` : `Archidekt Collection ${collectionId}`,
+    sourceUrl: `https://archidekt.com/collection/v2/${collectionId}`,
+    itemCount: Number(payload.count ?? payload.results?.length ?? 0),
+    updatedAt: null,
+  }
+}
+
+export async function fetchArchidektSinglesSource(
+  value: string
+): Promise<{
+  sourceName: string
+  sourceUrl: string
+  externalSourceId: string
+  accountLabel: string
+  items: Array<{
+    sourceItemKey: string
+    cardName: string
+    quantity: number
+    foil: boolean
+    condition: 'near_mint' | 'light_play' | 'moderate_play' | 'heavy_play' | 'damaged'
+    language: string
+    setCode?: string
+    setName?: string
+    collectorNumber?: string
+  }>
+}> {
+  const collectionId = extractArchidektCollectionId(value)
+
+  if (!collectionId) {
+    throw new Error('Enter an Archidekt public collection URL for singles import.')
+  }
+
+  const items: Array<{
+    sourceItemKey: string
+    cardName: string
+    quantity: number
+    foil: boolean
+    condition: 'near_mint' | 'light_play' | 'moderate_play' | 'heavy_play' | 'damaged'
+    language: string
+    setCode?: string
+    setName?: string
+    collectorNumber?: string
+  }> = []
+
+  let nextUrl: string | null = `https://archidekt.com/api/collection/${collectionId}/`
+  let sourceName = `Archidekt Collection ${collectionId}`
+  let accountLabel = collectionId
+
+  while (nextUrl) {
+    const payload = await fetchArchidektCollectionPage(nextUrl)
+    const username = cleanText(payload.owner?.username)
+    if (username) {
+      sourceName = `${username}'s Collection`
+      accountLabel = username
+    }
+
+    for (const entry of payload.results ?? []) {
+      const cardName =
+        cleanText(entry.card?.oracleCard?.name) || cleanText(entry.card?.name)
+      if (!cardName) continue
+
+      items.push({
+        sourceItemKey: String(entry.id ?? [cardName, entry.card?.collectorNumber].join('::')).trim(),
+        cardName,
+        quantity: Math.max(1, Number(entry.quantity ?? 1)),
+        foil:
+          entry.foil === true ||
+          cleanText(entry.modifier).toLowerCase() === 'foil',
+        condition: mapArchidektCondition(entry.condition),
+        language: mapArchidektLanguage(entry.language),
+        setCode: cleanText(entry.card?.edition?.editioncode) || undefined,
+        setName: cleanText(entry.card?.edition?.editionname) || undefined,
+        collectorNumber: cleanText(String(entry.card?.collectorNumber ?? '')) || undefined,
+      })
+    }
+
+    nextUrl = payload.next ?? null
+    if (nextUrl && nextUrl.startsWith('http://')) {
+      nextUrl = nextUrl.replace(/^http:\/\//i, 'https://')
+    }
+  }
+
+  return {
+    sourceName,
+    sourceUrl: `https://archidekt.com/collection/v2/${collectionId}`,
+    externalSourceId: collectionId,
+    accountLabel,
+    items,
+  }
 }
 
 export async function listArchidektLibraryDecks(value: string): Promise<{

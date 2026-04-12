@@ -38,6 +38,9 @@ export function Header() {
           <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             My Decks
           </Link>
+          <Link href="/my-singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            My Singles
+          </Link>
           <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Profile
           </Link>
@@ -75,6 +78,9 @@ export function Header() {
               </Link>
               <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 My Decks
+              </Link>
+              <Link href="/my-singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                My Singles
               </Link>
               <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Profile
