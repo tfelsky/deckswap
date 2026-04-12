@@ -45,6 +45,32 @@ async function requireSignedInUser() {
   return { supabase, user }
 }
 
+function getFriendlySinglesImportMessage(message?: string) {
+  const normalized = String(message ?? '').trim()
+
+  if (!normalized) {
+    return 'Singles import failed before any rows were saved.'
+  }
+
+  if (normalized.includes('File-based singles import is only set up for Archidekt')) {
+    return 'That file upload needs the provider set to Archidekt. Switch the provider to Archidekt, then upload the collection CSV or TSV again.'
+  }
+
+  if (normalized.includes('does not look like an Archidekt collection export')) {
+    return 'That file did not match the expected Archidekt collection export format. Use an Archidekt collection CSV or TSV with quantity and card-name columns, then try again.'
+  }
+
+  if (normalized.includes('No readable singles rows were found')) {
+    return 'The file uploaded successfully, but no readable singles rows were found in it. Double-check the export format and make sure it contains card rows.'
+  }
+
+  if (normalized.includes('Singles inventory tables are not set up yet')) {
+    return 'The import could not save because the singles inventory tables are not set up in Supabase yet.'
+  }
+
+  return normalized
+}
+
 export async function importLibraryDeckAction(formData: FormData) {
   const { supabase, user } = await requireSignedInUser()
   const provider = String(formData.get('provider') || '').trim() as LibraryImportProvider
@@ -173,6 +199,7 @@ export async function importLibrarySinglesSourceAction(formData: FormData) {
     if (hasUploadedFile) {
       const fileText = (await sourceFile.text()).trim()
       const fileStem = sourceFile.name.replace(/\.[^.]+$/, '').trim() || 'archidekt-collection'
+      const fallbackSourceKey = `file:${fileStem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'archidekt-collection'}`
 
       if (provider !== 'archidekt') {
         throw new Error('File-based singles import is only set up for Archidekt collection exports right now.')
@@ -193,7 +220,7 @@ export async function importLibrarySinglesSourceAction(formData: FormData) {
       source = {
         sourceName: fileStem,
         sourceUrl: '',
-        externalSourceId: `file:${fileStem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'archidekt-collection'}`,
+        externalSourceId: fallbackSourceKey,
         accountLabel: account || fileStem,
         items,
       }
@@ -238,12 +265,42 @@ export async function importLibrarySinglesSourceAction(formData: FormData) {
       })
     )
   } catch (error) {
-    const message =
+    const rawMessage =
       error instanceof Error ? error.message.slice(0, 180) : 'Singles import failed.'
+    const message = getFriendlySinglesImportMessage(rawMessage)
+
+    const fileName =
+      sourceFile instanceof File && sourceFile.size > 0
+        ? sourceFile.name.replace(/\.[^.]+$/, '').trim() || 'archidekt-collection'
+        : ''
+    const fallbackSourceKey =
+      sourceFile instanceof File && sourceFile.size > 0
+        ? `file:${fileName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'archidekt-collection'}`
+        : sourceUrl || 'manual-source'
+    const fallbackSourceName = fileName || account || 'singles-import'
+    const fallbackSourceUrl = sourceFile instanceof File && sourceFile.size > 0 ? '' : sourceUrl
+    const fallbackAccountLabel = account || fileName || provider
+
+    await persistLibrarySinglesImportLinkage(supabase, {
+      userId: user.id,
+      provider,
+      accountLabel: fallbackAccountLabel,
+      sourceScope: 'singles',
+      sourceKey: fallbackSourceKey,
+      sourceName: fallbackSourceName,
+      sourceUrl: fallbackSourceUrl,
+      importedItemCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      failedCount: 1,
+      syncStatus: 'error',
+      lastError: message,
+    })
 
     redirect(
       buildReturnUrl(provider, account, scope, {
         importFailed: 'singles',
+        importFailedKind: hasUploadedFile ? 'file' : 'source',
         message,
       })
     )

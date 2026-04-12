@@ -90,6 +90,7 @@ export default async function ImportLibraryPage({
   const skippedCount = getSingleParam(resolvedSearchParams, 'skippedCount')
   const importedSourceName = getSingleParam(resolvedSearchParams, 'importedSourceName')
   const importFailed = getSingleParam(resolvedSearchParams, 'importFailed')
+  const importFailedKind = getSingleParam(resolvedSearchParams, 'importFailedKind')
   const importFailedMessage = getSingleParam(resolvedSearchParams, 'message')
   const providerCapabilities = getLibraryImportCapabilities(provider)
 
@@ -419,8 +420,17 @@ export default async function ImportLibraryPage({
 
             {importFailed ? (
               <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                {scope === 'singles' ? 'Singles source import could not finish right now.' : `Deck ${importFailed} could not be imported right now.`}
+                {scope === 'singles'
+                  ? importFailedKind === 'file'
+                    ? 'Collection file import could not finish right now.'
+                    : 'Singles source import could not finish right now.'
+                  : `Deck ${importFailed} could not be imported right now.`}
                 {importFailedMessage ? ` ${importFailedMessage}` : ''}
+                {scope === 'singles' ? (
+                  <div className="mt-3 text-xs text-amber-100/80">
+                    Nothing was saved to My Singles for this attempt unless you see a success card above.
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
