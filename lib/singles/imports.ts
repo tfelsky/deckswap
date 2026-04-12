@@ -35,6 +35,16 @@ type ImportSinglesArgs = {
   items: ImportedSingleRow[]
 }
 
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = []
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+
+  return chunks
+}
+
 function toFriendlySingleImportError(message?: string) {
   if (!message) return 'Failed to import singles.'
 
@@ -140,14 +150,58 @@ export async function importSinglesToCollection({
         }
   )
 
-  let enrichedCards: Awaited<ReturnType<typeof fetchScryfallCollection>> = []
+  const enrichmentBatches = chunkArray(identifierRows, 75)
+  const enrichedCards: Awaited<ReturnType<typeof fetchScryfallCollection>> = []
+  let enrichmentFailureCount = 0
+  let enrichmentFailureMessage: string | null = null
 
-  try {
-    enrichedCards = await fetchScryfallCollection(identifierRows)
-  } catch (error) {
-    throw new Error(
-      toFriendlySingleImportError(error instanceof Error ? error.message : undefined)
-    )
+  for (const [batchIndex, batch] of enrichmentBatches.entries()) {
+    try {
+      const batchCards = await fetchScryfallCollection(batch)
+      enrichedCards.push(...batchCards)
+    } catch (error) {
+      enrichmentFailureCount += 1
+      enrichmentFailureMessage =
+        enrichmentFailureMessage ??
+        toFriendlySingleImportError(error instanceof Error ? error.message : undefined)
+
+      await logSingleImportEvent(supabase as any, {
+        actorUserId: actorUserId ?? userId,
+        provider,
+        sourceScope,
+        eventType: 'single_import_enrichment_batch_failed',
+        severity: 'warning',
+        message: enrichmentFailureMessage,
+        details: {
+          sourceKey,
+          batchIndex,
+          batchSize: batch.length,
+          totalBatches: enrichmentBatches.length,
+        },
+      })
+    }
+  }
+
+  if (enrichmentFailureCount > 0) {
+    await logSingleImportEvent(supabase as any, {
+      actorUserId: actorUserId ?? userId,
+      provider,
+      sourceScope,
+      eventType: 'single_import_enrichment_partially_failed',
+      severity: 'warning',
+      message:
+        enrichmentFailureCount === enrichmentBatches.length
+          ? enrichmentFailureMessage ??
+            'Card enrichment could not be completed from Scryfall right now.'
+          : `${enrichmentFailureMessage ?? 'Some card enrichment batches failed.'} Imported rows were still saved.`,
+      details: {
+        sourceKey,
+        attemptedIdentifiers: identifierRows.length,
+        successfulBatches: enrichmentBatches.length - enrichmentFailureCount,
+        failedBatches: enrichmentFailureCount,
+        totalBatches: enrichmentBatches.length,
+      },
+    })
   }
 
   const cardsByIdentity = new Map<string, ReturnType<typeof scryfallToDeckCardUpdate>>()
@@ -176,7 +230,11 @@ export async function importSinglesToCollection({
       null
 
     const importWarning = enriched
-      ? null
+      ? enrichmentFailureMessage
+        ? `${enrichmentFailureMessage} Imported without complete live card metadata, so pricing and enrichment fields may be incomplete.`
+        : null
+      : enrichmentFailureMessage
+      ? `${enrichmentFailureMessage} Imported without complete live card metadata, so pricing and enrichment fields may be incomplete.`
       : 'Imported without a Scryfall enrichment match. Pricing and metadata may be incomplete.'
 
     if (importWarning) {
@@ -255,6 +313,9 @@ export async function importSinglesToCollection({
       importedCount: preparedItems.length,
       warningCount,
       skippedCount,
+      enrichmentFailed: enrichmentFailureCount > 0,
+      enrichmentFailedBatches: enrichmentFailureCount,
+      enrichmentTotalBatches: enrichmentBatches.length,
     },
   })
 
@@ -264,5 +325,6 @@ export async function importSinglesToCollection({
     skippedCount,
     failedCount: 0,
     sourceName,
+    enrichmentFailed: enrichmentFailureCount > 0,
   }
 }
