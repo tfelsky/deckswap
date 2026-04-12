@@ -244,6 +244,10 @@ export default async function ManageDeckPage({
   const refreshedFitMatched = Number(resolvedSearchParams?.fitMatched ?? 0)
   const refreshedFitNoMatch = Number(resolvedSearchParams?.fitNoMatch ?? 0)
   const refreshedFitErrors = Number(resolvedSearchParams?.fitErrors ?? 0)
+  const commanderFitsError =
+    typeof resolvedSearchParams?.commanderFitsError === 'string'
+      ? resolvedSearchParams.commanderFitsError
+      : ''
   const saveStatus = String(resolvedSearchParams?.saved ?? '').trim()
   const holidayStatus = String(resolvedSearchParams?.holiday ?? '').trim()
   const deckFormat = normalizeDeckFormat(deck.format)
@@ -908,6 +912,12 @@ export default async function ManageDeckPage({
           {showCommanderFitsRefreshed && (
             <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
               Commander fits refreshed for {refreshedFitRows} card rows. Matched {refreshedFitMatched}, no match for {refreshedFitNoMatch}, errors on {refreshedFitErrors}.
+            </div>
+          )}
+
+          {commanderFitsError && (
+            <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              {commanderFitsError}
             </div>
           )}
 

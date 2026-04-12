@@ -151,6 +151,8 @@ export default async function MyDecksPage({
   const refreshedFitMatched = Number(params.fitMatched ?? 0)
   const refreshedFitNoMatch = Number(params.fitNoMatch ?? 0)
   const refreshedFitErrors = Number(params.fitErrors ?? 0)
+  const commanderFitsError =
+    typeof params.commanderFitsError === 'string' ? params.commanderFitsError : ''
 
   const { data: deckCards } = deckIds.length
     ? await supabase
@@ -263,6 +265,12 @@ export default async function MyDecksPage({
           {showCommanderFitsRefreshed && (
             <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
               Commander fits refreshed for {refreshedFitRows} card rows. Matched {refreshedFitMatched}, no match for {refreshedFitNoMatch}, errors on {refreshedFitErrors}.
+            </div>
+          )}
+
+          {commanderFitsError && (
+            <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              {commanderFitsError}
             </div>
           )}
 
