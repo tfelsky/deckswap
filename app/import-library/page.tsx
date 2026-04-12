@@ -228,6 +228,17 @@ export default async function ImportLibraryPage({
               collection exports remain a later slice.
             </p>
 
+            {scope === 'singles' ? (
+              <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm text-sky-100">
+                <div className="font-medium text-white">Singles import modes</div>
+                <p className="mt-2">
+                  Use a public source URL for live provider fetches, or upload an Archidekt
+                  collection CSV/TSV file directly. File import is currently supported for
+                  Archidekt.
+                </p>
+              </div>
+            ) : null}
+
             <div className="mt-6 grid gap-3">
               {providerCapabilities.map((capability) => (
                 <div
@@ -307,14 +318,24 @@ export default async function ImportLibraryPage({
             </div>
 
             {scope === 'singles' && provider === 'archidekt' ? (
-              <form action={importLibrarySinglesSourceAction} className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <form
+                action={importLibrarySinglesSourceAction}
+                encType="multipart/form-data"
+                className="mt-6 grid gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4"
+              >
                 <input type="hidden" name="provider" value={provider} />
                 <input type="hidden" name="scope" value={scope} />
                 <input type="hidden" name="account" value={account} />
                 <div>
-                  <div className="text-sm font-medium text-white">Import an Archidekt collection CSV</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-medium text-white">Import an Archidekt collection file</div>
+                    <span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2.5 py-1 text-[11px] font-medium text-amber-100">
+                      CSV / TSV upload
+                    </span>
+                  </div>
                   <p className="mt-2 text-sm text-amber-50/80">
-                    Upload an Archidekt collection export to import singles directly without using a public collection URL.
+                    Upload an Archidekt collection export here to import singles directly without
+                    using a public collection URL.
                   </p>
                 </div>
                 <div>
@@ -336,6 +357,16 @@ export default async function ImportLibraryPage({
                   Import collection file
                 </button>
               </form>
+            ) : null}
+
+            {scope === 'singles' && provider !== 'archidekt' ? (
+              <div className="mt-6 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-sm text-zinc-400">
+                <div className="font-medium text-white">File upload availability</div>
+                <p className="mt-2">
+                  File-based singles import is currently set up for Archidekt collection exports.
+                  Switch the provider to Archidekt to reveal the CSV/TSV upload form.
+                </p>
+              </div>
             ) : null}
           </div>
 
