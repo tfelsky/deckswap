@@ -18,6 +18,7 @@ type SinglesMarketplaceProps = {
 
 type FinishFilter = 'all' | 'foil' | 'nonfoil'
 type SortOption = 'featured' | 'price_desc' | 'price_asc' | 'name_asc'
+type PageSizeOption = 50 | 100 | 150
 
 function readStoredCart() {
   try {
@@ -61,6 +62,8 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
   const [finishFilter, setFinishFilter] = useState<FinishFilter>('all')
   const [setFilter, setSetFilter] = useState('all')
   const [sortOption, setSortOption] = useState<SortOption>('featured')
+  const [pageSize, setPageSize] = useState<PageSizeOption>(50)
+  const [page, setPage] = useState(1)
   const deferredSearch = useDeferredValue(search)
 
   useEffect(() => {
@@ -115,6 +118,16 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
 
       return left.id - right.id
     })
+
+  useEffect(() => {
+    setPage(1)
+  }, [deferredSearch, finishFilter, setFilter, sortOption, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const pageStart = (currentPage - 1) * pageSize
+  const pageEnd = pageStart + pageSize
+  const visibleListings = filteredListings.slice(pageStart, pageEnd)
 
   const selectedListing =
     selectedListingId != null ? listingMap.get(selectedListingId) ?? null : null
@@ -187,7 +200,7 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
             </div>
           </div>
 
-          <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem]">
+          <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_10rem]">
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -225,6 +238,15 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               <option value="price_asc">Price: low to high</option>
               <option value="name_asc">Name A-Z</option>
             </select>
+            <select
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value) as PageSizeOption)}
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            >
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+              <option value={150}>150 / page</option>
+            </select>
           </div>
         </div>
       </section>
@@ -235,107 +257,141 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
             No singles match that filter set yet.
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredListings.map((listing) => {
-              const quantityInCart = getListingQuantity(listing.id)
-              const availableQuantity = Number(listing.marketplace_quantity_available ?? 0)
-              const priceLabel = formatCurrencyAmount(Number(listing.marketplace_price_usd ?? 0), 'USD')
-
-              return (
-                <article
-                  key={listing.id}
-                  className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 shadow-[0_20px_40px_rgba(0,0,0,0.18)]"
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-medium text-white">
+                  Showing {pageStart + 1}-{Math.min(pageEnd, filteredListings.length)} of {filteredListings.length} listings
+                </div>
+                <div className="mt-1 text-sm text-zinc-400">
+                  Search and filters apply before pagination so it is easy to browse large public inventory drops.
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedListingId(listing.id)}
-                    className="block w-full text-left"
+                  Previous
+                </button>
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-300">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {visibleListings.map((listing) => {
+                const quantityInCart = getListingQuantity(listing.id)
+                const availableQuantity = Number(listing.marketplace_quantity_available ?? 0)
+                const priceLabel = formatCurrencyAmount(Number(listing.marketplace_price_usd ?? 0), 'USD')
+
+                return (
+                  <article
+                    key={listing.id}
+                    className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 shadow-[0_20px_40px_rgba(0,0,0,0.18)]"
                   >
-                    <div className="relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
-                      {listing.image_url ? (
-                        <img
-                          src={listing.image_url}
-                          alt={listing.card_name}
-                          className="h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                          No image
+                    <button
+                      type="button"
+                      onClick={() => setSelectedListingId(listing.id)}
+                      className="block w-full text-left"
+                    >
+                      <div className="relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                        {listing.image_url ? (
+                          <img
+                            src={listing.image_url}
+                            alt={listing.card_name}
+                            className="h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                            No image
+                          </div>
+                        )}
+                        <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+                          {listing.foil ? 'Foil' : 'Non-foil'}
                         </div>
-                      )}
-                      <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-                        {listing.foil ? 'Foil' : 'Non-foil'}
+                        <div className="absolute right-4 top-4 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200 backdrop-blur">
+                          Qty {availableQuantity}
+                        </div>
                       </div>
-                      <div className="absolute right-4 top-4 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200 backdrop-blur">
-                        Qty {availableQuantity}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  <div className="space-y-4 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h2 className="truncate text-xl font-semibold text-white">{listing.card_name}</h2>
-                        <p className="mt-1 truncate text-sm text-zinc-400">
-                          {listing.set_name || 'Unknown set'}
-                          {listing.collector_number ? ` #${listing.collector_number}` : ''}
-                        </p>
+                    <div className="space-y-4 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-xl font-semibold text-white">{listing.card_name}</h2>
+                          <p className="mt-1 truncate text-sm text-zinc-400">
+                            {listing.set_name || 'Unknown set'}
+                            {listing.collector_number ? ` #${listing.collector_number}` : ''}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
+                          <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Price</div>
+                          <div className="text-lg font-semibold text-emerald-300">{priceLabel}</div>
+                        </div>
                       </div>
-                      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
-                        <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Price</div>
-                        <div className="text-lg font-semibold text-emerald-300">{priceLabel}</div>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                        {formatSingleCondition(listing.condition)}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                        {String(listing.language ?? 'en').toUpperCase()}
-                      </span>
-                      {listing.set_code ? (
+                      <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
                         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                          {String(listing.set_code).toUpperCase()}
+                          {formatSingleCondition(listing.condition)}
                         </span>
-                      ) : null}
-                    </div>
-
-                    {quantityInCart > 0 ? (
-                      <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setListingQuantity(listing, quantityInCart - 1)}
-                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xl text-white transition hover:bg-white/10"
-                        >
-                          -
-                        </button>
-                        <div className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center">
-                          <div className="text-lg font-semibold text-white">{quantityInCart}</div>
-                          <div className="text-xs text-zinc-500">in cart</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setListingQuantity(listing, quantityInCart + 1)}
-                          disabled={quantityInCart >= availableQuantity}
-                          className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xl text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          +
-                        </button>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          {String(listing.language ?? 'en').toUpperCase()}
+                        </span>
+                        {listing.set_code ? (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                            {String(listing.set_code).toUpperCase()}
+                          </span>
+                        ) : null}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setListingQuantity(listing, 1)}
-                        className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90"
-                      >
-                        Add to cart
-                      </button>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
+
+                      {quantityInCart > 0 ? (
+                        <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setListingQuantity(listing, quantityInCart - 1)}
+                            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xl text-white transition hover:bg-white/10"
+                          >
+                            -
+                          </button>
+                          <div className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center">
+                            <div className="text-lg font-semibold text-white">{quantityInCart}</div>
+                            <div className="text-xs text-zinc-500">in cart</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setListingQuantity(listing, quantityInCart + 1)}
+                            disabled={quantityInCart >= availableQuantity}
+                            className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xl text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setListingQuantity(listing, 1)}
+                          className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90"
+                        >
+                          Add to cart
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
           </div>
         )}
       </section>

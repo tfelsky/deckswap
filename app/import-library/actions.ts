@@ -12,6 +12,7 @@ import {
 import { importSinglesToCollection } from '@/lib/singles/imports'
 import { looksLikeArchidektCollectionTable, parseArchidektCollectionTable } from '@/lib/singles/parse'
 import { createClient } from '@/lib/supabase/server'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { redirect } from 'next/navigation'
 
 function buildReturnUrl(
@@ -111,6 +112,10 @@ export async function importLibraryDeckAction(formData: FormData) {
 
     redirect(buildReturnUrl(provider, account, scope, { importedDeckId: result.deckId }))
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     redirect(
       buildReturnUrl(provider, account, scope, {
         importFailed: externalDeckId,
@@ -265,6 +270,10 @@ export async function importLibrarySinglesSourceAction(formData: FormData) {
       })
     )
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     const rawMessage =
       error instanceof Error ? error.message.slice(0, 180) : 'Singles import failed.'
     const message = getFriendlySinglesImportMessage(rawMessage)

@@ -35,6 +35,8 @@ type ImportSinglesArgs = {
   items: ImportedSingleRow[]
 }
 
+type EnrichmentResult = Awaited<ReturnType<typeof fetchScryfallCollection>>
+
 function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = []
 
@@ -57,6 +59,30 @@ function toFriendlySingleImportError(message?: string) {
   }
 
   return message
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchScryfallBatchWithRetry(
+  identifiers: Array<{ name?: string; set?: string; collector_number?: string }>,
+  maxAttempts = 3
+): Promise<EnrichmentResult> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await fetchScryfallCollection(identifiers)
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Scryfall enrichment failed.')
+      if (attempt < maxAttempts) {
+        await wait(250 * attempt)
+      }
+    }
+  }
+
+  throw lastError ?? new Error('Scryfall enrichment failed.')
 }
 
 function makeIdentityKey(item: Pick<ImportedSingleRow, 'cardName' | 'setCode' | 'collectorNumber'>) {
@@ -140,30 +166,39 @@ export async function importSinglesToCollection({
   })
 
   const identifierRows = preparedItems.map((item) =>
-    item.setCode && item.collectorNumber
-      ? {
-          set: item.setCode,
-          collector_number: item.collectorNumber,
-        }
-      : {
-          name: item.cardName,
-        }
+    ({
+      sourceItemKey: item.sourceItemKey,
+      identifier: item.setCode && item.collectorNumber
+        ? {
+            set: item.setCode,
+            collector_number: item.collectorNumber,
+          }
+        : {
+            name: item.cardName,
+          },
+    })
   )
 
   const enrichmentBatches = chunkArray(identifierRows, 75)
-  const enrichedCards: Awaited<ReturnType<typeof fetchScryfallCollection>> = []
+  const enrichedCards: EnrichmentResult = []
   let enrichmentFailureCount = 0
-  let enrichmentFailureMessage: string | null = null
+  const failedEnrichmentMessages = new Map<string, string>()
 
   for (const [batchIndex, batch] of enrichmentBatches.entries()) {
     try {
-      const batchCards = await fetchScryfallCollection(batch)
+      const batchCards = await fetchScryfallBatchWithRetry(
+        batch.map((entry) => entry.identifier)
+      )
       enrichedCards.push(...batchCards)
     } catch (error) {
       enrichmentFailureCount += 1
-      enrichmentFailureMessage =
-        enrichmentFailureMessage ??
-        toFriendlySingleImportError(error instanceof Error ? error.message : undefined)
+      const batchMessage = toFriendlySingleImportError(
+        error instanceof Error ? error.message : undefined
+      )
+
+      for (const entry of batch) {
+        failedEnrichmentMessages.set(entry.sourceItemKey, batchMessage)
+      }
 
       await logSingleImportEvent(supabase as any, {
         actorUserId: actorUserId ?? userId,
@@ -171,7 +206,7 @@ export async function importSinglesToCollection({
         sourceScope,
         eventType: 'single_import_enrichment_batch_failed',
         severity: 'warning',
-        message: enrichmentFailureMessage,
+        message: batchMessage,
         details: {
           sourceKey,
           batchIndex,
@@ -183,6 +218,10 @@ export async function importSinglesToCollection({
   }
 
   if (enrichmentFailureCount > 0) {
+    const fallbackEnrichmentMessage =
+      Array.from(failedEnrichmentMessages.values())[0] ??
+      'Card enrichment could not be completed from Scryfall right now.'
+
     await logSingleImportEvent(supabase as any, {
       actorUserId: actorUserId ?? userId,
       provider,
@@ -191,9 +230,8 @@ export async function importSinglesToCollection({
       severity: 'warning',
       message:
         enrichmentFailureCount === enrichmentBatches.length
-          ? enrichmentFailureMessage ??
-            'Card enrichment could not be completed from Scryfall right now.'
-          : `${enrichmentFailureMessage ?? 'Some card enrichment batches failed.'} Imported rows were still saved.`,
+          ? fallbackEnrichmentMessage
+          : `${fallbackEnrichmentMessage} Imported rows were still saved.`,
       details: {
         sourceKey,
         attemptedIdentifiers: identifierRows.length,
@@ -229,13 +267,12 @@ export async function importSinglesToCollection({
       ) ??
       null
 
-    const importWarning = enriched
-      ? enrichmentFailureMessage
-        ? `${enrichmentFailureMessage} Imported without complete live card metadata, so pricing and enrichment fields may be incomplete.`
-        : null
-      : enrichmentFailureMessage
-      ? `${enrichmentFailureMessage} Imported without complete live card metadata, so pricing and enrichment fields may be incomplete.`
-      : 'Imported without a Scryfall enrichment match. Pricing and metadata may be incomplete.'
+    const batchFailureMessage = failedEnrichmentMessages.get(item.sourceItemKey)
+    const importWarning = batchFailureMessage
+      ? `${batchFailureMessage} Imported without complete live card metadata, so pricing and enrichment fields may be incomplete.`
+      : enriched
+        ? null
+        : 'Imported without a Scryfall enrichment match. Pricing and metadata may be incomplete.'
 
     if (importWarning) {
       warningCount += 1
@@ -290,12 +327,14 @@ export async function importSinglesToCollection({
     }
   })
 
-  const itemResult = await supabase.from('single_inventory_items').upsert(rows, {
-    onConflict: 'user_id,provider,source_collection_key,source_item_key',
-  })
+  for (const rowBatch of chunkArray(rows, 500)) {
+    const itemResult = await supabase.from('single_inventory_items').upsert(rowBatch, {
+      onConflict: 'user_id,provider,source_collection_key,source_item_key',
+    })
 
-  if (itemResult.error) {
-    throw new Error(toFriendlySingleImportError(itemResult.error.message ?? undefined))
+    if (itemResult.error) {
+      throw new Error(toFriendlySingleImportError(itemResult.error.message ?? undefined))
+    }
   }
 
   await logSingleImportEvent(supabase as any, {
