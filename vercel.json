@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/sync-commanders",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/sync-edhrec-commander-fits",
+      "schedule": "0 10 * * *"
     }
   ]
 }
