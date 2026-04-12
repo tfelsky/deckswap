@@ -1,7 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const EDHREC_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const EDHREC_ERROR_RETRY_MS = 3 * 24 * 60 * 60 * 1000
+const EDHREC_NO_MATCH_RETRY_MS = 14 * 24 * 60 * 60 * 1000
 const EDHREC_CONCURRENCY = 2
+const EDHREC_DAILY_CARD_LIMIT = 150
 const EDHREC_USER_AGENT = 'Mozilla/5.0 (compatible; DeckSwap/1.0; +https://deckswap.local)'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -60,11 +63,13 @@ type ParsedCommanderRec = {
 type RefreshCommanderFitsOptions = {
   force?: boolean
   deckId?: number
+  maxDistinctCards?: number
 }
 
 type RefreshCommanderFitsResult = {
   cardRowsProcessed: number
   distinctCardsProcessed: number
+  distinctCardsRequested: number
   matchedCount: number
   noMatchCount: number
   errorCount: number
@@ -228,6 +233,36 @@ function isFreshScrape(rows: CachedCommanderRec[]) {
   return latest != null && Date.now() - latest <= EDHREC_CACHE_TTL_MS
 }
 
+function getLatestScrapeAgeMs(rows: CachedCommanderRec[]) {
+  const latest = rows.reduce<number | null>((max, row) => {
+    const value = Date.parse(row.scraped_at)
+    if (!Number.isFinite(value)) return max
+    return max == null ? value : Math.max(max, value)
+  }, null)
+
+  return latest == null ? null : Date.now() - latest
+}
+
+function shouldRefreshCachedRows(rows: CachedCommanderRec[], force = false) {
+  if (force) return true
+  if (rows.length === 0) return true
+
+  const ageMs = getLatestScrapeAgeMs(rows)
+  if (ageMs == null) return true
+
+  const hasOk = rows.some((row) => row.fetch_status === 'ok')
+  if (hasOk) {
+    return ageMs > EDHREC_CACHE_TTL_MS
+  }
+
+  const hasNoMatch = rows.some((row) => row.fetch_status === 'no_match')
+  if (hasNoMatch) {
+    return ageMs > EDHREC_NO_MATCH_RETRY_MS
+  }
+
+  return ageMs > EDHREC_ERROR_RETRY_MS
+}
+
 async function fetchCommanderDirectoryNames(
   supabase: SupabaseAdmin,
   normalizedNames: string[]
@@ -308,7 +343,7 @@ async function fetchAndCacheRecsForCard(
   const identity = buildCacheIdentity(card)
   const existingRows = await readCachedRecsForKey(supabase, identity.cardKeyType, identity.cardKey)
 
-  if (!force && existingRows.length > 0 && isFreshScrape(existingRows)) {
+  if (!shouldRefreshCachedRows(existingRows, force)) {
     return existingRows
   }
 
@@ -536,14 +571,39 @@ async function loadOwnedDeckCardsForAllUsers(supabase: SupabaseAdmin) {
 async function syncCommanderFitMatchesForCards(
   supabase: SupabaseAdmin,
   cards: OwnedDeckCard[],
-  force = false
+  options: { force?: boolean; maxDistinctCards?: number } = {}
 ): Promise<RefreshCommanderFitsResult> {
-  const distinctCards = Array.from(
-    new Map(cards.map((card) => [cacheMapKey(buildCacheIdentity(card).cardKeyType, buildCacheIdentity(card).cardKey), card])).values()
-  )
-  const cacheByKey = new Map<string, CachedCommanderRec[]>()
+  const force = options.force ?? false
+  const distinctCardMap = new Map<string, OwnedDeckCard>()
 
-  await runWithConcurrency(distinctCards, EDHREC_CONCURRENCY, async (card) => {
+  for (const card of cards) {
+    const identity = buildCacheIdentity(card)
+    const key = cacheMapKey(identity.cardKeyType, identity.cardKey)
+    if (!distinctCardMap.has(key)) {
+      distinctCardMap.set(key, card)
+    }
+  }
+
+  const distinctCards = Array.from(distinctCardMap.values())
+  const cacheByKey = new Map<string, CachedCommanderRec[]>()
+  const cardsToFetch: OwnedDeckCard[] = []
+
+  for (const card of distinctCards) {
+    const identity = buildCacheIdentity(card)
+    const existingRows = await readCachedRecsForKey(supabase, identity.cardKeyType, identity.cardKey)
+    cacheByKey.set(cacheMapKey(identity.cardKeyType, identity.cardKey), existingRows)
+
+    if (shouldRefreshCachedRows(existingRows, force)) {
+      cardsToFetch.push(card)
+    }
+  }
+
+  const limitedCardsToFetch =
+    force || !options.maxDistinctCards || options.maxDistinctCards <= 0
+      ? cardsToFetch
+      : cardsToFetch.slice(0, options.maxDistinctCards)
+
+  await runWithConcurrency(limitedCardsToFetch, EDHREC_CONCURRENCY, async (card) => {
     const identity = buildCacheIdentity(card)
     const rows = await fetchAndCacheRecsForCard(supabase, card, force)
     cacheByKey.set(cacheMapKey(identity.cardKeyType, identity.cardKey), rows)
@@ -620,6 +680,7 @@ async function syncCommanderFitMatchesForCards(
   return {
     cardRowsProcessed: cards.length,
     distinctCardsProcessed: distinctCards.length,
+    distinctCardsRequested: limitedCardsToFetch.length,
     matchedCount: upsertRows.filter((row) => row.match_status === 'matched').length,
     noMatchCount: upsertRows.filter((row) => row.match_status === 'no_match').length,
     errorCount: upsertRows.filter((row) => row.match_status === 'error').length,
@@ -632,11 +693,17 @@ export async function refreshCommanderFitsForUser(
 ) {
   const supabase = createAdminClient()
   const cards = await loadOwnedDeckCardsForUser(supabase, userId, options.deckId)
-  return syncCommanderFitMatchesForCards(supabase, cards, options.force)
+  return syncCommanderFitMatchesForCards(supabase, cards, {
+    force: options.force,
+    maxDistinctCards: options.maxDistinctCards,
+  })
 }
 
 export async function refreshCommanderFitsForAllUsers(options: { force?: boolean } = {}) {
   const supabase = createAdminClient()
   const cards = await loadOwnedDeckCardsForAllUsers(supabase)
-  return syncCommanderFitMatchesForCards(supabase, cards, options.force)
+  return syncCommanderFitMatchesForCards(supabase, cards, {
+    force: options.force,
+    maxDistinctCards: EDHREC_DAILY_CARD_LIMIT,
+  })
 }
