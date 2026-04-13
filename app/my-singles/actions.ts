@@ -18,6 +18,7 @@ type EnrichmentCandidate = {
 
 type PublishCandidate = {
   id: number
+  user_id: string
   quantity?: number | null
   foil?: boolean | null
   price_usd?: number | null
@@ -158,7 +159,7 @@ async function fetchAllPublishCandidates(supabase: any, userId: string) {
     const end = start + 999
     const { data, error } = await supabase
       .from('single_inventory_items')
-      .select('id, quantity, foil, price_usd, price_usd_foil, buy_now_price_usd, buy_now_currency')
+      .select('id, user_id, quantity, foil, price_usd, price_usd_foil, buy_now_price_usd, buy_now_currency')
       .eq('user_id', userId)
       .eq('inventory_status', 'staged')
       .order('id', { ascending: true })
@@ -368,54 +369,50 @@ export async function publishAllStagedSinglesAction(formData: FormData) {
 
   try {
     const rows = await fetchAllPublishCandidates(supabase, user.id)
-    let publishCount = 0
-    let publishSkipped = 0
+    const publishRows = rows.flatMap((row) => {
+      const quantity = Math.max(0, Math.floor(Number(row.quantity ?? 0)))
+      const rawDerivedPrice = row.buy_now_price_usd
+        ? Number(row.buy_now_price_usd)
+        : row.foil
+          ? Number(row.price_usd_foil ?? row.price_usd ?? 0)
+          : Number(row.price_usd ?? row.price_usd_foil ?? 0)
+      const derivedPrice = Number.isFinite(rawDerivedPrice)
+        ? normalizeUsdAmount(rawDerivedPrice)
+        : 0
 
-    for (const batch of chunkArray(rows, 25)) {
-      for (const row of batch) {
-        const quantity = Math.max(0, Math.floor(Number(row.quantity ?? 0)))
-        const rawDerivedPrice = row.buy_now_price_usd
-          ? Number(row.buy_now_price_usd)
-          : row.foil
-            ? Number(row.price_usd_foil ?? row.price_usd ?? 0)
-            : Number(row.price_usd ?? row.price_usd_foil ?? 0)
-        const derivedPrice = Number.isFinite(rawDerivedPrice)
-          ? normalizeUsdAmount(rawDerivedPrice)
-          : 0
+      if (quantity <= 0 || derivedPrice <= 0) {
+        return []
+      }
 
-        if (quantity <= 0 || derivedPrice <= 0) {
-          publishSkipped += 1
-          continue
-        }
+      const now = new Date().toISOString()
 
-        const result = await supabase
-          .from('single_inventory_items')
-          .update({
-            inventory_status: 'buy_it_now_live',
-            buy_now_price_usd: normalizeUsdAmount(Number(row.buy_now_price_usd ?? derivedPrice)),
-            buy_now_currency: row.buy_now_currency ?? 'USD',
-            marketplace_visible: true,
-            marketplace_status: 'active',
-            marketplace_quantity_available: quantity,
-            marketplace_price_usd: derivedPrice,
-            marketplace_currency: row.buy_now_currency ?? 'USD',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', row.id)
-          .eq('user_id', user.id)
-          .eq('inventory_status', 'staged')
-          .select('id')
-          .maybeSingle()
+      return [
+        {
+          id: row.id,
+          user_id: row.user_id,
+          inventory_status: 'buy_it_now_live',
+          buy_now_price_usd: normalizeUsdAmount(Number(row.buy_now_price_usd ?? derivedPrice)),
+          buy_now_currency: row.buy_now_currency ?? 'USD',
+          marketplace_visible: true,
+          marketplace_status: 'active',
+          marketplace_quantity_available: quantity,
+          marketplace_price_usd: derivedPrice,
+          marketplace_currency: row.buy_now_currency ?? 'USD',
+          updated_at: now,
+        },
+      ]
+    })
 
-        if (result.error) {
-          throw new Error(result.error.message)
-        }
+    const publishCount = publishRows.length
+    const publishSkipped = rows.length - publishCount
 
-        if (result.data) {
-          publishCount += 1
-        } else {
-          publishSkipped += 1
-        }
+    for (const batch of chunkArray(publishRows, 500)) {
+      const result = await supabase.from('single_inventory_items').upsert(batch, {
+        onConflict: 'id',
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message)
       }
     }
 

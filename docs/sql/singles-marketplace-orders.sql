@@ -185,6 +185,9 @@ declare
   v_line_subtotal numeric := 0;
   v_price numeric := 0;
   v_available integer := 0;
+  v_shipping_method text := 'pwe_untracked';
+  v_shipping_label text := 'PWE Plain White Envelope';
+  v_shipping_description text := 'No tracking. Available for up to 10 cards when the order stays at $30 or less in Canada.';
 begin
   if p_buyer_user_id is null then
     raise exception 'A signed-in buyer is required.';
@@ -267,6 +270,17 @@ begin
   end if;
 
   v_discounted_subtotal := round(v_subtotal - v_discount_amount, 2);
+  if v_subtotal > 30 or v_item_count > 10 then
+    v_shipping_method := 'tracked_padded_mailer';
+    v_shipping_label := 'Padded mailer with tracking';
+    v_shipping_description := 'Automatic for orders over $30 or more than 10 cards in Canada.';
+    v_shipping_amount := 15;
+  else
+    v_shipping_method := 'pwe_untracked';
+    v_shipping_label := 'PWE Plain White Envelope';
+    v_shipping_description := 'No tracking. Available for up to 10 cards when the order stays at $30 or less in Canada.';
+    v_shipping_amount := 5;
+  end if;
   v_grand_total := round(v_discounted_subtotal + v_shipping_amount + v_tax_amount, 2);
 
   insert into public.singles_orders (
@@ -306,6 +320,9 @@ begin
       'tierLabel', v_discount_tier_label,
       'discountAmount', v_discount_amount,
       'discountedSubtotal', v_discounted_subtotal,
+      'shippingMethod', v_shipping_method,
+      'shippingLabel', v_shipping_label,
+      'shippingDescription', v_shipping_description,
       'shippingAmount', v_shipping_amount,
       'taxAmount', v_tax_amount,
       'grandTotal', v_grand_total

@@ -122,10 +122,11 @@ export function buildSinglesQuote(args: {
     ? items.filter((item) => item.sellerUserId === sellerUserId)
     : items
   const subtotal = singleSellerItems.reduce((sum, item) => sum + item.lineSubtotalUsd, 0)
+  const itemCount = singleSellerItems.reduce((sum, item) => sum + item.quantity, 0)
 
   return {
     sellerUserId,
     items: singleSellerItems,
-    pricing: calculateSinglesPricingBreakdown(subtotal),
+    pricing: calculateSinglesPricingBreakdown(subtotal, itemCount),
   } satisfies SinglesQuote
 }

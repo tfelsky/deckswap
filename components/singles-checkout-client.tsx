@@ -67,11 +67,18 @@ export function SinglesCheckoutClient({
         <h2 className="text-2xl font-semibold text-white">Cart review</h2>
         <div className="mt-5 grid gap-4">
           {quote.items.map((item) => (
-            <article key={item.listingId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article
+              key={item.listingId}
+              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+            >
               <div className="flex items-start gap-4">
                 <div className="h-20 w-14 overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.cardName} className="h-full w-full object-cover object-top" />
+                    <img
+                      src={item.imageUrl}
+                      alt={item.cardName}
+                      className="h-full w-full object-cover object-top"
+                    />
                   ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -81,7 +88,7 @@ export function SinglesCheckoutClient({
                     {item.collectorNumber ? ` #${item.collectorNumber}` : ''}
                   </div>
                   <div className="mt-2 text-xs text-zinc-500">
-                    {item.foil ? 'Foil' : 'Non-foil'} · Qty {item.quantity}
+                    {[item.foil ? 'Foil' : 'Non-foil', `Qty ${item.quantity}`].join(' · ')}
                   </div>
                 </div>
                 <div className="text-right">
@@ -115,8 +122,11 @@ export function SinglesCheckoutClient({
             <span>-{formatCurrencyAmount(quote.pricing.discountAmount, 'USD')}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Shipping</span>
+            <span>{quote.pricing.shippingLabel}</span>
             <span>{formatCurrencyAmount(quote.pricing.shippingAmount, 'USD')}</span>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-400">
+            {quote.pricing.shippingDescription}
           </div>
           <div className="flex items-center justify-between">
             <span>Tax</span>
@@ -132,8 +142,8 @@ export function SinglesCheckoutClient({
 
         <input type="hidden" name="cart_payload" value={JSON.stringify(cartItems)} />
         <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
-          Checkout revalidates every listing live on submit, recalculates the tier, and creates an
-          order snapshot so later price edits do not change this order.
+          Checkout revalidates every listing live on submit, recalculates discounts and Canada
+          shipping, and creates an order snapshot so later price edits do not change this order.
         </div>
         <div className="mt-4">
           <FormActionButton

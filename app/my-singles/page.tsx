@@ -13,6 +13,7 @@ import { backfillSinglesEnrichmentAction, publishAllStagedSinglesAction } from '
 export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE_OPTIONS = [50, 100, 150] as const
+const CARDS_PER_ROW_OPTIONS = [2, 3, 4, 5] as const
 
 type SingleRow = {
   id: number
@@ -105,9 +106,15 @@ function parsePageSize(value: string | string[] | undefined) {
   return PAGE_SIZE_OPTIONS.includes(parsed as (typeof PAGE_SIZE_OPTIONS)[number]) ? parsed : 50
 }
 
+function parseCardsPerRow(value: string | string[] | undefined) {
+  const parsed = Number.parseInt(parseStringParam(value, '5'), 10)
+  return CARDS_PER_ROW_OPTIONS.includes(parsed as (typeof CARDS_PER_ROW_OPTIONS)[number]) ? parsed : 5
+}
+
 function buildInventoryUrl(params: {
   page?: number
   pageSize: number
+  cardsPerRow: number
   queryText: string
   status: string
   finish: string
@@ -121,6 +128,10 @@ function buildInventoryUrl(params: {
 
   if (params.pageSize !== 50) {
     search.set('pageSize', String(params.pageSize))
+  }
+
+  if (params.cardsPerRow !== 5) {
+    search.set('cardsPerRow', String(params.cardsPerRow))
   }
 
   if (params.queryText) {
@@ -199,6 +210,7 @@ export default async function MySinglesPage({
   const params = (await searchParams) ?? {}
   const page = parsePageParam(params.page)
   const pageSize = parsePageSize(params.pageSize)
+  const cardsPerRow = parseCardsPerRow(params.cardsPerRow)
   const filters: InventoryFilters = {
     queryText: sanitizeSearchTerm(parseStringParam(params.q)),
     status: normalizeFilterValue(params.status, STATUS_FILTER_OPTIONS, 'all'),
@@ -208,11 +220,21 @@ export default async function MySinglesPage({
   const currentUrl = buildInventoryUrl({
     page,
     pageSize,
+    cardsPerRow,
     queryText: filters.queryText,
     status: filters.status,
     finish: filters.finish,
     warnings: filters.warnings,
   })
+
+  const cardsPerRowClass =
+    cardsPerRow === 2
+      ? 'grid-cols-1 md:grid-cols-2'
+      : cardsPerRow === 3
+        ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+        : cardsPerRow === 4
+          ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
+          : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-5'
 
   if (!user) {
     return (
@@ -319,6 +341,7 @@ export default async function MySinglesPage({
     return sum + unitValue * Number(row.quantity ?? 0)
   }, 0)
   const warningCount = summaryRows.filter((row) => row.import_warning).length
+  const stagedCount = summaryRows.filter((row) => row.inventory_status === 'staged').length
   const liveCount = summaryRows.filter((row) => row.inventory_status === 'buy_it_now_live').length
   const uniqueSources = new Set(
     summaryRows.map((row) => row.source_collection_name || row.source_collection_url || '')
@@ -403,12 +426,12 @@ export default async function MySinglesPage({
               <div className="mt-2 text-xs text-zinc-500">Snapshot value from imported pricing fields.</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Warnings / Live</div>
+              <div className="text-sm text-zinc-400">Staged / Published</div>
               <div className="mt-2 text-3xl font-semibold text-amber-200">
-                {warningCount} / {liveCount}
+                {stagedCount} / {liveCount}
               </div>
               <div className="mt-2 text-xs text-zinc-500">
-                {uniqueSources} source{uniqueSources === 1 ? '' : 's'} represented in the current filter.
+                {warningCount} warning{warningCount === 1 ? '' : 's'} across {uniqueSources} source{uniqueSources === 1 ? '' : 's'} in the current filter.
               </div>
             </div>
           </div>
@@ -511,6 +534,7 @@ export default async function MySinglesPage({
                   </option>
                 ))}
               </select>
+              <input type="hidden" name="cardsPerRow" value={String(cardsPerRow)} />
               <div className="flex gap-3">
                 <button
                   type="submit"
@@ -524,6 +548,47 @@ export default async function MySinglesPage({
                 >
                   Reset
                 </Link>
+              </div>
+            </div>
+          </form>
+        ) : null}
+
+        {!schemaMissing && rows.length > 0 ? (
+          <form method="get" className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-4">
+            <input type="hidden" name="q" value={filters.queryText} />
+            <input type="hidden" name="status" value={filters.status} />
+            <input type="hidden" name="finish" value={filters.finish} />
+            <input type="hidden" name="warnings" value={filters.warnings} />
+            <input type="hidden" name="pageSize" value={String(pageSize)} />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm font-medium text-white">Cards per row</div>
+                <div className="mt-1 text-sm text-zinc-400">
+                  Match the marketplace card view while keeping your current filters.
+                </div>
+              </div>
+              <div className="flex min-w-[16rem] items-center gap-3">
+                <span className="text-xs text-zinc-500">2</span>
+                <input
+                  type="range"
+                  name="cardsPerRow"
+                  min={2}
+                  max={5}
+                  step={1}
+                  defaultValue={cardsPerRow}
+                  className="h-2 w-full cursor-pointer accent-emerald-400"
+                  aria-label="Cards per row"
+                />
+                <span className="text-xs text-zinc-500">5</span>
+                <div className="min-w-14 rounded-2xl border border-white/10 bg-zinc-950 px-3 py-2 text-center text-sm font-medium text-white">
+                  {cardsPerRow}
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-2xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
+                >
+                  Update
+                </button>
               </div>
             </div>
           </form>
@@ -560,6 +625,7 @@ export default async function MySinglesPage({
                       ? buildInventoryUrl({
                           page: currentPage - 1,
                           pageSize,
+                          cardsPerRow,
                           queryText: filters.queryText,
                           status: filters.status,
                           finish: filters.finish,
@@ -584,6 +650,7 @@ export default async function MySinglesPage({
                       ? buildInventoryUrl({
                           page: currentPage + 1,
                           pageSize,
+                          cardsPerRow,
                           queryText: filters.queryText,
                           status: filters.status,
                           finish: filters.finish,
@@ -602,6 +669,7 @@ export default async function MySinglesPage({
               </div>
             </div>
 
+            <div className={`grid gap-6 ${cardsPerRowClass}`}>
             {rows.map((row) => {
               const unitValue = row.foil
                 ? Number(row.price_usd_foil ?? row.price_usd ?? 0)
@@ -611,23 +679,19 @@ export default async function MySinglesPage({
               return (
                 <article
                   key={row.id}
-                  className="grid gap-4 rounded-3xl border border-white/10 bg-zinc-900/80 p-4 lg:grid-cols-[5rem_minmax(0,1fr)_14rem]"
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 shadow-[0_20px_40px_rgba(0,0,0,0.18)]"
                 >
                   <div
-                    className={`overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 ${
-                      row.foil ? 'foil-card-shell ring-1 ring-amber-300/25' : ''
+                    className={`relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 ${
+                      row.foil ? 'foil-card-shell' : ''
                     }`}
                   >
                     {row.image_url ? (
-                      <img src={row.image_url} alt={row.card_name} className="h-28 w-full object-cover" />
+                      <img src={row.image_url} alt={row.card_name} className="h-full w-full object-cover object-top" />
                     ) : (
-                      <div className="flex h-28 items-center justify-center text-xs text-zinc-500">No image</div>
+                      <div className="flex h-full items-center justify-center text-sm text-zinc-500">No image</div>
                     )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-semibold text-white">{row.card_name}</h2>
+                    <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                       <span className={`rounded-full border px-3 py-1 text-xs ${getSingleInventoryStatusBadgeClass(row.inventory_status)}`}>
                         {getSingleInventoryStatusLabel(row.inventory_status)}
                       </span>
@@ -637,11 +701,29 @@ export default async function MySinglesPage({
                         </span>
                       ) : null}
                     </div>
+                    <div className="absolute right-4 top-4 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200 backdrop-blur">
+                      Qty {Number(row.quantity ?? 0)}
+                    </div>
+                  </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-300">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                        Qty {Number(row.quantity ?? 0)}
-                      </span>
+                  <div className="space-y-4 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-xl font-semibold text-white">{row.card_name}</h2>
+                        <p className="mt-1 truncate text-sm text-zinc-400">
+                          {row.set_name || 'Unknown printing'}
+                          {row.collector_number ? ` #${row.collector_number}` : ''}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right">
+                        <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Row value</div>
+                        <div className="text-lg font-semibold text-emerald-300">
+                          {formatCurrencyAmount(totalRowValue, 'USD')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                         {formatCondition(row.condition)}
                       </span>
@@ -657,11 +739,10 @@ export default async function MySinglesPage({
                     </div>
 
                     <div className="mt-3 text-sm text-zinc-400">
-                      {row.set_name || 'Unknown printing'}
                       {row.source_collection_name ? ` - Imported from ${row.source_collection_name}` : ''}
                     </div>
 
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-400">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-400">
                       {getSingleInventoryStatusDescription(row.inventory_status)}
                     </div>
 
@@ -670,14 +751,7 @@ export default async function MySinglesPage({
                         {row.import_warning}
                       </div>
                     ) : null}
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="text-[10px] uppercase tracking-wide text-zinc-500">Row value</div>
-                    <div className="mt-1 text-2xl font-semibold text-emerald-300">
-                      {formatCurrencyAmount(totalRowValue, 'USD')}
-                    </div>
-                    <div className="mt-1 text-xs text-zinc-500">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-zinc-400">
                       Unit {formatCurrencyAmount(unitValue, 'USD')}
                     </div>
 
@@ -697,20 +771,28 @@ export default async function MySinglesPage({
                       </div>
                     )}
 
-                    {row.source_collection_url ? (
-                      <a
-                        href={row.source_collection_url}
-                        target="_blank"
+                    <div className="flex flex-wrap gap-3">
+                      {row.source_collection_url ? (
+                        <a
+                          href={row.source_collection_url}
+                          target="_blank"
                         rel="noreferrer"
-                        className="mt-4 block text-sm text-emerald-300 hover:text-emerald-200"
-                      >
-                        Open source record
-                      </a>
-                    ) : null}
+                        className="text-sm text-emerald-300 hover:text-emerald-200"
+                        >
+                          Open source record
+                        </a>
+                      ) : null}
+                      {row.inventory_status === 'buy_it_now_live' ? (
+                        <Link href="/singles" className="text-sm text-emerald-300 hover:text-emerald-200">
+                          View in marketplace
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               )
             })}
+            </div>
           </div>
         )}
       </section>

@@ -10,6 +10,7 @@ import { buildSinglesQuote, formatSingleCondition, type PublicSingleListing } fr
 import { type SinglesCartItem } from '@/lib/singles/pricing'
 
 const SINGLES_CART_STORAGE_KEY = 'deckswap_singles_cart_v1'
+const SINGLES_GRID_COLUMNS_STORAGE_KEY = 'deckswap_singles_grid_columns_v1'
 
 type SinglesMarketplaceProps = {
   listings: PublicSingleListing[]
@@ -17,8 +18,25 @@ type SinglesMarketplaceProps = {
 }
 
 type FinishFilter = 'all' | 'foil' | 'nonfoil'
-type SortOption = 'featured' | 'price_desc' | 'price_asc' | 'name_asc'
+type SortOption = 'price_desc' | 'price_asc' | 'name_asc' | 'name_desc'
 type PageSizeOption = 6 | 50 | 100 | 150
+type CardsPerRowOption = 2 | 3 | 4 | 5
+type ColorFilter =
+  | 'all'
+  | 'w'
+  | 'u'
+  | 'b'
+  | 'r'
+  | 'g'
+  | 'colorless'
+  | 'multicolor'
+
+const CARDS_PER_ROW_CLASSES: Record<CardsPerRowOption, string> = {
+  2: 'grid-cols-1 md:grid-cols-2',
+  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4',
+  5: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-5',
+}
 
 function readStoredCart() {
   try {
@@ -26,6 +44,15 @@ function readStoredCart() {
     return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
+  }
+}
+
+function readStoredGridColumns() {
+  try {
+    const parsed = Number(window.localStorage.getItem(SINGLES_GRID_COLUMNS_STORAGE_KEY) ?? '5')
+    return parsed >= 2 && parsed <= 5 ? (parsed as CardsPerRowOption) : 5
+  } catch {
+    return 5
   }
 }
 
@@ -61,18 +88,25 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
   const [search, setSearch] = useState('')
   const [finishFilter, setFinishFilter] = useState<FinishFilter>('all')
   const [setFilter, setSetFilter] = useState('all')
-  const [sortOption, setSortOption] = useState<SortOption>('featured')
+  const [colorFilter, setColorFilter] = useState<ColorFilter>('all')
+  const [sortOption, setSortOption] = useState<SortOption>('price_desc')
   const [pageSize, setPageSize] = useState<PageSizeOption>(6)
+  const [cardsPerRow, setCardsPerRow] = useState<CardsPerRowOption>(5)
   const [page, setPage] = useState(1)
   const deferredSearch = useDeferredValue(search)
 
   useEffect(() => {
     setCartItems(normalizeCart(readStoredCart()))
+    setCardsPerRow(readStoredGridColumns())
   }, [])
 
   useEffect(() => {
     window.localStorage.setItem(SINGLES_CART_STORAGE_KEY, JSON.stringify(cartItems))
   }, [cartItems])
+
+  useEffect(() => {
+    window.localStorage.setItem(SINGLES_GRID_COLUMNS_STORAGE_KEY, String(cardsPerRow))
+  }, [cardsPerRow])
 
   const listingMap = new Map(listings.map((listing) => [listing.id, listing]))
   const setOptions = Array.from(
@@ -100,6 +134,20 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
       if (finishFilter === 'foil' && !listing.foil) return false
       if (finishFilter === 'nonfoil' && listing.foil) return false
       if (setFilter !== 'all' && listing.set_name !== setFilter) return false
+      if (colorFilter !== 'all') {
+        const colorIdentity = Array.isArray(listing.color_identity)
+          ? listing.color_identity.map((color) => String(color).toLowerCase())
+          : []
+
+        if (colorFilter === 'colorless' && colorIdentity.length > 0) return false
+        if (colorFilter === 'multicolor' && colorIdentity.length < 2) return false
+        if (
+          ['w', 'u', 'b', 'r', 'g'].includes(colorFilter) &&
+          !colorIdentity.includes(colorFilter)
+        ) {
+          return false
+        }
+      }
 
       return true
     })
@@ -116,12 +164,12 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
         return left.card_name.localeCompare(right.card_name)
       }
 
-      return left.id - right.id
+      return right.card_name.localeCompare(left.card_name)
     })
 
   useEffect(() => {
     setPage(1)
-  }, [deferredSearch, finishFilter, setFilter, sortOption, pageSize])
+  }, [deferredSearch, finishFilter, setFilter, colorFilter, sortOption, pageSize])
 
   const totalPages = Math.max(1, Math.ceil(filteredListings.length / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -166,41 +214,42 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
 
   return (
     <>
-      <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-                Singles Marketplace
+      <section className="border-b border-white/10 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900/95">
+        <div className="mx-auto max-w-7xl px-6 py-6">
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                    Singles Marketplace
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-zinc-300">
+                    {listings.length} live listings
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                      Browse cards, price fast, checkout cleanly.
+                    </h1>
+                    <p className="mt-1 text-sm text-zinc-400 sm:text-base">
+                      Canada shipping: $5 PWE up to 10 cards at $30 or less, then automatic $15
+                      tracked mailer.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                      20% off at $100
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                      25% off at $200
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Fast cart. Native checkout. Volume savings built in.
-              </h1>
-              <p className="mt-4 text-base text-zinc-400 sm:text-lg">
-                Browse live singles listings, stack a cart locally, and unlock automatic savings at
-                $100 and $200.
-              </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">Live listings</div>
-                <div className="mt-1 text-2xl font-semibold text-white">{listings.length}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">Tier one</div>
-                <div className="mt-1 text-2xl font-semibold text-amber-200">20%</div>
-                <div className="text-xs text-zinc-500">at $100 subtotal</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-zinc-500">Tier two</div>
-                <div className="mt-1 text-2xl font-semibold text-emerald-300">25%</div>
-                <div className="text-xs text-zinc-500">at $200 subtotal</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_10rem]">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_12rem_10rem]">
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -233,10 +282,24 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               onChange={(event) => setSortOption(event.target.value as SortOption)}
               className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
             >
-              <option value="featured">Featured</option>
               <option value="price_desc">Price: high to low</option>
               <option value="price_asc">Price: low to high</option>
               <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+            </select>
+            <select
+              value={colorFilter}
+              onChange={(event) => setColorFilter(event.target.value as ColorFilter)}
+              className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+            >
+              <option value="all">All colors</option>
+              <option value="w">White</option>
+              <option value="u">Blue</option>
+              <option value="b">Black</option>
+              <option value="r">Red</option>
+              <option value="g">Green</option>
+              <option value="multicolor">Multicolor</option>
+              <option value="colorless">Colorless</option>
             </select>
             <select
               value={pageSize}
@@ -248,6 +311,33 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               <option value={100}>100 / page</option>
               <option value={150}>150 / page</option>
             </select>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm font-medium text-white">Cards per row</div>
+                <div className="mt-1 text-sm text-zinc-400">
+                  Increase the grid density without changing pagination.
+                </div>
+              </div>
+              <div className="flex min-w-[16rem] items-center gap-3">
+                <span className="text-xs text-zinc-500">2</span>
+                <input
+                  type="range"
+                  min={2}
+                  max={5}
+                  step={1}
+                  value={cardsPerRow}
+                  onChange={(event) => setCardsPerRow(Number(event.target.value) as CardsPerRowOption)}
+                  className="h-2 w-full cursor-pointer accent-emerald-400"
+                  aria-label="Cards per row"
+                />
+                <span className="text-xs text-zinc-500">5</span>
+                <div className="min-w-14 rounded-2xl border border-white/10 bg-zinc-950 px-3 py-2 text-center text-sm font-medium text-white">
+                  {cardsPerRow}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -291,7 +381,7 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className={`grid gap-6 ${CARDS_PER_ROW_CLASSES[cardsPerRow]}`}>
               {visibleListings.map((listing) => {
                 const quantityInCart = getListingQuantity(listing.id)
                 const availableQuantity = Number(listing.marketplace_quantity_available ?? 0)
@@ -495,8 +585,11 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               <span>-{formatCurrencyAmount(quote.pricing.discountAmount, 'USD')}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Shipping</span>
+              <span>{quote.pricing.shippingLabel}</span>
               <span>{formatCurrencyAmount(quote.pricing.shippingAmount, 'USD')}</span>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-400">
+              {quote.pricing.shippingDescription}
             </div>
             <div className="flex items-center justify-between">
               <span>Tax</span>
@@ -626,6 +719,9 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
                 <div className="flex items-center justify-between text-base font-semibold text-white">
                   <span>Grand total</span>
                   <span>{formatCurrencyAmount(quote.pricing.grandTotal, 'USD')}</span>
+                </div>
+                <div className="text-xs text-zinc-500">
+                  {quote.pricing.shippingLabel}: {quote.pricing.shippingDescription}
                 </div>
               </div>
               <div className="mt-4">
