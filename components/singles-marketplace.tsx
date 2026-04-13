@@ -18,7 +18,7 @@ type SinglesMarketplaceProps = {
 
 type FinishFilter = 'all' | 'foil' | 'nonfoil'
 type SortOption = 'featured' | 'price_desc' | 'price_asc' | 'name_asc'
-type PageSizeOption = 50 | 100 | 150
+type PageSizeOption = 6 | 50 | 100 | 150
 
 function readStoredCart() {
   try {
@@ -62,7 +62,7 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
   const [finishFilter, setFinishFilter] = useState<FinishFilter>('all')
   const [setFilter, setSetFilter] = useState('all')
   const [sortOption, setSortOption] = useState<SortOption>('featured')
-  const [pageSize, setPageSize] = useState<PageSizeOption>(50)
+  const [pageSize, setPageSize] = useState<PageSizeOption>(6)
   const [page, setPage] = useState(1)
   const deferredSearch = useDeferredValue(search)
 
@@ -243,6 +243,7 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               onChange={(event) => setPageSize(Number(event.target.value) as PageSizeOption)}
               className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
             >
+              <option value={6}>6 / page</option>
               <option value={50}>50 / page</option>
               <option value={100}>100 / page</option>
               <option value={150}>150 / page</option>
@@ -290,7 +291,7 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {visibleListings.map((listing) => {
                 const quantityInCart = getListingQuantity(listing.id)
                 const availableQuantity = Number(listing.marketplace_quantity_available ?? 0)
@@ -306,7 +307,11 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
                       onClick={() => setSelectedListingId(listing.id)}
                       className="block w-full text-left"
                     >
-                      <div className="relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+                      <div
+                        className={`relative aspect-[4/5] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 ${
+                          listing.foil ? 'foil-card-shell' : ''
+                        }`}
+                      >
                         {listing.image_url ? (
                           <img
                             src={listing.image_url}
@@ -642,7 +647,11 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
         <DialogContent className="max-w-4xl border-white/10 bg-zinc-950 p-0 text-white sm:max-w-4xl">
           {selectedListing ? (
             <div className="grid gap-0 md:grid-cols-[22rem_minmax(0,1fr)]">
-              <div className="border-b border-white/10 bg-zinc-900 md:border-b-0 md:border-r">
+              <div
+                className={`border-b border-white/10 bg-zinc-900 md:border-b-0 md:border-r ${
+                  selectedListing.foil ? 'foil-card-shell' : ''
+                }`}
+              >
                 {selectedListing.image_url ? (
                   <img src={selectedListing.image_url} alt={selectedListing.card_name} className="h-full w-full object-cover object-top" />
                 ) : (

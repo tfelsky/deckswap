@@ -205,4 +205,85 @@
     );
     @apply border border-border/80 shadow-[0_16px_50px_rgba(0,0,0,0.18)];
   }
+
+  .foil-card-shell {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .foil-card-shell img {
+    filter: saturate(1.12) contrast(1.06) brightness(1.04);
+  }
+
+  .foil-card-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        115deg,
+        transparent 0%,
+        color-mix(in oklab, #7dd3fc 34%, transparent) 16%,
+        color-mix(in oklab, #f9a8d4 42%, transparent) 34%,
+        color-mix(in oklab, #fde68a 40%, transparent) 52%,
+        color-mix(in oklab, #86efac 36%, transparent) 70%,
+        transparent 100%
+      ),
+      radial-gradient(circle at 18% 22%, color-mix(in oklab, white 55%, transparent) 0 0.22rem, transparent 0.24rem),
+      radial-gradient(circle at 78% 28%, color-mix(in oklab, #fde68a 60%, transparent) 0 0.18rem, transparent 0.2rem),
+      radial-gradient(circle at 32% 78%, color-mix(in oklab, #c4b5fd 55%, transparent) 0 0.16rem, transparent 0.18rem),
+      radial-gradient(circle at 84% 72%, color-mix(in oklab, #67e8f9 50%, transparent) 0 0.16rem, transparent 0.18rem);
+    mix-blend-mode: screen;
+    opacity: 0.5;
+    animation: foil-sheen 5.8s linear infinite;
+  }
+
+  .foil-card-shell::after {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 8%, rgba(255, 255, 255, 0) 10%) 12% 18% / 20% 20%,
+      radial-gradient(circle, rgba(254, 240, 138, 0.85) 0 7%, rgba(254, 240, 138, 0) 10%) 76% 26% / 18% 18%,
+      radial-gradient(circle, rgba(196, 181, 253, 0.82) 0 7%, rgba(196, 181, 253, 0) 10%) 28% 76% / 16% 16%,
+      radial-gradient(circle, rgba(103, 232, 249, 0.78) 0 6%, rgba(103, 232, 249, 0) 9%) 82% 70% / 14% 14%;
+    background-repeat: no-repeat;
+    opacity: 0.72;
+    animation: foil-sparkle 3.4s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes foil-sheen {
+  0% {
+    transform: translateX(-28%) translateY(-6%) rotate(0deg);
+    opacity: 0.38;
+  }
+  50% {
+    transform: translateX(14%) translateY(3%) rotate(5deg);
+    opacity: 0.68;
+  }
+  100% {
+    transform: translateX(30%) translateY(-4%) rotate(-2deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes foil-sparkle {
+  0% {
+    transform: translate3d(-1%, 0, 0) scale(0.96);
+    opacity: 0.42;
+  }
+  50% {
+    transform: translate3d(1%, -1%, 0) scale(1.02);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(0.5%, 1%, 0) scale(1.06);
+    opacity: 0.56;
+  }
 }

@@ -613,7 +613,11 @@ export default async function MySinglesPage({
                   key={row.id}
                   className="grid gap-4 rounded-3xl border border-white/10 bg-zinc-900/80 p-4 lg:grid-cols-[5rem_minmax(0,1fr)_14rem]"
                 >
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
+                  <div
+                    className={`overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 ${
+                      row.foil ? 'foil-card-shell ring-1 ring-amber-300/25' : ''
+                    }`}
+                  >
                     {row.image_url ? (
                       <img src={row.image_url} alt={row.card_name} className="h-28 w-full object-cover" />
                     ) : (
