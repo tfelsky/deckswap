@@ -1,6 +1,7 @@
 import AppHeader from '@/components/app-header'
 import FormActionButton from '@/components/form-action-button'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
 import {
   getSingleInventoryStatusBadgeClass,
@@ -207,6 +208,7 @@ export default async function MySinglesPage({
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  const unreadNotifications = user ? await getUnreadNotificationsCount(supabase, user.id) : 0
   const params = (await searchParams) ?? {}
   const page = parsePageParam(params.page)
   const pageSize = parsePageSize(params.pageSize)
@@ -238,7 +240,8 @@ export default async function MySinglesPage({
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-white">
+      <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+        <AppHeader current="my-singles" isSignedIn={false} />
         <section className="mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-8">
             <h1 className="text-3xl font-semibold">My Singles</h1>
@@ -357,7 +360,7 @@ export default async function MySinglesPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
-      <AppHeader current="my-singles" isSignedIn />
+      <AppHeader current="my-singles" isSignedIn unreadNotifications={unreadNotifications} />
 
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-7xl px-6 py-12">

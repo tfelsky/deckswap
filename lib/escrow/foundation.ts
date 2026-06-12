@@ -54,6 +54,10 @@ export type TradeParticipantRow = {
   amount_due_usd: number
   payment_status?: PaymentStatus | null
   payment_marked_at?: string | null
+  payment_method?: string | null
+  payment_intent_id?: string | null
+  payment_intent_status?: string | null
+  payment_authorization_amount_usd?: number | null
   shipment_status?: ShipmentStatus | null
   tracking_code?: string | null
   shipped_at?: string | null

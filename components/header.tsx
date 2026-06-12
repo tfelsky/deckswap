@@ -8,23 +8,20 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/mythiverse-shield.png"
             alt="Mythiverse Exchange shield logo"
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
           />
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-            <span className="text-sm font-bold text-primary-foreground">ME</span>
-          </div>
           <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
         </Link>
 
         <nav className="hidden items-center gap-5 lg:flex xl:gap-6">
           <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Marketplace
+            Decks
           </Link>
           <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Singles
@@ -33,7 +30,7 @@ export function Header() {
             Deck Swap
           </Link>
           <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Collection
+            My Decks
           </Link>
           <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Learn
@@ -53,7 +50,7 @@ export function Header() {
           </Button>
         </div>
 
-        <details className="group md:hidden">
+        <details className="group lg:hidden">
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden" aria-label="Toggle menu">
             <span className="group-open:hidden">
               <Menu className="h-6 w-6 text-foreground" />
@@ -65,7 +62,7 @@ export function Header() {
           <div className="absolute left-0 right-0 top-16 border-t border-border/80 bg-card/95 px-4 py-4 backdrop-blur-xl">
             <nav className="flex flex-col gap-4">
               <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Marketplace
+                Decks
               </Link>
               <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Singles
@@ -74,7 +71,7 @@ export function Header() {
                 Deck Swap
               </Link>
               <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Collection
+                My Decks
               </Link>
               <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Learn

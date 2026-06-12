@@ -19,6 +19,11 @@ import {
   verificationStatusTone,
 } from '@/lib/profile-verifications'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClientOrNull } from '@/lib/supabase/admin'
+import {
+  GOVERNMENT_IDS_BUCKET,
+  isGovernmentIdStoragePath,
+} from '@/lib/profiles/government-id'
 
 export const dynamic = 'force-dynamic'
 
@@ -151,6 +156,34 @@ export default async function AdminVerificationsPage() {
     (((summariesResult.data ?? []) as ReputationSummary[]) ?? []).map((row) => [row.user_id, row])
   )
 
+  const governmentIdLinks = new Map<string, string>()
+  const adminClient = createAdminClientOrNull()
+
+  if (adminClient) {
+    const governmentIdUserIds = [
+      ...new Set(
+        verifications
+          .filter((item) => item.verification_type === 'government_id')
+          .map((item) => item.user_id)
+      ),
+    ]
+
+    await Promise.all(
+      governmentIdUserIds.map(async (userId) => {
+        const storageKey = privateProfiles.get(userId)?.government_id_storage_key
+        if (!isGovernmentIdStoragePath(storageKey)) return
+
+        const { data } = await adminClient.storage
+          .from(GOVERNMENT_IDS_BUCKET)
+          .createSignedUrl(String(storageKey), 60 * 10)
+
+        if (data?.signedUrl) {
+          governmentIdLinks.set(userId, data.signedUrl)
+        }
+      })
+    )
+  }
+
   const queuedCount = verifications.filter((item) => isVerificationInQueue(item.status)).length
   const verifiedCount = verifications.filter((item) => item.status === 'verified').length
   const rejectedCount = verifications.filter((item) => item.status === 'rejected').length
@@ -261,6 +294,23 @@ export default async function AdminVerificationsPage() {
                           <div className="mt-2 text-sm font-medium text-white">{privateProfile?.support_email || 'Not set'}</div>
                         </div>
                       </div>
+
+                      {verification.verification_type === 'government_id' && (
+                        governmentIdLinks.has(verification.user_id) ? (
+                          <a
+                            href={governmentIdLinks.get(verification.user_id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-medium text-sky-100 hover:bg-sky-400/20"
+                          >
+                            View Government ID (secure link, 10 min)
+                          </a>
+                        ) : (
+                          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
+                            No ID document is on file for this user yet.
+                          </div>
+                        )
+                      )}
 
                       {links.length > 0 && (
                         <div className="flex flex-wrap gap-2">

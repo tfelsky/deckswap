@@ -266,10 +266,6 @@ export default async function AdminDashboardPage() {
   )
   const estimatedAverageTicket =
     tradeReadyCount > 0 ? tradeReadyValue / tradeReadyCount : 0
-  const trackedSales = 0
-  const completedTrades = 0
-  const openEscrows = 0
-  const escrowBalance = 0
   const guestDraftsSchemaReady = !isGuestImportSchemaMissing(guestDraftsResult.error?.message)
   const guestDraftsCount = guestDraftsSchemaReady ? Number(guestDraftsResult.count ?? 0) : null
   const deckPriceHistoryReady = !isDeckPriceHistorySchemaMissing(priceHistoryResult.error?.message)
@@ -282,6 +278,29 @@ export default async function AdminDashboardPage() {
     !isEscrowSchemaMissing(tradeParticipantsResult.error?.message)
   const auctionSchemaReady = !isAuctionSchemaMissing(auctionListingsResult.error?.message)
   const profileSchemaReady = !isProfileSchemaMissing(profilesResult.error?.message)
+
+  const escrowTransactions = escrowSchemaReady
+    ? ((tradeTransactionsResult.data ?? []) as TradeTransactionMetricsRow[])
+    : []
+  const completedTrades = escrowTransactions.filter(
+    (transaction) => transaction.status === 'completed'
+  ).length
+  const openEscrowTransactions = escrowTransactions.filter(
+    (transaction) =>
+      transaction.status !== 'completed' &&
+      transaction.status !== 'cancelled' &&
+      transaction.status !== 'draft'
+  )
+  const openEscrows = openEscrowTransactions.length
+  const escrowBalance = openEscrowTransactions.reduce(
+    (sum, transaction) => sum + Number(transaction.platform_gross_usd ?? 0),
+    0
+  )
+  const trackedSales = auctionSchemaReady
+    ? ((auctionListingsResult.data ?? []) as AuctionListingMetricsRow[]).filter(
+        (auction) => auction.status === 'payout_released'
+      ).length
+    : 0
 
   const bracketCounts = new Map<number, number>()
 
@@ -683,8 +702,8 @@ export default async function AdminDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
-                Sales, trade, and escrow counters are reserved now and switch to live values when
-                the order ledger ships.
+                Sales, trade, and escrow counters now read live auction and escrow records.
+                Escrow balance reflects platform gross on open transactions, not held funds.
               </div>
             </div>
 
@@ -692,24 +711,24 @@ export default async function AdminDashboardPage() {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm text-zinc-400">Tracked Sales</div>
                 <div className="mt-2 text-3xl font-semibold">{trackedSales}</div>
-                <div className="mt-1 text-sm text-zinc-500">Pending sales model</div>
+                <div className="mt-1 text-sm text-zinc-500">Auctions with payout released</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm text-zinc-400">Completed Trades</div>
                 <div className="mt-2 text-3xl font-semibold">{completedTrades}</div>
-                <div className="mt-1 text-sm text-zinc-500">Pending trade ledger</div>
+                <div className="mt-1 text-sm text-zinc-500">Escrow transactions completed</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm text-zinc-400">Open Escrows</div>
                 <div className="mt-2 text-3xl font-semibold text-emerald-300">{openEscrows}</div>
-                <div className="mt-1 text-sm text-zinc-500">Pending escrow ledger</div>
+                <div className="mt-1 text-sm text-zinc-500">Active escrow transactions</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm text-zinc-400">Escrow Balance</div>
                 <div className="mt-2 text-3xl font-semibold text-emerald-300">
                   {formatUsd(escrowBalance)}
                 </div>
-                <div className="mt-1 text-sm text-zinc-500">Funds currently held</div>
+                <div className="mt-1 text-sm text-zinc-500">Platform gross on open escrows</div>
               </div>
             </div>
 

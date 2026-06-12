@@ -12,4 +12,5 @@ export type ImportedDeckCard = {
   keywords?: string[]
   partnerWithName?: string | null
   colorIdentity?: string[]
+  formatLegalities?: Record<string, string> | null
 }

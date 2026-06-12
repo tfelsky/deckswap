@@ -30,6 +30,8 @@ import { calculateSuggestedBuyNowPrice } from '@/lib/decks/trade-value'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
+import { enrichDeckWithScryfall } from '@/app/import-deck/enrich'
 import { refreshCommanderFitsAction } from '../actions'
 import ConfirmFormActionButton from '@/components/confirm-form-action-button'
 import { DeckMarketingGuidance } from '@/components/deck-marketing-guidance'
@@ -249,6 +251,7 @@ export default async function ManageDeckPage({
       ? resolvedSearchParams.commanderFitsError
       : ''
   const saveStatus = String(resolvedSearchParams?.saved ?? '').trim()
+  const repairStatus = String(resolvedSearchParams?.repair ?? '').trim()
   const holidayStatus = String(resolvedSearchParams?.holiday ?? '').trim()
   const deckFormat = normalizeDeckFormat(deck.format)
   const isCommanderDeck = formatSupportsCommanderRules(deckFormat)
@@ -453,6 +456,43 @@ export default async function ManageDeckPage({
       })
       .eq('id', deckId)
       .eq('user_id', userId)
+  }
+
+  async function repairDeck() {
+    'use server'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/sign-in')
+    }
+
+    const { data: ownedDeck } = await supabase
+      .from('decks')
+      .select('id')
+      .eq('id', deckId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!ownedDeck) {
+      redirect('/my-decks')
+    }
+
+    try {
+      await enrichDeckWithScryfall(deckId, 'refresh')
+    } catch (error) {
+      if (isRedirectError(error)) {
+        throw error
+      }
+
+      console.error('Deck repair failed:', error)
+      redirect(`/my-decks/${deckId}?repair=failed`)
+    }
+
+    redirect(`/my-decks/${deckId}?repair=done`)
   }
 
   async function updateOverview(formData: FormData) {
@@ -845,7 +885,7 @@ export default async function ManageDeckPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-40 text-white">
+    <main className="min-h-screen bg-zinc-950 px-8 pb-8 pt-32 text-white">
       <AppHeader
         current="my-decks"
         isSignedIn
@@ -930,6 +970,18 @@ export default async function ManageDeckPage({
           {resolvedSearchParams.enrich === 'failed' && (
             <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
               Import completed, but card enrichment did not fully finish. You can still review and fix the saved deck here.
+            </div>
+          )}
+
+          {repairStatus === 'done' && (
+            <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Deck repaired. Card data, pricing, commander structure, color identity, and validation were refreshed from Scryfall.
+            </div>
+          )}
+
+          {repairStatus === 'failed' && (
+            <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Deck repair could not finish. Scryfall may be busy — wait a moment and try again, or check the card rows manually.
             </div>
           )}
 
@@ -1059,6 +1111,25 @@ export default async function ManageDeckPage({
                   className="rounded-xl bg-sky-300 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   Refresh Catalog Fits
+                </FormActionButton>
+              </div>
+            </div>
+          </form>
+
+          <form action={repairDeck} className="mt-4">
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-white">Repair &amp; Re-enrich Deck</div>
+                  <p className="mt-2 text-sm text-emerald-100/80">
+                    Re-pull card data from Scryfall, refresh pricing and images, fix duplicate commander rows, and recalculate color identity and validation. Use this when an import looks broken or prices feel stale.
+                  </p>
+                </div>
+                <FormActionButton
+                  pendingLabel="Repairing deck..."
+                  className="rounded-xl bg-emerald-300 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Repair Deck
                 </FormActionButton>
               </div>
             </div>

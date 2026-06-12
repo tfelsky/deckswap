@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import AppHeader from '@/components/app-header'
 import FormActionButton from '@/components/form-action-button'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { sendUserTransactionalEmailById } from '@/lib/email-events'
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
+import { refreshAvgTradeReplyHours } from '@/lib/trust-telemetry'
 import {
   buildTradeDraftRows,
   isEscrowSchemaMissing,
@@ -458,6 +460,8 @@ export default async function TradeOfferDetailPage({
       )
     }
 
+    await refreshAvgTradeReplyHours(supabase, user.id)
+
     await createNotification(supabase, {
       userId: currentOffer.offered_by_user_id,
       actorUserId: user.id,
@@ -538,6 +542,8 @@ export default async function TradeOfferDetailPage({
       .eq('id', offerId)
       .eq('requested_user_id', user.id)
       .eq('status', 'pending')
+
+    await refreshAvgTradeReplyHours(supabase, user.id)
 
     await createNotification(supabase, {
       userId: offer.offered_by_user_id,
@@ -710,6 +716,8 @@ export default async function TradeOfferDetailPage({
       })
       .eq('id', currentOffer.id)
 
+    await refreshAvgTradeReplyHours(supabase, user.id)
+
     await createNotification(supabase, {
       userId: requestedUserIdForCounter,
       actorUserId: user.id,
@@ -758,7 +766,8 @@ export default async function TradeOfferDetailPage({
     typeof resolvedSearchParams.code === 'string' ? resolvedSearchParams.code : null
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="trade-offers" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="flex flex-wrap gap-3">

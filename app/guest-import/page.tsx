@@ -5,7 +5,7 @@ import {
   fetchGuestImportDraftRemote,
   readGuestImportDraft,
   saveGuestImportDraft,
-  syncGuestImportDraftRemote,
+  syncGuestImportDraftRemoteWithRetry,
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import Link from 'next/link'
@@ -21,6 +21,9 @@ export default function GuestImportPage() {
   const [draftToken, setDraftToken] = useState('')
   const [draftTokenFromUrl, setDraftTokenFromUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'local_only'>(
+    'idle'
+  )
 
   useEffect(() => {
     const tokenFromUrl = new URLSearchParams(window.location.search).get('guestDraft')?.trim() ?? ''
@@ -85,7 +88,10 @@ export default function GuestImportPage() {
     saveGuestImportDraft(nextDraft)
 
     const timeout = window.setTimeout(() => {
-      syncGuestImportDraftRemote(nextDraft).catch(() => {})
+      setSyncStatus('syncing')
+      syncGuestImportDraftRemoteWithRetry(nextDraft).then((result) => {
+        setSyncStatus(result.status === 'synced' ? 'synced' : 'local_only')
+      })
     }, 500)
 
     return () => {
@@ -134,7 +140,7 @@ export default function GuestImportPage() {
     }
 
     saveGuestImportDraft(draft)
-    syncGuestImportDraftRemote(draft).catch(() => {})
+    syncGuestImportDraftRemoteWithRetry(draft).catch(() => {})
     router.push(`/guest-preview?guestDraft=${encodeURIComponent(draft.draftToken ?? '')}`)
   }
 
@@ -249,6 +255,24 @@ Mainboard
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400/40"
               />
             </div>
+
+            {syncStatus !== 'idle' && (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  syncStatus === 'synced'
+                    ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                    : syncStatus === 'local_only'
+                    ? 'border-amber-400/20 bg-amber-400/10 text-amber-100'
+                    : 'border-white/10 bg-white/5 text-zinc-400'
+                }`}
+              >
+                {syncStatus === 'synced'
+                  ? 'Draft saved online. You can resume it from another browser with your draft link.'
+                  : syncStatus === 'local_only'
+                  ? 'Draft saved in this browser only. Online backup is unavailable right now; we will retry as you keep typing.'
+                  : 'Saving draft online…'}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">

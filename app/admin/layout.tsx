@@ -62,6 +62,12 @@ export default async function AdminLayout({
                 Maintenance
               </Link>
               <Link
+                href="/admin/import-events"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Import Events
+              </Link>
+              <Link
                 href="/admin/verifications"
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
               >
@@ -96,6 +102,12 @@ export default async function AdminLayout({
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
               >
                 Support Queue
+              </Link>
+              <Link
+                href="/admin/holiday-giveback"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Holiday Giveback
               </Link>
               <Link
                 href="/admin/paper-power-9"

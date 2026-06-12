@@ -50,6 +50,7 @@ type DerivedStateCardRow = DeckCardRow & {
   keywords: string[] | null
   partner_with_name: string | null
   color_identity: string[] | null
+  format_legalities?: Record<string, string> | null
 }
 
 type ScryfallCard = {
@@ -373,7 +374,43 @@ function toImportedDeckCard(card: DerivedStateCardRow): ImportedDeckCard {
     keywords: card.keywords ?? undefined,
     partnerWithName: card.partner_with_name ?? undefined,
     colorIdentity: card.color_identity ?? undefined,
+    formatLegalities: card.format_legalities ?? undefined,
   }
+}
+
+// Selects deck_cards including format_legalities, retrying without it when the
+// migration has not been applied yet (selects hard-fail on unknown columns,
+// and enrichment must keep working pre-migration).
+async function selectDerivedStateCards(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  deckId: number,
+  baseColumns: string
+): Promise<DerivedStateCardRow[]> {
+  const { data, error } = await supabase
+    .from('deck_cards')
+    .select(`${baseColumns}, format_legalities`)
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+
+  if (!error) {
+    return (data ?? []) as unknown as DerivedStateCardRow[]
+  }
+
+  if (!/format_legalities/i.test(error.message ?? '')) {
+    throw new Error(error.message)
+  }
+
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('deck_cards')
+    .select(baseColumns)
+    .eq('deck_id', deckId)
+    .order('sort_order', { ascending: true })
+
+  if (fallbackError) {
+    throw new Error(fallbackError.message)
+  }
+
+  return (fallbackData ?? []) as unknown as DerivedStateCardRow[]
 }
 
 function hasSingletonCommanderShape(cards: DerivedStateCardRow[]) {
@@ -416,19 +453,11 @@ async function inferCommanderDeckState(deckId: number) {
     throw new Error(deckError?.message ?? 'Failed to load deck for commander inference.')
   }
 
-  const { data: cardsData, error: cardsError } = await supabase
-    .from('deck_cards')
-    .select(
-      'id, section, quantity, card_name, set_code, collector_number, sort_order, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
-    )
-    .eq('deck_id', deckId)
-    .order('sort_order', { ascending: true })
-
-  if (cardsError) {
-    throw new Error(cardsError.message)
-  }
-
-  const cards = (cardsData ?? []) as DerivedStateCardRow[]
+  const cards = await selectDerivedStateCards(
+    supabase,
+    deckId,
+    'id, section, quantity, card_name, set_code, collector_number, sort_order, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+  )
   const explicitCommanders = cards.filter((card) => card.section === 'commander')
   const currentFormat = normalizeDeckFormat(deckData.format)
 
@@ -548,19 +577,11 @@ export async function syncDeckDerivedState(deckId: number) {
     throw new Error(deckError?.message ?? 'Failed to load deck state.')
   }
 
-  const { data: cardsData, error: cardsError } = await supabase
-    .from('deck_cards')
-    .select(
-      'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
-    )
-    .eq('deck_id', deckId)
-    .order('sort_order', { ascending: true })
-
-  if (cardsError) {
-    throw new Error(cardsError.message)
-  }
-
-  let cards = (cardsData ?? []) as DerivedStateCardRow[]
+  let cards = await selectDerivedStateCards(
+    supabase,
+    deckId,
+    'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+  )
 
   if (normalizeDeckFormat(deckData.format) === 'commander') {
     const overlapFixes = planCommanderOverlapRowFixes(cards)
@@ -588,19 +609,11 @@ export async function syncDeckDerivedState(deckId: number) {
     }
 
     if (overlapFixes.hasFixes) {
-      const { data: refreshedCardsData, error: refreshedCardsError } = await supabase
-        .from('deck_cards')
-        .select(
-          'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
-        )
-        .eq('deck_id', deckId)
-        .order('sort_order', { ascending: true })
-
-      if (refreshedCardsError) {
-        throw new Error(refreshedCardsError.message)
-      }
-
-      cards = (refreshedCardsData ?? []) as DerivedStateCardRow[]
+      cards = await selectDerivedStateCards(
+        supabase,
+        deckId,
+        'id, section, quantity, card_name, set_code, set_name, collector_number, foil, image_url, is_legendary, is_background, can_be_commander, keywords, partner_with_name, color_identity'
+      )
     }
   }
 

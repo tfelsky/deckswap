@@ -10,10 +10,46 @@ import {
   type TradeParticipantRow,
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
+import {
+  createPlaceholderPaymentIntentId,
+  normalizePaymentMethod,
+} from '@/lib/escrow/payment-intents'
 import { createClient } from '@/lib/supabase/server'
 
 function sideLabel(side: 'a' | 'b') {
   return side === 'a' ? 'Trader A' : 'Trader B'
+}
+
+// Updates a participant row, retrying without columns the schema does not
+// have yet (payment-intent fields ship behind a hand-applied migration).
+async function updateParticipantWithSchemaFallback(
+  adminSupabase: { from: (table: string) => any },
+  tradeId: number,
+  side: 'a' | 'b',
+  payload: Record<string, unknown>
+) {
+  const nextPayload = { ...payload }
+
+  while (Object.keys(nextPayload).length > 0) {
+    const { error } = await adminSupabase
+      .from('trade_transaction_participants')
+      .update(nextPayload)
+      .eq('transaction_id', tradeId)
+      .eq('side', side)
+
+    if (!error) return
+
+    const match = String(error.message ?? '').match(
+      /Could not find the '([^']+)' column|column "([^"]+)" of relation/i
+    )
+    const missingColumn = match?.[1] ?? match?.[2]
+
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message)
+    }
+
+    delete nextPayload[missingColumn]
+  }
 }
 
 function parseTradeId(formData: FormData) {
@@ -171,16 +207,19 @@ export async function markTradePaidAction(formData: FormData) {
   }
 
   const now = new Date().toISOString()
+  const paymentMethod = normalizePaymentMethod(String(formData.get('payment_method') || '')) ?? 'card'
+  const paymentIntentId = createPlaceholderPaymentIntentId()
+  const authorizationAmountUsd = Number(participant.amount_due_usd ?? 0)
 
-  await context.adminSupabase
-    .from('trade_transaction_participants')
-    .update({
-      payment_status: 'paid',
-      payment_marked_at: now,
-      updated_at: now,
-    })
-    .eq('transaction_id', tradeId)
-    .eq('side', side)
+  await updateParticipantWithSchemaFallback(context.adminSupabase, tradeId, side, {
+    payment_status: 'paid',
+    payment_marked_at: now,
+    payment_method: paymentMethod,
+    payment_intent_id: paymentIntentId,
+    payment_intent_status: 'succeeded',
+    payment_authorization_amount_usd: authorizationAmountUsd,
+    updated_at: now,
+  })
 
   const refreshedParticipants = context.participants.map((row) =>
     row.side === side ? { ...row, payment_status: 'paid' as const } : row
@@ -199,7 +238,14 @@ export async function markTradePaidAction(formData: FormData) {
     transaction_id: tradeId,
     actor_user_id: context.user.id,
     event_type: 'payment_marked_paid',
-    event_data: { side, markedAt: now },
+    event_data: {
+      side,
+      markedAt: now,
+      paymentMethod,
+      paymentIntentId,
+      paymentIntentStatus: 'succeeded',
+      authorizationAmountUsd,
+    },
   })
 
   for (const other of refreshedParticipants) {

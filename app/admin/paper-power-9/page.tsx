@@ -4,7 +4,15 @@ import {
   buildPaperPowerNineVideoScript,
   loadAdminPaperPowerNineWorkspace,
 } from '@/lib/admin/paper-power-nine'
+import FormActionButton from '@/components/form-action-button'
+import {
+  PAPER_POWER_NINE_STATUSES,
+  formatPaperPowerNineStatus,
+  normalizePaperPowerNineStatus,
+  paperPowerNineStatusTone,
+} from '@/lib/paper-power-nine'
 import Link from 'next/link'
+import { updatePaperPowerNineStatusAction } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,10 +96,14 @@ export default async function AdminPaperPowerNinePage({
                       <div className="mt-2 text-sm text-zinc-300">
                         {submission.theme || 'No theme supplied'}
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
                         <span>{formatDate(submission.created_at)}</span>
                         <span>{submission.exact_match_count ?? 0}/9 exact matches</span>
-                        <span>{submission.status || 'submitted'}</span>
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 font-medium ${paperPowerNineStatusTone(submission.status)}`}
+                        >
+                          {formatPaperPowerNineStatus(submission.status)}
+                        </span>
                       </div>
                     </Link>
                   )
@@ -106,6 +118,12 @@ export default async function AdminPaperPowerNinePage({
         </div>
 
         <div className="space-y-6">
+          {getSingleParam(resolvedSearchParams, 'updated') === '1' && (
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              Submission status saved.
+            </div>
+          )}
+
           {workspace.selected && script ? (
             <>
               <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
@@ -122,13 +140,43 @@ export default async function AdminPaperPowerNinePage({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-start gap-3">
                     <a
                       href={`/api/admin/paper-power-9/submissions/${workspace.selected.submission.id}/image`}
                       className="rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:opacity-90"
                     >
                       Download PNG
                     </a>
+
+                    <form
+                      action={updatePaperPowerNineStatusAction}
+                      className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2"
+                    >
+                      <input
+                        type="hidden"
+                        name="submission_id"
+                        value={workspace.selected.submission.id}
+                      />
+                      <select
+                        name="status"
+                        defaultValue={normalizePaperPowerNineStatus(
+                          workspace.selected.submission.status
+                        )}
+                        className="rounded-xl border border-white/10 bg-zinc-950 p-2 text-sm text-white"
+                      >
+                        {PAPER_POWER_NINE_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {formatPaperPowerNineStatus(status)}
+                          </option>
+                        ))}
+                      </select>
+                      <FormActionButton
+                        pendingLabel="Saving..."
+                        className="rounded-xl bg-emerald-400 px-3 py-2 text-sm font-medium text-zinc-950 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        Save Status
+                      </FormActionButton>
+                    </form>
                   </div>
                 </div>
 

@@ -601,7 +601,7 @@ export default async function DecksPage({
     [...bracketCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
 
   return (
-    <main className="min-h-screen bg-zinc-950 pt-24 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
       <AppHeader
         current="decks"
         isSignedIn={!!user}

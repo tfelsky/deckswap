@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
+import { touchProfileLastSeen } from '@/lib/trust-telemetry'
 import {
   formatTradeOfferStatus,
   formatTradeOfferTimestamp,
@@ -48,6 +50,8 @@ export default async function TradeOffersPage() {
     redirect('/sign-in')
   }
 
+  await touchProfileLastSeen(supabase)
+
   const { data, error } = await supabase
     .from('trade_offers')
     .select('*')
@@ -86,13 +90,11 @@ export default async function TradeOffersPage() {
   const outboundUnreadCount = outboundOffers.filter((offer) => isUnreadTradeOffer(offer, user.id)).length
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="trade-offers" isSignedIn unreadTradeOffers={inboundUnreadCount} />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="flex flex-wrap gap-3">
-            <Link href="/my-decks" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10">
-              {'<-'} Back to My Decks
-            </Link>
             <Link href="/trades" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
               Trades Workspace
             </Link>

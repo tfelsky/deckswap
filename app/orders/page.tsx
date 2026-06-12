@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AppHeader from '@/components/app-header'
 import { redirect } from 'next/navigation'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -36,7 +37,8 @@ export default async function OrdersPage() {
   const orders = Array.from(rows.values()).sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="orders" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-wide text-amber-200">

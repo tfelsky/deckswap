@@ -1,4 +1,4 @@
-type ScryfallCard = {
+export type ScryfallCard = {
   id: string
   oracle_id?: string
   name: string
@@ -18,6 +18,7 @@ type ScryfallCard = {
   mana_cost?: string
   color_identity?: string[]
   keywords?: string[]
+  legalities?: Record<string, string>
   prices?: {
     usd?: string | null
     usd_foil?: string | null
@@ -135,6 +136,7 @@ export function scryfallToDeckCardUpdate(card: ScryfallCard) {
     toughness: card.toughness ?? null,
     color_identity: card.color_identity ?? [],
     keywords: card.keywords ?? [],
+    format_legalities: card.legalities ?? null,
     image_url: firstImage(card),
     is_legendary: isLegendary(card.type_line),
     is_background: isBackground(card.type_line),

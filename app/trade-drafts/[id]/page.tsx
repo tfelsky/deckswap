@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AppHeader from '@/components/app-header'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
 import {
@@ -22,6 +23,10 @@ import {
   type TradeTransactionRow,
 } from '@/lib/escrow/foundation'
 import { buildCheckoutBreakdownFromParticipant } from '@/lib/escrow/checkout'
+import {
+  formatPaymentMethodLabel,
+  isPlaceholderPaymentIntentId,
+} from '@/lib/escrow/payment-intents'
 
 export const dynamic = 'force-dynamic'
 
@@ -372,7 +377,8 @@ export default async function TradeDraftPage({
   const checkoutBreakdown = buildCheckoutBreakdownFromParticipant(currentUserParticipant)
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="trades" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="flex flex-wrap gap-3">
@@ -425,6 +431,19 @@ export default async function TradeDraftPage({
                   <div className="text-xs uppercase tracking-wide text-zinc-500">Your payment</div>
                   <div className="mt-2 text-white">{formatPaymentStatus(currentUserParticipant.payment_status)}</div>
                   <div className="mt-1 text-xs text-zinc-500">{formatTimestamp(currentUserParticipant.payment_marked_at)}</div>
+                  {currentUserParticipant.payment_status === 'paid' && currentUserParticipant.payment_method ? (
+                    <div className="mt-2 text-xs text-zinc-400">
+                      {formatPaymentMethodLabel(currentUserParticipant.payment_method)}
+                      {currentUserParticipant.payment_intent_id ? (
+                        <span className="ml-2 font-mono text-zinc-500">
+                          {currentUserParticipant.payment_intent_id}
+                          {isPlaceholderPaymentIntentId(currentUserParticipant.payment_intent_id)
+                            ? ' (test)'
+                            : ''}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-wide text-zinc-500">Your shipment</div>
@@ -506,6 +525,17 @@ export default async function TradeDraftPage({
                     <p className="text-sm text-emerald-100">
                       Confirm your payment to unlock the shipping step for your side.
                     </p>
+                    <p className="mt-2 text-sm font-medium text-emerald-100">
+                      Amount due: {formatUsd(Number(currentUserParticipant.amount_due_usd ?? 0))}
+                    </p>
+                    <select
+                      name="payment_method"
+                      defaultValue="card"
+                      className="mt-4 w-full rounded-xl border border-white/10 bg-zinc-950 p-3 text-sm text-white"
+                    >
+                      <option value="card">Card (placeholder)</option>
+                      <option value="bank_transfer">Bank transfer (placeholder)</option>
+                    </select>
                     <FormActionButton
                       pendingLabel="Saving..."
                       className="mt-4 rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 disabled:cursor-wait disabled:opacity-70"

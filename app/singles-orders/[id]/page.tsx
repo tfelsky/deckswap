@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AppHeader from '@/components/app-header'
 import { redirect } from 'next/navigation'
 import { SinglesCartResetter } from '@/components/singles-cart-resetter'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
@@ -189,7 +190,8 @@ export default async function SinglesOrderDetailPage({
   const canMarkDelivered = order.status === 'shipped' && isBuyer
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="singles-orders" isSignedIn />
       <SinglesCartResetter enabled={clearSinglesCart} />
 
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">

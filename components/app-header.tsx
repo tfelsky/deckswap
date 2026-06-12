@@ -1,23 +1,10 @@
 'use client'
 
 import { Header } from '@/components/header'
-import MarketplaceNav from '@/components/marketplace-nav'
+import MarketplaceNav, { type MarketplaceNavSection } from '@/components/marketplace-nav'
 
 type AppHeaderProps = {
-  current:
-    | 'home'
-    | 'decks'
-    | 'singles'
-    | 'import'
-    | 'create'
-    | 'my-decks'
-    | 'my-singles'
-    | 'singles-orders'
-    | 'trade-matches'
-    | 'profile'
-    | 'trade-offers'
-    | 'notifications'
-    | 'support'
+  current: MarketplaceNavSection
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number

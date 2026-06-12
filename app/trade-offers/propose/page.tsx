@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendUserTransactionalEmailById } from '@/lib/email-events'
 import { createNotification } from '@/lib/notifications'
 import { isTradeOffersSchemaMissing } from '@/lib/trade-offers'
+import AppHeader from '@/components/app-header'
 import FormActionButton from '@/components/form-action-button'
 
 export const dynamic = 'force-dynamic'
@@ -181,7 +182,8 @@ export default async function ProposeTradeOfferPage({
   const error = params.error === '1'
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="trade-offers" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="flex flex-wrap gap-3">

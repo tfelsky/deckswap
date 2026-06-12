@@ -1,4 +1,8 @@
-import { normalizeDeckFormat } from '@/lib/decks/formats'
+import { getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import {
+  calculateCanlanderPoints,
+  CANLANDER_MAX_POINTS,
+} from '@/lib/formats/canlander-points'
 import type { ImportedDeckCard } from './types'
 
 function hasKeyword(card: ImportedDeckCard, keyword: string) {
@@ -75,7 +79,7 @@ function validateSixtyCardConstructedDeck(
 
   for (const [name, qty] of nameCounts.entries()) {
     if (qty > 4 && !isBasicLand(name)) {
-      errors.push(`Too many copies for ${name}: ${qty}. Standard-style decks usually allow up to 4 between mainboard and sideboard.`)
+      errors.push(`Too many copies for ${name}: ${qty}. ${formatLabel} decks usually allow up to 4 between mainboard and sideboard.`)
     }
   }
 
@@ -88,6 +92,113 @@ function validateSixtyCardConstructedDeck(
     commanderMode: commanders.length > 0 ? 'single' : 'invalid',
     errors: dedupeErrors(errors),
   }
+}
+
+function validateCanlanderDeck(cards: ImportedDeckCard[]) {
+  const { commanders, mainboardCards, sideboardCards, commanderCount, mainboardCount, sideboardCount, tokenCount } =
+    toSectionCounts(cards)
+
+  const errors: string[] = []
+
+  if (commanderCount > 0) {
+    errors.push('Canadian Highlander decks should not include a commander section.')
+  }
+
+  if (sideboardCount > 0) {
+    errors.push(`Canadian Highlander decks do not use a sideboard, found ${sideboardCount} sideboard cards.`)
+  }
+
+  if (mainboardCount !== 100) {
+    errors.push(`Canadian Highlander decks usually contain 100 cards, found ${mainboardCount}.`)
+  }
+
+  const nameCounts = new Map<string, number>()
+
+  for (const card of [...mainboardCards, ...sideboardCards]) {
+    const key = card.cardName.trim().toLowerCase()
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + card.quantity)
+  }
+
+  for (const [name, qty] of nameCounts.entries()) {
+    if (qty > 1 && !isBasicLand(name)) {
+      errors.push(`Canadian Highlander is singleton: ${name} x${qty}`)
+    }
+  }
+
+  const points = calculateCanlanderPoints(
+    [...mainboardCards, ...sideboardCards].map((card) => ({
+      cardName: card.cardName,
+      quantity: card.quantity,
+    }))
+  )
+
+  if (points.total > CANLANDER_MAX_POINTS) {
+    errors.push(
+      `Canadian Highlander decks are limited to ${CANLANDER_MAX_POINTS} points, found ${points.total}: ` +
+        points.breakdown
+          .map(
+            (entry) =>
+              `${entry.cardName} (${entry.points}${entry.quantity > 1 ? ` x${entry.quantity}` : ''})`
+          )
+          .join(', ')
+    )
+  }
+
+  return {
+    isValid: errors.length === 0,
+    commanderCount,
+    mainboardCount,
+    sideboardCount,
+    tokenCount,
+    commanderMode: commanders.length > 0 ? 'single' : 'invalid',
+    errors: dedupeErrors(errors),
+  }
+}
+
+// Formats whose Scryfall legality keys match our stored format ids.
+const LEGALITY_CHECKED_FORMATS = new Set([
+  'standard',
+  'modern',
+  'legacy',
+  'pauper',
+  'premodern',
+])
+
+function validateFormatLegalities(
+  cards: ImportedDeckCard[],
+  format: string,
+  formatLabel: string
+) {
+  if (!LEGALITY_CHECKED_FORMATS.has(format)) {
+    return [] as string[]
+  }
+
+  const errors: string[] = []
+  const restrictedCounts = new Map<string, number>()
+
+  for (const card of cards) {
+    if (card.section === 'token') continue
+
+    const status = card.formatLegalities?.[format]
+    if (!status) continue
+
+    if (status === 'banned' || status === 'not_legal') {
+      errors.push(
+        `${card.cardName} is not legal in ${formatLabel} (${status === 'banned' ? 'banned' : 'not legal'}).`
+      )
+    } else if (status === 'restricted') {
+      const key = card.cardName.trim().toLowerCase()
+      restrictedCounts.set(key, (restrictedCounts.get(key) ?? 0) + card.quantity)
+    }
+  }
+
+  for (const [name, qty] of restrictedCounts.entries()) {
+    if (qty > 1) {
+      errors.push(`${name} is restricted in ${formatLabel}: limit 1 copy, found ${qty}.`)
+    }
+  }
+
+  return errors
 }
 
 function validateCommanderColorIdentity(cards: ImportedDeckCard[]) {
@@ -241,8 +352,21 @@ export function validateDeckForFormat(
     return validateCommanderDeck(cards)
   }
 
-  if (normalizedFormat === 'standard') {
-    return validateSixtyCardConstructedDeck(cards, 'Standard')
+  if (LEGALITY_CHECKED_FORMATS.has(normalizedFormat)) {
+    const formatLabel = getDeckFormatLabel(normalizedFormat)
+    const result = validateSixtyCardConstructedDeck(cards, formatLabel)
+    const legalityErrors = validateFormatLegalities(cards, normalizedFormat, formatLabel)
+    const errors = dedupeErrors([...result.errors, ...legalityErrors])
+
+    return {
+      ...result,
+      isValid: errors.length === 0,
+      errors,
+    }
+  }
+
+  if (normalizedFormat === 'canlander') {
+    return validateCanlanderDeck(cards)
   }
 
   const { commanders, commanderCount, mainboardCount, sideboardCount, tokenCount } =
@@ -252,23 +376,6 @@ export function validateDeckForFormat(
 
   if (mainboardCount === 0 && sideboardCount === 0) {
     errors.push('Deck must include at least one non-token card.')
-  }
-
-  if (
-    ['standard', 'modern', 'legacy', 'premodern', 'pauper'].includes(
-      normalizedFormat
-    ) &&
-    mainboardCount < 60
-  ) {
-    errors.push(
-      `${normalizedFormat[0].toUpperCase()}${normalizedFormat.slice(
-        1
-      )} decks usually need at least 60 cards, found ${mainboardCount}.`
-    )
-  }
-
-  if (normalizedFormat === 'canlander' && mainboardCount !== 100) {
-    errors.push(`Canadian Highlander decks usually contain 100 cards, found ${mainboardCount}.`)
   }
 
   return {

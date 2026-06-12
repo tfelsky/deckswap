@@ -6,7 +6,7 @@ import {
   GUEST_IMPORT_SAVED_QUERY_KEY,
   readGuestImportDraft,
   saveGuestImportDraft,
-  syncGuestImportDraftRemote,
+  syncGuestImportDraftRemoteWithRetry,
   type GuestImportDraft,
 } from '@/lib/guest-import'
 import AppHeader from '@/components/app-header'
@@ -75,7 +75,7 @@ function ImportDeckPageContent() {
     }
 
     saveGuestImportDraft(nextDraft)
-    syncGuestImportDraftRemote(nextDraft).catch(() => {})
+    syncGuestImportDraftRemoteWithRetry(nextDraft).catch(() => {})
   }, [guestDraft?.draftToken, searchParams, showGuestBanner, state?.fields])
 
   useEffect(() => {
@@ -114,11 +114,11 @@ function ImportDeckPageContent() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Add a deck
+              Optimize a deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Start with import for the fastest path, or switch to manual creation if you want to build the listing yourself from scratch.
+              Start with an import and DeckSwap will build a buying tree with optimized printings, style branches, and marketplace handoffs.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -409,7 +409,7 @@ Tokens
                 disabled={pending}
                 className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {pending ? 'Importing...' : 'Import Deck'}
+                {pending ? 'Importing...' : 'Optimize Deck'}
               </button>
             </div>
           </div>

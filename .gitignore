@@ -16,4 +16,5 @@ node_modules
 .DS_Store
 .codex-dev.log
 .codex-dev.err.log
+.next-dev*.log
 docs/wireframe/chrome-profile/

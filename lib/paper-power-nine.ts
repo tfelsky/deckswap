@@ -4,6 +4,48 @@ type SupabaseLike = any
 
 export const PERSONAL_POWER_NINE_CARD_COUNT = 9
 
+export const PAPER_POWER_NINE_STATUSES = [
+  'submitted',
+  'shortlisted',
+  'featured',
+  'declined',
+] as const
+
+export type PaperPowerNineStatus = (typeof PAPER_POWER_NINE_STATUSES)[number]
+
+export function normalizePaperPowerNineStatus(value: unknown): PaperPowerNineStatus {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return (PAPER_POWER_NINE_STATUSES as readonly string[]).includes(normalized)
+    ? (normalized as PaperPowerNineStatus)
+    : 'submitted'
+}
+
+export function formatPaperPowerNineStatus(status?: string | null) {
+  switch (normalizePaperPowerNineStatus(status)) {
+    case 'shortlisted':
+      return 'Shortlisted'
+    case 'featured':
+      return 'Featured'
+    case 'declined':
+      return 'Declined'
+    default:
+      return 'Submitted'
+  }
+}
+
+export function paperPowerNineStatusTone(status?: string | null) {
+  switch (normalizePaperPowerNineStatus(status)) {
+    case 'shortlisted':
+      return 'border-sky-400/20 bg-sky-400/10 text-sky-100'
+    case 'featured':
+      return 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+    case 'declined':
+      return 'border-red-400/20 bg-red-400/10 text-red-200'
+    default:
+      return 'border-white/10 bg-white/5 text-zinc-300'
+  }
+}
+
 export type PaperPowerNineCardInput = {
   slot: number
   name: string

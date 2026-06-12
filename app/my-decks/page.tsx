@@ -16,6 +16,7 @@ import { getDeckMarketingChips } from '@/lib/decks/marketing'
 import { calculateDeckTradeValue } from '@/lib/decks/trade-value'
 import FormActionButton from '@/components/form-action-button'
 import { createClient } from '@/lib/supabase/server'
+import { touchProfileLastSeen } from '@/lib/trust-telemetry'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
 import { refreshCommanderFitsAction } from './actions'
@@ -91,7 +92,8 @@ export default async function MyDecksPage({
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-white">
+      <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+        <AppHeader current="my-decks" isSignedIn={false} />
         <section className="mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-8">
             <h1 className="text-3xl font-semibold">My Decks</h1>
@@ -117,6 +119,8 @@ export default async function MyDecksPage({
       </main>
     )
   }
+
+  await touchProfileLastSeen(supabase)
 
   const { data, error } = await supabase
     .from('decks')
@@ -662,10 +666,10 @@ export default async function MyDecksPage({
 
                   <div className="mt-5 flex gap-3">
                     <Link
-                      href={`/my-decks/${deck.id}?tab=settings`}
+                      href={`/optimizer/${deck.id}`}
                       className="flex-1 rounded-2xl bg-emerald-400 px-4 py-3 text-center text-sm font-medium text-zinc-950 hover:opacity-90"
                     >
-                      Market This Deck
+                      Optimize
                     </Link>
 
                     <Link

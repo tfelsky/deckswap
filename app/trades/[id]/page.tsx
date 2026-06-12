@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AppHeader from '@/components/app-header'
 import { redirect } from 'next/navigation'
 import FormActionButton from '@/components/form-action-button'
 import {
@@ -307,7 +308,8 @@ export default async function TradeReviewPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="trades" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="flex flex-wrap gap-3">

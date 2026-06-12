@@ -156,6 +156,35 @@ export async function syncGuestImportDraftRemote(draft: GuestImportDraft) {
   }
 }
 
+export type GuestImportSyncResult =
+  | { status: 'synced'; draft: RemoteGuestImportDraft }
+  | { status: 'local_only'; error: string }
+
+export async function syncGuestImportDraftRemoteWithRetry(
+  draft: GuestImportDraft,
+  attempts = 3
+): Promise<GuestImportSyncResult> {
+  let lastError = 'Could not save the guest draft online right now.'
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await syncGuestImportDraftRemote(draft)
+      return { status: 'synced', draft: result.draft }
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error.message
+          : 'Could not save the guest draft online right now.'
+
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 800))
+      }
+    }
+  }
+
+  return { status: 'local_only', error: lastError }
+}
+
 export async function fetchGuestImportDraftRemote(draftToken: string) {
   const response = await fetch(
     `/api/guest-import?token=${encodeURIComponent(draftToken)}`,

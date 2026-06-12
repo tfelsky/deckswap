@@ -36,7 +36,8 @@ export default async function SinglesCheckoutPage({
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-white">
+      <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+        <AppHeader current="singles" isSignedIn={false} />
         <section className="mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-3xl border border-white/10 bg-zinc-900 p-8">
             <h1 className="text-3xl font-semibold">Sign in to check out singles</h1>

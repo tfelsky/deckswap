@@ -4,7 +4,9 @@ import { Header } from '@/components/header'
 import { PersonalPowerNineGallery } from '@/components/personal-power-nine-gallery'
 import FormActionButton from '@/components/form-action-button'
 import {
+  formatPaperPowerNineStatus,
   isPaperPowerNineSchemaMissing,
+  paperPowerNineStatusTone,
   PERSONAL_POWER_NINE_CARD_COUNT,
 } from '@/lib/paper-power-nine'
 import { createClient } from '@/lib/supabase/server'
@@ -91,12 +93,13 @@ export default async function PaperPowerNinePage({
     color_identity?: string[] | null
     exact_print_matched?: boolean | null
   }> = []
+  let latestSubmissionStatus: string | null = null
 
   if (user) {
     try {
       const submissionQuery = supabase
         .from('paper_power_nine_submissions')
-        .select('id')
+        .select('id, status')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -104,7 +107,7 @@ export default async function PaperPowerNinePage({
       const submissionResult = activeSubmissionId
         ? await supabase
             .from('paper_power_nine_submissions')
-            .select('id')
+            .select('id, status')
             .eq('user_id', user.id)
             .eq('id', activeSubmissionId)
             .maybeSingle()
@@ -115,6 +118,8 @@ export default async function PaperPowerNinePage({
       }
 
       const latestSubmissionId = Number(submissionResult.data?.id ?? 0)
+      latestSubmissionStatus =
+        (submissionResult.data as { status?: string | null } | null)?.status ?? null
 
       if (latestSubmissionId > 0) {
         const cardsResult = await supabase
@@ -452,6 +457,16 @@ export default async function PaperPowerNinePage({
 
         {user && latestSubmissionCards.length > 0 ? (
           <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+            {latestSubmissionStatus ? (
+              <div className="mb-4 flex items-center gap-3">
+                <span className="text-sm text-zinc-400">Review status:</span>
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-medium ${paperPowerNineStatusTone(latestSubmissionStatus)}`}
+                >
+                  {formatPaperPowerNineStatus(latestSubmissionStatus)}
+                </span>
+              </div>
+            ) : null}
             <PersonalPowerNineGallery cards={latestSubmissionCards} />
           </section>
         ) : null}

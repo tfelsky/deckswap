@@ -2,21 +2,26 @@
 
 import Link from 'next/link'
 
+export type MarketplaceNavSection =
+  | 'home'
+  | 'optimizer'
+  | 'decks'
+  | 'singles'
+  | 'import'
+  | 'create'
+  | 'my-decks'
+  | 'my-singles'
+  | 'singles-orders'
+  | 'trade-matches'
+  | 'profile'
+  | 'trade-offers'
+  | 'notifications'
+  | 'support'
+  | 'trades'
+  | 'orders'
+
 type MarketplaceNavProps = {
-  current:
-    | 'home'
-    | 'decks'
-    | 'singles'
-    | 'import'
-    | 'create'
-    | 'my-decks'
-    | 'my-singles'
-    | 'singles-orders'
-    | 'trade-matches'
-    | 'profile'
-    | 'trade-offers'
-    | 'notifications'
-    | 'support'
+  current: MarketplaceNavSection
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number
@@ -24,7 +29,8 @@ type MarketplaceNavProps = {
 }
 
 const NAV_ITEMS = {
-  decks: { href: '/decks', label: 'Browse' },
+  optimizer: { href: '/optimizer', label: 'Optimizer' },
+  decks: { href: '/decks', label: 'Decks' },
   singles: { href: '/singles', label: 'Singles' },
   import: { href: '/import-deck', label: 'Import' },
   create: { href: '/create-deck', label: 'Create' },
@@ -38,21 +44,15 @@ const NAV_ITEMS = {
   profile: { href: '/settings/profile', label: 'Profile' },
 } as const
 
-const CONTEXT_GROUPS: Record<MarketplaceNavProps['current'], Array<keyof typeof NAV_ITEMS>> = {
-  home: ['decks', 'singles', 'trade-matches', 'import'],
-  decks: ['decks', 'singles', 'trade-matches', 'trade-offers', 'notifications'],
-  singles: ['singles', 'singles-orders', 'my-singles', 'notifications'],
-  import: ['import', 'create', 'decks'],
-  create: ['import', 'create', 'my-decks'],
-  'my-decks': ['my-decks', 'create', 'decks', 'notifications'],
-  'my-singles': ['my-singles', 'my-decks', 'import', 'notifications'],
-  'singles-orders': ['singles-orders', 'singles', 'my-singles', 'notifications'],
-  'trade-matches': ['trade-matches', 'trade-offers', 'notifications', 'decks'],
-  profile: ['profile', 'my-decks', 'notifications'],
-  'trade-offers': ['trade-offers', 'trade-matches', 'notifications', 'decks'],
-  notifications: ['notifications', 'trade-offers', 'my-decks'],
-  support: ['support', 'decks', 'profile'],
-}
+// One predictable tab set everywhere, so the nav never reshuffles between pages.
+const PUBLIC_TABS: Array<keyof typeof NAV_ITEMS> = ['decks', 'singles', 'optimizer', 'import']
+const SIGNED_IN_TABS: Array<keyof typeof NAV_ITEMS> = [
+  ...PUBLIC_TABS,
+  'my-decks',
+  'trade-matches',
+  'trade-offers',
+  'notifications',
+]
 
 export default function MarketplaceNav({
   current,
@@ -62,14 +62,18 @@ export default function MarketplaceNav({
   unreadNotifications = 0,
 }: MarketplaceNavProps) {
   const detectedSignedIn = isSignedIn ?? false
-  const contextKeys = CONTEXT_GROUPS[current]
-  const visibleItems = contextKeys.filter((key) => {
-    if (detectedSignedIn) return true
-    return !['create', 'my-decks', 'my-singles', 'singles-orders', 'trade-offers', 'notifications', 'profile'].includes(key)
-  })
+  const baseTabs = detectedSignedIn ? SIGNED_IN_TABS : PUBLIC_TABS
+  const currentTab = current in NAV_ITEMS ? (current as keyof typeof NAV_ITEMS) : null
+  const visibleItems =
+    currentTab && current !== 'create' && !baseTabs.includes(currentTab)
+      ? [...baseTabs, currentTab]
+      : baseTabs
 
   return (
-    <nav aria-label="Section navigation" className="flex flex-wrap gap-1.5">
+    <nav
+      aria-label="Section navigation"
+      className="flex gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       {visibleItems.map((key) => {
         const item = NAV_ITEMS[key]
         const active =
@@ -87,7 +91,7 @@ export default function MarketplaceNav({
           <Link
             key={key}
             href={item.href}
-            className={`rounded-2xl border px-3 py-1.5 text-sm font-medium transition ${
+            className={`shrink-0 rounded-2xl border px-3 py-1.5 text-sm font-medium transition ${
               active
                 ? 'border-primary/30 bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(0,0,0,0.14)]'
                 : hasUnreadNotifications
@@ -117,7 +121,7 @@ export default function MarketplaceNav({
       {isAdmin ? (
         <Link
           href="/admin"
-          className="rounded-2xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-primary/15"
+          className="shrink-0 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-primary/15"
         >
           Admin
         </Link>

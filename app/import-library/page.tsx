@@ -8,6 +8,7 @@ import {
   type LibraryImportScope,
   type LibrarySingleSourceSummary,
 } from '@/lib/deck-sources/library'
+import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -78,6 +79,8 @@ export default async function ImportLibraryPage({
   if (!user) {
     redirect('/sign-in')
   }
+
+  const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
 
   const provider = (getSingleParam(resolvedSearchParams, 'provider') || 'moxfield') as LibraryImportProvider
   const scope = ((getSingleParam(resolvedSearchParams, 'scope') || 'decks') as LibraryImportScope) || 'decks'
@@ -184,7 +187,7 @@ export default async function ImportLibraryPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
-      <AppHeader current="import" isSignedIn />
+      <AppHeader current="import" isSignedIn unreadNotifications={unreadNotifications} />
 
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-6 py-10">

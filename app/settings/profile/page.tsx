@@ -1,7 +1,10 @@
 import Link from 'next/link'
+import AppHeader from '@/components/app-header'
 import { redirect } from 'next/navigation'
 import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import FormActionButton from '@/components/form-action-button'
+import GovernmentIdUploader from '@/components/government-id-uploader'
+import { isGovernmentIdStoragePath } from '@/lib/profiles/government-id'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatVerificationStatus,
@@ -271,7 +274,6 @@ export default async function ProfileSettingsPage({
       shipping_postal_code: String(formData.get('shipping_postal_code') || '').trim(),
       shipping_country: String(formData.get('shipping_country') || '').trim(),
       customer_service_notes: String(formData.get('customer_service_notes') || '').trim(),
-      government_id_storage_key: String(formData.get('government_id_storage_key') || '').trim(),
       marketing_opt_in_email: formData.get('marketing_opt_in_email') === 'on',
     }
 
@@ -418,7 +420,8 @@ export default async function ProfileSettingsPage({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white">
+    <main className="min-h-screen bg-zinc-950 pt-32 text-white">
+      <AppHeader current="profile" isSignedIn />
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6">
           <div className="flex flex-wrap gap-3">
@@ -768,10 +771,6 @@ export default async function ProfileSettingsPage({
                   <input name="shipping_country" defaultValue={privateProfile.shipping_country ?? ''} className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm text-zinc-400">Internal ID reference</label>
-                  <input name="government_id_storage_key" defaultValue={privateProfile.government_id_storage_key ?? ''} placeholder="optional review note or intake reference" className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
-                </div>
-                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm text-zinc-400">Customer service notes</label>
                   <textarea name="customer_service_notes" rows={4} defaultValue={privateProfile.customer_service_notes ?? ''} className="w-full rounded-xl border border-white/10 bg-white/5 p-3" />
                 </div>
@@ -789,6 +788,10 @@ export default async function ProfileSettingsPage({
                 Save Private Profile
               </FormActionButton>
             </form>
+
+            <GovernmentIdUploader
+              hasDocument={isGovernmentIdStoragePath(privateProfile.government_id_storage_key)}
+            />
           </div>
 
           <div className="space-y-6">

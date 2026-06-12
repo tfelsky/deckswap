@@ -248,8 +248,6 @@ export async function importDeckAction(
     params.set('enrich', 'failed')
   }
 
-  params.set('tab', 'settings')
-
   if (nextPath.startsWith('/')) {
     const nextUrl = new URL(nextPath, 'http://deckswap.local')
     const nextParams = nextUrl.searchParams
@@ -260,5 +258,5 @@ export async function importDeckAction(
     redirect(`${nextUrl.pathname}?${nextParams.toString()}`)
   }
 
-  redirect(`/my-decks/${importResult.deckId}?${params.toString()}`)
+  redirect(`/optimizer/${importResult.deckId}?${params.toString()}`)
 }

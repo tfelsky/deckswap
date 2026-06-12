@@ -10,6 +10,7 @@ import {
   saveGuestImportDraft,
   type GuestImportDraft,
 } from '@/lib/guest-import'
+import { estimateDeckPricesByName, type DeckPriceEstimate } from '@/lib/scryfall/pricing'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -20,6 +21,7 @@ type PreviewCard = {
   cardName: string
   setCode?: string
   collectorNumber?: string
+  foil?: boolean
 }
 
 function formatPrint(card: PreviewCard) {
@@ -66,8 +68,33 @@ export default function GuestPreviewPage() {
       cardName: card.cardName,
       setCode: card.setCode,
       collectorNumber: card.collectorNumber,
+      foil: card.foil,
     }))
   }, [draft])
+
+  const [priceEstimate, setPriceEstimate] = useState<DeckPriceEstimate | null>(null)
+  const [priceState, setPriceState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+
+  async function handleEstimatePrices() {
+    if (priceState === 'loading') return
+
+    setPriceState('loading')
+    try {
+      const estimate = await estimateDeckPricesByName(
+        parsed
+          .filter((card) => card.section !== 'token')
+          .map((card) => ({
+            name: card.cardName,
+            quantity: card.quantity,
+            foil: card.foil,
+          }))
+      )
+      setPriceEstimate(estimate)
+      setPriceState('done')
+    } catch {
+      setPriceState('error')
+    }
+  }
 
   const isRemoteOnlyPreview =
     draft?.sourceType === 'moxfield' && !draft.rawList.trim() && !!draft.sourceUrl.trim()
@@ -262,6 +289,55 @@ export default function GuestPreviewPage() {
           </div>
 
           <div className="space-y-6">
+            {!isRemoteOnlyPreview && parsed.length > 0 && (
+              <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+                <div className="text-sm font-medium text-white">Estimated Value</div>
+
+                {priceState === 'done' && priceEstimate ? (
+                  <>
+                    <div className="mt-3 text-3xl font-semibold text-emerald-300">
+                      ${priceEstimate.totalUsd.toFixed(2)}
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-400">
+                      Based on current Scryfall USD prices for {priceEstimate.pricedCount} card
+                      names. Final pricing during the real import also matches exact prints and
+                      foils.
+                    </p>
+                    {priceEstimate.unmatchedNames.length > 0 && (
+                      <p className="mt-2 text-xs text-amber-200/90">
+                        {priceEstimate.unmatchedNames.length} card name
+                        {priceEstimate.unmatchedNames.length === 1 ? '' : 's'} could not be priced:{' '}
+                        {priceEstimate.unmatchedNames.slice(0, 5).join(', ')}
+                        {priceEstimate.unmatchedNames.length > 5 ? ', …' : ''}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-3 text-sm text-zinc-400">
+                    Get a rough USD value for this list from live Scryfall prices before creating an
+                    account.
+                  </p>
+                )}
+
+                {priceState === 'error' && (
+                  <p className="mt-3 text-sm text-amber-200">
+                    Price lookup failed. Scryfall may be busy — try again in a moment.
+                  </p>
+                )}
+
+                {priceState !== 'done' && (
+                  <button
+                    type="button"
+                    onClick={handleEstimatePrices}
+                    disabled={priceState === 'loading'}
+                    className="mt-4 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {priceState === 'loading' ? 'Pricing cards…' : 'Estimate prices'}
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
               <div className="text-sm font-medium text-emerald-200">What this preview shows</div>
               <div className="mt-4 space-y-3 text-sm text-emerald-50/90">

@@ -4,6 +4,7 @@ import Image from "next/image"
 const footerLinks = {
   marketplace: [
     { name: "Browse Decks", href: "/decks" },
+    { name: "Singles", href: "/singles" },
     { name: "Create Deck", href: "/create-deck" },
     { name: "Import Deck", href: "/import-deck" },
     { name: "Live Auctions", href: "/auctions" },
@@ -36,17 +37,14 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2.5">
               <Image
                 src="/mythiverse-shield.png"
                 alt="Mythiverse Exchange shield logo"
-                width={48}
-                height={48}
-                className="h-12 w-12 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-xl object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
               />
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-                <span className="text-sm font-bold text-primary-foreground">ME</span>
-              </div>
               <span className="text-lg font-semibold text-foreground">Mythiverse Exchange</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
@@ -124,39 +122,18 @@ export function Footer() {
           <p className="text-sm text-muted-foreground">
             (c) {new Date().getFullYear()} Mythiverse Exchange. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link href="/decks" className="text-sm text-muted-foreground hover:text-foreground">
-              Marketplace
-            </Link>
-            <Link href="/auctions" className="text-sm text-muted-foreground hover:text-foreground">
-              Auctions
-            </Link>
-            <Link href="/info" className="text-sm text-muted-foreground hover:text-foreground">
-              Info
-            </Link>
-            <Link href="/trade-offers" className="text-sm text-muted-foreground hover:text-foreground">
-              Trade Offers
-            </Link>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 sm:justify-end">
             <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
               Privacy
-            </Link>
-            <Link href="/compliance" className="text-sm text-muted-foreground hover:text-foreground">
-              Compliance
-            </Link>
-            <Link href="/cookies" className="text-sm text-muted-foreground hover:text-foreground">
-              Cookies
-            </Link>
-            <Link href="/sustainability" className="text-sm text-muted-foreground hover:text-foreground">
-              Sustainability
-            </Link>
-            <Link href="/accessibility" className="text-sm text-muted-foreground hover:text-foreground">
-              Accessibility
             </Link>
             <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
               Terms
             </Link>
-            <Link href="/my-decks" className="text-sm text-muted-foreground hover:text-foreground">
-              My Decks
+            <Link href="/cookies" className="text-sm text-muted-foreground hover:text-foreground">
+              Cookies
+            </Link>
+            <Link href="/accessibility" className="text-sm text-muted-foreground hover:text-foreground">
+              Accessibility
             </Link>
           </div>
         </div>

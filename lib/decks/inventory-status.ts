@@ -13,6 +13,7 @@ export const INVENTORY_STATUSES = [
   'escrow_completed',
   'holiday_pending_receipt',
   'holiday_received',
+  'holiday_placed',
 ] as const
 
 export type InventoryStatus = (typeof INVENTORY_STATUSES)[number]
@@ -33,6 +34,7 @@ const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
   escrow_completed: 'Escrow Complete',
   holiday_pending_receipt: 'Holiday Donation Pending Receipt',
   holiday_received: 'Holiday Donation Received',
+  holiday_placed: 'Holiday Donation Placed',
 }
 
 const INVENTORY_STATUS_DESCRIPTIONS: Record<InventoryStatus, string> = {
@@ -50,6 +52,7 @@ const INVENTORY_STATUS_DESCRIPTIONS: Record<InventoryStatus, string> = {
   escrow_completed: 'Escrow flow is complete.',
   holiday_pending_receipt: 'Committed to the Mythiverse Exchange Holiday program and waiting to be physically received.',
   holiday_received: 'Received for the holiday donation program.',
+  holiday_placed: 'Placed with a holiday program recipient.',
 }
 
 const INVENTORY_STATUS_BADGES: Record<InventoryStatus, string> = {
@@ -67,6 +70,7 @@ const INVENTORY_STATUS_BADGES: Record<InventoryStatus, string> = {
   escrow_completed: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
   holiday_pending_receipt: 'border-zinc-500/30 bg-zinc-500/15 text-zinc-200',
   holiday_received: 'border-zinc-500/30 bg-zinc-500/15 text-zinc-200',
+  holiday_placed: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
 }
 
 const INVENTORY_STATUS_VISIBILITY: Record<InventoryStatus, InventoryStatusVisibility> = {
@@ -84,6 +88,7 @@ const INVENTORY_STATUS_VISIBILITY: Record<InventoryStatus, InventoryStatusVisibi
   escrow_completed: 'completed',
   holiday_pending_receipt: 'private',
   holiday_received: 'private',
+  holiday_placed: 'completed',
 }
 
 const LOCKED_STATUSES = new Set<InventoryStatus>([
@@ -95,6 +100,7 @@ const LOCKED_STATUSES = new Set<InventoryStatus>([
   'escrow_review',
   'escrow_completed',
   'holiday_received',
+  'holiday_placed',
 ])
 
 export function normalizeInventoryStatus(value?: string | null): InventoryStatus {
@@ -140,6 +146,7 @@ export function resolveInventoryStatusForSettings(input: {
   if (
     normalized === 'holiday_pending_receipt' ||
     normalized === 'holiday_received' ||
+    normalized === 'holiday_placed' ||
     normalized === 'checked_out' ||
     normalized === 'awaiting_delivery' ||
     normalized === 'escrow_pending_shipment' ||

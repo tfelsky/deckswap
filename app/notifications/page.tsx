@@ -9,6 +9,7 @@ import {
   type NotificationRow,
 } from '@/lib/notifications'
 import { isUnreadTradeOffer, type TradeOfferRow } from '@/lib/trade-offers'
+import { touchProfileLastSeen } from '@/lib/trust-telemetry'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -46,6 +47,8 @@ export default async function NotificationsPage() {
   if (!user) {
     redirect('/sign-in')
   }
+
+  await touchProfileLastSeen(supabase)
 
   const [notificationsResult, tradeOffersResult] = await Promise.all([
     supabase
