@@ -1,9 +1,12 @@
 'use client'
 
 import { Header } from '@/components/header'
-import MarketplaceNav, { type MarketplaceNavSection } from '@/components/marketplace-nav'
+import ContextNav from '@/components/context-nav'
+import { type MarketplaceNavSection } from '@/components/marketplace-nav'
 
 type AppHeaderProps = {
+  // Kept for backwards compatibility with existing page calls; the contextual
+  // bar now derives the active area/sub-function from the pathname.
   current: MarketplaceNavSection
   isSignedIn?: boolean
   isAdmin?: boolean
@@ -12,8 +15,6 @@ type AppHeaderProps = {
 }
 
 export default function AppHeader({
-  current,
-  isSignedIn,
   isAdmin = false,
   unreadTradeOffers = 0,
   unreadNotifications = 0,
@@ -21,17 +22,11 @@ export default function AppHeader({
   return (
     <>
       <Header />
-      <div className="fixed inset-x-0 top-16 z-40 border-b border-border/70 bg-background/75 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <MarketplaceNav
-          current={current}
-          isSignedIn={isSignedIn}
-          isAdmin={isAdmin}
-          unreadTradeOffers={unreadTradeOffers}
-          unreadNotifications={unreadNotifications}
-        />
-        </div>
-      </div>
+      <ContextNav
+        isAdmin={isAdmin}
+        unreadTradeOffers={unreadTradeOffers}
+        unreadNotifications={unreadNotifications}
+      />
     </>
   )
 }
