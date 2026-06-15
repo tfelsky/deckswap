@@ -248,7 +248,10 @@ export default function GuestPreviewPage() {
             {[
               { title: 'Commander', cards: commanders },
               { title: 'Mainboard', cards: mainboard },
-              { title: 'Sideboard', cards: sideboard },
+              {
+                title: detectedFormat === 'double-decker' ? 'Maybeboard' : 'Sideboard',
+                cards: sideboard,
+              },
               { title: 'Tokens', cards: tokens },
             ].map((group) => (
               <div key={group.title} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">

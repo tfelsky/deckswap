@@ -132,11 +132,11 @@ const CEDH_SIGNAL_CARDS = [
   'Fierce Guardianship',
 ]
 
-const CEDH_SIGNAL_SET = new Set(
+export const CEDH_SIGNAL_SET = new Set(
   CEDH_SIGNAL_CARDS.map((name) => name.trim().toLowerCase())
 )
 
-const EXTRA_TURN_NAMES = new Set(
+export const EXTRA_TURN_NAMES = new Set(
   [
     'Time Warp',
     'Temporal Manipulation',
@@ -151,7 +151,7 @@ const EXTRA_TURN_NAMES = new Set(
   ].map((name) => name.toLowerCase())
 )
 
-const MASS_LAND_DENIAL_NAMES = new Set(
+export const MASS_LAND_DENIAL_NAMES = new Set(
   [
     'Armageddon',
     'Ravages of War',

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { CARD_CONDITION_DETAILS, getCardConditionMeta } from '@/lib/decks/conditions'
+import { isDoubleDeckerFormat } from '@/lib/decks/formats'
 
 type BaseCard = {
   id: number
@@ -31,6 +32,7 @@ type DeckCardViewsProps = {
   mainboard: BaseCard[]
   sideboard: BaseCard[]
   tokens: BaseCard[]
+  format?: string | null
 }
 
 function printLine(card: BaseCard) {
@@ -526,8 +528,20 @@ export default function DeckCardViews({
   mainboard,
   sideboard,
   tokens,
+  format,
 }: DeckCardViewsProps) {
   const [view, setView] = useState<'table' | 'grid' | 'type'>('table')
+
+  // Double Decker decks carry their extras as a maybeboard — an unlimited pile
+  // of bonus cards bundled with the trade, not a 60-card swap sideboard.
+  const isDoubleDecker = isDoubleDeckerFormat(format)
+  const extrasLabel = isDoubleDecker ? 'Maybeboard' : 'Sideboard'
+  const extrasDescription = isDoubleDecker
+    ? 'Unlimited bonus cards bundled with this Double Decker as extra trade value.'
+    : 'Optional 60-card format sideboard stored with the deck import.'
+  const extrasEmptyState = isDoubleDecker
+    ? 'No maybeboard cards saved.'
+    : 'No sideboard cards saved.'
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
   const [hoveredTypeCardId, setHoveredTypeCardId] = useState<number | null>(null)
 
@@ -804,13 +818,11 @@ export default function DeckCardViews({
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-        <h2 className="text-2xl font-semibold">Sideboard</h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          Optional 60-card format sideboard stored with the deck import.
-        </p>
+        <h2 className="text-2xl font-semibold">{extrasLabel}</h2>
+        <p className="mt-1 text-sm text-zinc-400">{extrasDescription}</p>
 
         {sideboard.length === 0 ? (
-          <div className="mt-5 text-sm text-zinc-400">No sideboard cards saved.</div>
+          <div className="mt-5 text-sm text-zinc-400">{extrasEmptyState}</div>
         ) : view === 'table' ? (
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
             <div className="grid grid-cols-[70px_1fr_260px_110px_120px] gap-3 border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-wide text-zinc-400">
@@ -851,7 +863,7 @@ export default function DeckCardViews({
                 key={card.id}
                 card={card}
                 onOpen={() => openCard(card)}
-                label="Sideboard"
+                label={extrasLabel}
               />
             ))}
           </div>
