@@ -1,10 +1,20 @@
+'use client'
+
 import Link from "next/link"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import { HeaderAuth } from "@/components/header-auth"
+import { SITE_AREAS, detectArea } from "@/lib/site-nav"
 
+// The persistent top bar: the site's main sections, identical on every page.
+// The active section is highlighted; sub-functions live in ContextNav below.
 export function Header() {
+  const pathname = usePathname() || ""
+  const activeKey = detectArea(pathname)?.key
+  const sections = SITE_AREAS.filter((area) => area.inMainBar)
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -20,27 +30,17 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-5 lg:flex xl:gap-6">
-          <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Decks
-          </Link>
-          <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Singles
-          </Link>
-          <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Deck Swap
-          </Link>
-          <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            My Decks
-          </Link>
-          <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Learn
-          </Link>
-          <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Support
-          </Link>
-          <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Profile
-          </Link>
+          {sections.map((section) => (
+            <Link
+              key={section.key}
+              href={section.href}
+              className={`text-sm transition-colors hover:text-foreground ${
+                section.key === activeKey ? "font-medium text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {section.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -61,27 +61,17 @@ export function Header() {
           </summary>
           <div className="absolute left-0 right-0 top-16 border-t border-border/80 bg-card/95 px-4 py-4 backdrop-blur-xl">
             <nav className="flex flex-col gap-4">
-              <Link href="/decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Decks
-              </Link>
-              <Link href="/singles" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Singles
-              </Link>
-              <Link href="/trade-matches" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Deck Swap
-              </Link>
-              <Link href="/my-decks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                My Decks
-              </Link>
-              <Link href="/info" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Learn
-              </Link>
-              <Link href="/support" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Support
-              </Link>
-              <Link href="/settings/profile" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Profile
-              </Link>
+              {sections.map((section) => (
+                <Link
+                  key={section.key}
+                  href={section.href}
+                  className={`text-sm transition-colors hover:text-foreground ${
+                    section.key === activeKey ? "font-medium text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {section.label}
+                </Link>
+              ))}
               <div className="flex flex-col gap-2 pt-4">
                 <HeaderAuth />
                 <Button size="sm" className="w-full justify-center" asChild>
