@@ -2,12 +2,12 @@
 
 import { Header } from '@/components/header'
 import ContextNav from '@/components/context-nav'
-import { type MarketplaceNavSection } from '@/components/marketplace-nav'
 
 type AppHeaderProps = {
-  // Kept for backwards compatibility with existing page calls; the contextual
-  // bar now derives the active area/sub-function from the pathname.
-  current: MarketplaceNavSection
+  // `current` is accepted for backwards compatibility with existing page
+  // calls but is no longer used: the contextual bar derives the active
+  // area/sub-function from the pathname.
+  current?: string
   isSignedIn?: boolean
   isAdmin?: boolean
   unreadTradeOffers?: number
