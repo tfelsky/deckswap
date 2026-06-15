@@ -4,7 +4,7 @@ import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
-  getLeague,
+  getLeagueForViewer,
   getLeaguePlayers,
   getPods,
   getRegisteredDecks,
@@ -32,8 +32,9 @@ export default async function ReportGamePage({
   if (!user) notFound()
 
   const { isAdmin } = await getAdminAccessForUser(user)
-  const league = await getLeague(supabase, leagueId, user.id)
-  if (!league) notFound()
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+  if (!viewer) notFound()
+  const { league } = viewer
 
   let seats: ReportSeat[] = []
   let roundNumber = 1

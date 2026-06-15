@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
-import { getLeague } from '@/lib/podmatch/leagues'
+import { getLeagueForViewer } from '@/lib/podmatch/leagues'
 import { getHandicapData, getPlayerRatings } from '@/lib/podmatch/league-ratings'
 import { computeHandicap, resolveHandicapConfig } from '@/lib/podmatch/handicap'
 import { setHandicapsAction } from '../../actions'
@@ -29,8 +29,10 @@ export default async function LeagueHandicapsPage({
   if (!user) notFound()
 
   const { isAdmin } = await getAdminAccessForUser(user)
-  const league = await getLeague(supabase, leagueId, user.id)
-  if (!league) notFound()
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+  if (!viewer) notFound()
+  const { league, role } = viewer
+  const isLeagueAdmin = role === 'admin'
 
   const config = resolveHandicapConfig(league.settings)
   const [{ ratings, schemaMissing }, handicapData] = await Promise.all([
@@ -64,19 +66,21 @@ export default async function LeagueHandicapsPage({
                 {config.enabled ? 'Enabled' : 'Disabled'} · transparent and fully optional.
               </p>
             </div>
-            <form action={setHandicapsAction}>
-              <input type="hidden" name="leagueId" value={leagueId} />
-              <input type="hidden" name="enabled" value={(!config.enabled).toString()} />
-              <button
-                className={`rounded-2xl px-5 py-2.5 text-sm font-semibold transition ${
-                  config.enabled
-                    ? 'border border-white/10 bg-white/5 hover:bg-white/10'
-                    : 'bg-primary text-primary-foreground hover:opacity-90'
-                }`}
-              >
-                {config.enabled ? 'Disable handicaps' : 'Enable handicaps'}
-              </button>
-            </form>
+            {isLeagueAdmin ? (
+              <form action={setHandicapsAction}>
+                <input type="hidden" name="leagueId" value={leagueId} />
+                <input type="hidden" name="enabled" value={(!config.enabled).toString()} />
+                <button
+                  className={`rounded-2xl px-5 py-2.5 text-sm font-semibold transition ${
+                    config.enabled
+                      ? 'border border-white/10 bg-white/5 hover:bg-white/10'
+                      : 'bg-primary text-primary-foreground hover:opacity-90'
+                  }`}
+                >
+                  {config.enabled ? 'Disable handicaps' : 'Enable handicaps'}
+                </button>
+              </form>
+            ) : null}
           </div>
 
           <div className="mt-4 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-zinc-300">

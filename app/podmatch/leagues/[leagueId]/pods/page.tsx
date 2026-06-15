@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
-import { getLeague, getPods, type PodWithSeats } from '@/lib/podmatch/leagues'
+import { getLeagueForViewer, getPods, type PodWithSeats } from '@/lib/podmatch/leagues'
 import { GeneratePodsButton } from '@/components/podmatch/league-forms'
 import PrintButton from '@/components/podmatch/print-button'
 import LeagueTabs from '@/components/podmatch/league-tabs'
@@ -24,8 +24,10 @@ export default async function LeaguePodsPage({
   if (!user) notFound()
 
   const { isAdmin } = await getAdminAccessForUser(user)
-  const league = await getLeague(supabase, leagueId, user.id)
-  if (!league) notFound()
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+  if (!viewer) notFound()
+  const { league, role } = viewer
+  const isLeagueAdmin = role === 'admin'
 
   const pods = await getPods(supabase, leagueId)
   const byRound = new Map<number, PodWithSeats[]>()
@@ -49,13 +51,15 @@ export default async function LeaguePodsPage({
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
-          <GeneratePodsButton leagueId={leagueId} />
+          {isLeagueAdmin ? <GeneratePodsButton leagueId={leagueId} /> : null}
           {pods.length > 0 ? <PrintButton /> : null}
         </div>
 
         {pods.length === 0 ? (
           <p className="mt-6 rounded-2xl border border-white/10 bg-zinc-900 p-5 text-sm text-zinc-400 print:hidden">
-            No pods yet. Generate a round once players have approved, scored decks.
+            {isLeagueAdmin
+              ? 'No pods yet. Generate a round once players have approved, scored decks.'
+              : 'No pods yet. The admin will generate the next round.'}
           </p>
         ) : (
           <div className="mt-8 space-y-8">

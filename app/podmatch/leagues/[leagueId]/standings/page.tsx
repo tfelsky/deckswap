@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation'
 import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
-import { getLeague, getStandings } from '@/lib/podmatch/leagues'
+import { getLeagueForViewer, getStandings } from '@/lib/podmatch/leagues'
 import { getPlayerRatings } from '@/lib/podmatch/league-ratings'
+import { syncRatingsAction } from '../../actions'
 import PrintButton from '@/components/podmatch/print-button'
 import LeagueTabs from '@/components/podmatch/league-tabs'
 
@@ -22,8 +23,10 @@ export default async function LeagueStandingsPage({
   if (!user) notFound()
 
   const { isAdmin } = await getAdminAccessForUser(user)
-  const league = await getLeague(supabase, leagueId, user.id)
-  if (!league) notFound()
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+  if (!viewer) notFound()
+  const { league, role } = viewer
+  const isLeagueAdmin = role === 'admin'
 
   const [standings, { ratings }] = await Promise.all([
     getStandings(supabase, leagueId),
@@ -45,10 +48,23 @@ export default async function LeagueStandingsPage({
 
         <div className="mt-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Standings</h2>
-          {standings.length > 0 ? <PrintButton /> : null}
+          <div className="flex items-center gap-2 print:hidden">
+            {isLeagueAdmin ? (
+              <form action={syncRatingsAction}>
+                <input type="hidden" name="leagueId" value={leagueId} />
+                <button className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10">
+                  Sync ratings
+                </button>
+              </form>
+            ) : null}
+            {standings.length > 0 ? <PrintButton /> : null}
+          </div>
         </div>
         <p className="mt-1 text-sm text-zinc-500 print:text-zinc-600">
           Computed from finalized games only.
+          {isLeagueAdmin
+            ? ' Use "Sync ratings" after member-confirmed games to update Elo.'
+            : ''}
         </p>
 
         {standings.length === 0 ? (

@@ -7,7 +7,9 @@ import {
   addPlayerAction,
   createLeagueAction,
   generatePodsAction,
+  joinLeagueAction,
   registerDeckAction,
+  registerMyDeckAction,
   type ActionState,
 } from '@/app/podmatch/leagues/actions'
 
@@ -119,6 +121,70 @@ export function RegisterDeckForm({
         className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium hover:bg-white/10"
       >
         Register deck
+      </FormActionButton>
+      <div className="basis-full">
+        <ErrorLine state={state} />
+      </div>
+    </form>
+  )
+}
+
+export function JoinLeagueForm({ defaultCode }: { defaultCode?: string }) {
+  const [state, action] = useActionState<ActionState, FormData>(joinLeagueAction, {})
+  return (
+    <form action={action} className="flex flex-wrap items-start gap-2">
+      <input
+        name="code"
+        defaultValue={defaultCode}
+        placeholder="Invite code"
+        className={`max-w-xs ${inputClass}`}
+        required
+      />
+      <FormActionButton
+        pendingLabel="Joining…"
+        className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+      >
+        Join league
+      </FormActionButton>
+      <div className="basis-full">
+        <ErrorLine state={state} />
+      </div>
+    </form>
+  )
+}
+
+export function RegisterMyDeckForm({
+  leagueId,
+  decks,
+}: {
+  leagueId: string
+  decks: { id: number; name: string; power: number | null }[]
+}) {
+  const [state, action] = useActionState<ActionState, FormData>(registerMyDeckAction, {})
+  const scored = decks.filter((d) => d.power != null)
+  if (scored.length === 0) {
+    return (
+      <p className="text-sm text-zinc-500">
+        Analyze one of your decks in PodMatch first, then register it here.
+      </p>
+    )
+  }
+  return (
+    <form action={action} className="flex flex-wrap items-start gap-2">
+      <input type="hidden" name="leagueId" value={leagueId} />
+      <select name="deckId" className={`max-w-[16rem] ${inputClass}`} required>
+        <option value="">Your deck…</option>
+        {scored.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name} (power {d.power})
+          </option>
+        ))}
+      </select>
+      <FormActionButton
+        pendingLabel="Registering…"
+        className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+      >
+        Register my deck
       </FormActionButton>
       <div className="basis-full">
         <ErrorLine state={state} />

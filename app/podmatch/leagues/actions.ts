@@ -6,12 +6,16 @@ import { createClient } from '@/lib/supabase/server'
 import {
   addPlayer,
   confirmGame,
+  confirmGameViaRpc,
   createLeague,
   finalizeGame,
   generateAndPersistPods,
   getLatestRound,
   getLeague,
+  getLeagueForViewer,
+  getMyPlayer,
   isLeagueSchemaMissing,
+  joinLeague,
   LEAGUE_SETUP_MESSAGE,
   registerDeck,
   reportGame,
@@ -173,8 +177,9 @@ export async function reportGameAction(
   if (!user) return { error: 'Sign in required.' }
 
   const leagueId = String(formData.get('leagueId') ?? '')
-  const league = await getLeague(supabase, leagueId, user.id).catch(() => null)
-  if (!league) return { error: 'League not found.' }
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id).catch(() => null)
+  if (!viewer) return { error: 'League not found.' }
+  const league = viewer.league
 
   const podId = (formData.get('podId') as string) || null
   const roundNumber = Number(formData.get('roundNumber')) || 1
@@ -248,13 +253,87 @@ export async function confirmGameAction(formData: FormData): Promise<void> {
   const gameId = String(formData.get('gameId') ?? '')
   const playerId = String(formData.get('playerId') ?? '')
   try {
-    const { finalized } = await confirmGame(supabase, gameId, playerId)
-    if (finalized) await applyRatingsForGame(supabase, gameId)
+    const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+    if (viewer?.role === 'admin') {
+      // Admin confirms on behalf (e.g. roster players without accounts).
+      const { finalized } = await confirmGame(supabase, gameId, playerId)
+      if (finalized) await applyRatingsForGame(supabase, gameId)
+    } else {
+      // Member confirms their own result via the SECURITY DEFINER RPC.
+      // Elo is synced by the admin afterward (members can't write ratings).
+      await confirmGameViaRpc(supabase, gameId, playerId)
+    }
   } catch {
     // no-op; reflected on next render
   }
   revalidatePath(`/podmatch/leagues/${leagueId}`)
   revalidatePath(`/podmatch/leagues/${leagueId}/standings`)
+}
+
+export async function joinLeagueAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { supabase, user } = await requireUser()
+  if (!user) return { error: 'Sign in required.' }
+
+  const code = String(formData.get('code') ?? '').trim()
+  if (!code) return { error: 'Enter an invite code.' }
+
+  let leagueId: string
+  try {
+    leagueId = await joinLeague(supabase, code)
+  } catch (error) {
+    return { error: friendly(error) }
+  }
+
+  redirect(`/podmatch/leagues/${leagueId}`)
+}
+
+export async function registerMyDeckAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { supabase, user } = await requireUser()
+  if (!user) return { error: 'Sign in required.' }
+
+  const leagueId = String(formData.get('leagueId') ?? '')
+  const deckId = Number(formData.get('deckId'))
+  if (!deckId) return { error: 'Pick a deck.' }
+
+  try {
+    const me = await getMyPlayer(supabase, leagueId, user.id)
+    if (!me) return { error: 'Join the league before registering a deck.' }
+    await registerDeck(supabase, leagueId, deckId, me.id)
+  } catch (error) {
+    return { error: friendly(error) }
+  }
+
+  revalidatePath(`/podmatch/leagues/${leagueId}/players`)
+  revalidatePath(`/podmatch/leagues/${leagueId}`)
+  return { ok: true }
+}
+
+export async function syncRatingsAction(formData: FormData): Promise<void> {
+  const { supabase, user } = await requireUser()
+  if (!user) return
+  const leagueId = String(formData.get('leagueId') ?? '')
+  try {
+    const league = await getLeague(supabase, leagueId, user.id) // admin-only
+    if (!league) return
+    const { data: games } = await supabase
+      .from('podmatch_games')
+      .select('id')
+      .eq('league_id', leagueId)
+      .eq('status', 'final')
+    for (const g of (games ?? []) as { id: string }[]) {
+      await applyRatingsForGame(supabase, g.id)
+    }
+  } catch {
+    // no-op
+  }
+  revalidatePath(`/podmatch/leagues/${leagueId}/standings`)
+  revalidatePath(`/podmatch/leagues/${leagueId}/handicaps`)
 }
 
 export async function finalizeGameAction(formData: FormData): Promise<void> {
