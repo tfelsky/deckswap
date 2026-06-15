@@ -4,12 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getUserDecksWithScores } from '@/lib/podmatch/decks'
 import {
-  getLeague,
+  getLeagueForViewer,
   getLeaguePlayers,
+  getMyPlayer,
   getRegisteredDecks,
   type RegisteredDeck,
 } from '@/lib/podmatch/leagues'
-import { AddPlayerForm, RegisterDeckForm } from '@/components/podmatch/league-forms'
+import {
+  AddPlayerForm,
+  RegisterDeckForm,
+  RegisterMyDeckForm,
+} from '@/components/podmatch/league-forms'
 import { toggleDeckApprovalAction } from '../../actions'
 import LeagueTabs from '@/components/podmatch/league-tabs'
 
@@ -28,19 +33,22 @@ export default async function LeaguePlayersPage({
   if (!user) notFound()
 
   const { isAdmin } = await getAdminAccessForUser(user)
-  const league = await getLeague(supabase, leagueId, user.id)
-  if (!league) notFound()
+  const viewer = await getLeagueForViewer(supabase, leagueId, user.id)
+  if (!viewer) notFound()
+  const { league, role } = viewer
+  const isLeagueAdmin = role === 'admin'
 
-  const [players, registered, { decks: allDecks, scores }] = await Promise.all([
+  const [players, registered, myDecks, myPlayer] = await Promise.all([
     getLeaguePlayers(supabase, leagueId),
     getRegisteredDecks(supabase, leagueId),
     getUserDecksWithScores(supabase, user.id),
+    isLeagueAdmin ? Promise.resolve(null) : getMyPlayer(supabase, leagueId, user.id),
   ])
 
-  const selectableDecks = allDecks.map((deck) => ({
+  const myDeckOptions = myDecks.decks.map((deck) => ({
     id: deck.id,
     name: deck.name,
-    power: (scores.get(deck.id)?.overall_power as number | undefined) ?? null,
+    power: (myDecks.scores.get(deck.id)?.overall_power as number | undefined) ?? null,
   }))
 
   const decksByPlayer = new Map<string, RegisteredDeck[]>()
@@ -59,25 +67,45 @@ export default async function LeaguePlayersPage({
         <h1 className="text-2xl font-semibold">{league.name}</h1>
         <LeagueTabs leagueId={leagueId} current="players" />
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-            <h2 className="text-lg font-semibold">Add a player</h2>
-            <p className="mt-1 text-sm text-zinc-400">Roster entries you manage as the host.</p>
-            <div className="mt-4">
-              <AddPlayerForm leagueId={leagueId} />
+        {isLeagueAdmin ? (
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-lg font-semibold">Add a player</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Roster entries you manage (for players without accounts).
+              </p>
+              <div className="mt-4">
+                <AddPlayerForm leagueId={leagueId} />
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-lg font-semibold">Register a deck</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Assign one of your decks to a player. Scored decks are eligible for pods.
+              </p>
+              <div className="mt-4">
+                <RegisterDeckForm leagueId={leagueId} players={players} decks={myDeckOptions} />
+              </div>
             </div>
           </div>
-
-          <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
-            <h2 className="text-lg font-semibold">Register a deck</h2>
+        ) : (
+          <div className="mt-6 rounded-3xl border border-white/10 bg-zinc-900 p-6">
+            <h2 className="text-lg font-semibold">Register your deck</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Assign one of your decks to a player. Scored decks are eligible for pods.
+              Pick one of your analyzed decks to bring to this league.
             </p>
             <div className="mt-4">
-              <RegisterDeckForm leagueId={leagueId} players={players} decks={selectableDecks} />
+              {myPlayer ? (
+                <RegisterMyDeckForm leagueId={leagueId} decks={myDeckOptions} />
+              ) : (
+                <p className="text-sm text-amber-300">
+                  You don&apos;t appear to be a member yet — re-join with the invite code.
+                </p>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         <h2 className="mt-10 text-xl font-semibold">Roster</h2>
         {players.length === 0 ? (
@@ -88,10 +116,19 @@ export default async function LeaguePlayersPage({
           <ul className="mt-3 space-y-3">
             {players.map((player) => {
               const decks = decksByPlayer.get(player.id) ?? []
+              const isMe = myPlayer?.id === player.id
               return (
-                <li key={player.id} className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
+                <li
+                  key={player.id}
+                  className={`rounded-2xl border bg-zinc-900 p-5 ${
+                    isMe ? 'border-primary/30' : 'border-white/10'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{player.display_name}</span>
+                    <span className="font-medium">
+                      {player.display_name}
+                      {isMe ? <span className="ml-2 text-xs text-primary">you</span> : null}
+                    </span>
                     <span className="text-xs text-zinc-500">
                       {decks.length} deck{decks.length === 1 ? '' : 's'}
                     </span>
@@ -109,20 +146,36 @@ export default async function LeaguePlayersPage({
                               {deck.power != null ? `power ${deck.power}` : 'not scored'}
                             </span>
                           </span>
-                          <form action={toggleDeckApprovalAction}>
-                            <input type="hidden" name="leagueId" value={leagueId} />
-                            <input type="hidden" name="deckId" value={deck.deck_id} />
-                            <input type="hidden" name="approved" value={(!deck.approved).toString()} />
-                            <button
+                          {isLeagueAdmin ? (
+                            <form action={toggleDeckApprovalAction}>
+                              <input type="hidden" name="leagueId" value={leagueId} />
+                              <input type="hidden" name="deckId" value={deck.deck_id} />
+                              <input
+                                type="hidden"
+                                name="approved"
+                                value={(!deck.approved).toString()}
+                              />
+                              <button
+                                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                                  deck.approved
+                                    ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+                                    : 'border border-white/10 text-zinc-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {deck.approved ? 'Approved' : 'Approve'}
+                              </button>
+                            </form>
+                          ) : (
+                            <span
                               className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
                                 deck.approved
                                   ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
-                                  : 'border border-white/10 text-zinc-400 hover:bg-white/10'
+                                  : 'border border-white/10 text-zinc-400'
                               }`}
                             >
-                              {deck.approved ? 'Approved' : 'Approve'}
-                            </button>
-                          </form>
+                              {deck.approved ? 'Approved' : 'Pending'}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>

@@ -27,8 +27,11 @@ export type League = {
   scoring_model: string
   settings: Record<string, unknown>
   status: string
+  invite_code: string | null
   created_at: string
 }
+
+export type LeagueWithRole = League & { role: 'admin' | 'member' }
 
 export type LeaguePlayer = {
   id: string
@@ -124,6 +127,119 @@ export async function getLeague(
   return (data as League) ?? null
 }
 
+/**
+ * Load a league for any viewer (admin or member). Relies on RLS: members can
+ * read leagues they belong to, non-members get null. Returns the viewer's role.
+ */
+export async function getLeagueForViewer(
+  supabase: SupabaseLike,
+  leagueId: string,
+  userId: string
+): Promise<{ league: League; role: 'admin' | 'member' } | null> {
+  const { data, error } = await supabase
+    .from('podmatch_leagues')
+    .select('*')
+    .eq('id', leagueId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  const league = data as League
+  return { league, role: league.admin_user_id === userId ? 'admin' : 'member' }
+}
+
+/** Leagues the user administers or has joined as a member, role-tagged. */
+export async function getMyLeagues(
+  supabase: SupabaseLike,
+  userId: string
+): Promise<LeagueWithRole[]> {
+  const { data: adminData, error: adminError } = await supabase
+    .from('podmatch_leagues')
+    .select('*')
+    .eq('admin_user_id', userId)
+    .order('created_at', { ascending: false })
+  if (adminError) throw new Error(adminError.message)
+  const adminLeagues = (adminData ?? []) as League[]
+  const adminIds = new Set(adminLeagues.map((l) => l.id))
+
+  // Member leagues: my player rows -> league links -> leagues.
+  const { data: myPlayers } = await supabase
+    .from('podmatch_players')
+    .select('id')
+    .eq('user_id', userId)
+  const playerIds = (myPlayers ?? []).map((p: any) => p.id)
+
+  let memberLeagues: League[] = []
+  if (playerIds.length) {
+    const { data: links } = await supabase
+      .from('podmatch_league_players')
+      .select('league_id')
+      .in('player_id', playerIds)
+    const linkRows = (links ?? []) as { league_id: string }[]
+    const leagueIds = Array.from(new Set(linkRows.map((l) => l.league_id))).filter(
+      (id) => !adminIds.has(id)
+    )
+    if (leagueIds.length) {
+      const { data: ls } = await supabase.from('podmatch_leagues').select('*').in('id', leagueIds)
+      memberLeagues = (ls ?? []) as League[]
+    }
+  }
+
+  return [
+    ...adminLeagues.map((l) => ({ ...l, role: 'admin' as const })),
+    ...memberLeagues.map((l) => ({ ...l, role: 'member' as const })),
+  ]
+}
+
+/** The caller's player row in a league (null if they haven't joined). */
+export async function getMyPlayer(
+  supabase: SupabaseLike,
+  leagueId: string,
+  userId: string
+): Promise<LeaguePlayer | null> {
+  const { data: myPlayers } = await supabase
+    .from('podmatch_players')
+    .select('id, display_name, user_id')
+    .eq('user_id', userId)
+  const players = (myPlayers ?? []) as LeaguePlayer[]
+  if (!players.length) return null
+
+  const { data: link } = await supabase
+    .from('podmatch_league_players')
+    .select('player_id')
+    .eq('league_id', leagueId)
+    .in(
+      'player_id',
+      players.map((p) => p.id)
+    )
+    .maybeSingle()
+  if (!link) return null
+  return players.find((p) => p.id === link.player_id) ?? null
+}
+
+/** Join a league by invite code (SECURITY DEFINER RPC). Returns the league id. */
+export async function joinLeague(supabase: SupabaseLike, code: string): Promise<string> {
+  const { data, error } = await supabase.rpc('podmatch_join_league', {
+    p_code: code.trim().toLowerCase(),
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+/** Confirm a result as a member (SECURITY DEFINER RPC). Returns true if finalized. */
+export async function confirmGameViaRpc(
+  supabase: SupabaseLike,
+  gameId: string,
+  playerId: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('podmatch_confirm_game', {
+    p_game: gameId,
+    p_player: playerId,
+  })
+  if (error) throw new Error(error.message)
+  return Boolean(data)
+}
+
 // ---- Players & decks -------------------------------------------------------
 
 export async function getLeaguePlayers(
@@ -168,7 +284,7 @@ export async function getRegisteredDecks(
 ): Promise<RegisteredDeck[]> {
   const { data, error } = await supabase
     .from('podmatch_league_decks')
-    .select('deck_id, player_id, approved, decks(name, commander), deck_scores(overall_power)')
+    .select('deck_id, player_id, approved, deck_name, commander, power')
     .eq('league_id', leagueId)
 
   if (error) throw new Error(error.message)
@@ -176,24 +292,57 @@ export async function getRegisteredDecks(
     deck_id: row.deck_id,
     player_id: row.player_id,
     approved: row.approved,
-    deck_name: row.decks?.name ?? `Deck ${row.deck_id}`,
-    commander: row.decks?.commander ?? null,
-    power: row.deck_scores?.overall_power ?? null,
+    deck_name: row.deck_name ?? `Deck ${row.deck_id}`,
+    commander: row.commander ?? null,
+    power: row.power ?? null,
   }))
 }
 
+/**
+ * Register a deck to a league, snapshotting its identity + score onto the row.
+ * The snapshot means pod generation never has to read another user's
+ * owner-only deck_scores. Callable by the admin or by a member for their own
+ * deck (RLS enforces ownership of the player + deck).
+ */
 export async function registerDeck(
   supabase: SupabaseLike,
   leagueId: string,
   deckId: number,
   playerId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('podmatch_league_decks')
-    .upsert(
-      { league_id: leagueId, deck_id: deckId, player_id: playerId, approved: true },
-      { onConflict: 'league_id,deck_id' }
-    )
+  const [{ data: deck }, { data: score }, { data: cards }] = await Promise.all([
+    supabase.from('decks').select('name, commander').eq('id', deckId).maybeSingle(),
+    supabase
+      .from('deck_scores')
+      .select('overall_power, speed, salt, combo_density, tutor_density, budget_pressure')
+      .eq('deck_id', deckId)
+      .maybeSingle(),
+    supabase.from('deck_cards').select('color_identity').eq('deck_id', deckId),
+  ])
+
+  const colors = new Set<string>()
+  for (const row of (cards ?? []) as any[]) {
+    for (const c of row.color_identity ?? []) colors.add(c)
+  }
+
+  const { error } = await supabase.from('podmatch_league_decks').upsert(
+    {
+      league_id: leagueId,
+      deck_id: deckId,
+      player_id: playerId,
+      approved: true,
+      deck_name: deck?.name ?? `Deck ${deckId}`,
+      commander: deck?.commander ?? null,
+      color_identity: Array.from(colors),
+      power: score?.overall_power ?? null,
+      speed: score?.speed ?? null,
+      salt: score?.salt ?? null,
+      combo_density: score?.combo_density ?? null,
+      tutor_density: score?.tutor_density ?? null,
+      budget_pressure: score?.budget_pressure ?? null,
+    },
+    { onConflict: 'league_id,deck_id' }
+  )
   if (error) throw new Error(error.message)
 }
 
@@ -223,42 +372,29 @@ export async function getLeagueEntrants(
 
   const { data, error } = await supabase
     .from('podmatch_league_decks')
-    .select('deck_id, player_id, decks(name, commander), deck_scores(*)')
+    .select(
+      'deck_id, player_id, deck_name, commander, color_identity, power, speed, salt, combo_density, tutor_density, budget_pressure'
+    )
     .eq('league_id', leagueId)
     .eq('approved', true)
   if (error) throw new Error(error.message)
 
-  // Color identity per deck.
-  const deckIds = (data ?? []).map((row: any) => row.deck_id)
-  const colorByDeck = new Map<number, Set<string>>()
-  if (deckIds.length) {
-    const { data: cards } = await supabase
-      .from('deck_cards')
-      .select('deck_id, color_identity')
-      .in('deck_id', deckIds)
-    for (const row of (cards ?? []) as any[]) {
-      const set = colorByDeck.get(row.deck_id) ?? new Set<string>()
-      for (const c of row.color_identity ?? []) set.add(c)
-      colorByDeck.set(row.deck_id, set)
-    }
-  }
-
   const bestByPlayer = new Map<string, PodEntrant>()
   for (const row of (data ?? []) as any[]) {
-    if (!row.player_id || !row.deck_scores || row.deck_scores.overall_power == null) continue
+    if (!row.player_id || row.power == null) continue
     const entrant: PodEntrant = {
       id: row.deck_id,
-      name: row.decks?.name ?? `Deck ${row.deck_id}`,
-      commander: row.decks?.commander ?? null,
+      name: row.deck_name ?? `Deck ${row.deck_id}`,
+      commander: row.commander ?? null,
       owner: playerName.get(row.player_id) ?? null,
       proxy_count: null,
-      overall_power: row.deck_scores.overall_power ?? 0,
-      speed: row.deck_scores.speed ?? 0,
-      salt: row.deck_scores.salt ?? 0,
-      combo_density: row.deck_scores.combo_density ?? 0,
-      tutor_density: row.deck_scores.tutor_density ?? 0,
-      budget_pressure: row.deck_scores.budget_pressure ?? 0,
-      color_identity: Array.from(colorByDeck.get(row.deck_id) ?? []),
+      overall_power: Number(row.power) ?? 0,
+      speed: Number(row.speed) ?? 0,
+      salt: Number(row.salt) ?? 0,
+      combo_density: Number(row.combo_density) ?? 0,
+      tutor_density: Number(row.tutor_density) ?? 0,
+      budget_pressure: Number(row.budget_pressure) ?? 0,
+      color_identity: (row.color_identity ?? []) as string[],
       player_id: row.player_id,
       player_name: playerName.get(row.player_id) ?? 'Player',
     }
