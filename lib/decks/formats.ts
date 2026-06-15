@@ -3,6 +3,7 @@ import type { ImportedDeckCard } from '@/lib/commander/types'
 export const SUPPORTED_DECK_FORMATS = [
   'unknown',
   'commander',
+  'double-decker',
   'standard',
   'pauper',
   'canlander',
@@ -11,12 +12,18 @@ export const SUPPORTED_DECK_FORMATS = [
   'premodern',
 ] as const
 
+// Two commander decks fused into one customizable 200-card list, plus an
+// unlimited sideboard that travels with the deck as extra trade value.
+export const DOUBLE_DECKER_TOTAL_CARDS = 200
+export const DOUBLE_DECKER_MAX_COPIES = 2
+
 export type StoredDeckFormat = (typeof SUPPORTED_DECK_FORMATS)[number]
 
 const SUPPORTED_SET = new Set<string>(SUPPORTED_DECK_FORMATS)
 
 const MOXFIELD_FORMAT_MAP: Record<string, StoredDeckFormat> = {
   commander: 'commander',
+  doubledecker: 'double-decker',
   standard: 'standard',
   paupercommander: 'commander',
   pauperedh: 'commander',
@@ -64,6 +71,8 @@ export function getDeckFormatLabel(format: string | null | undefined) {
   switch (normalizeDeckFormat(format)) {
     case 'commander':
       return 'Commander'
+    case 'double-decker':
+      return 'Double Decker'
     case 'standard':
       return 'Standard'
     case 'pauper':
@@ -90,11 +99,19 @@ export function detectDeckFormat(
 
   const commanders = cards.filter((card) => card.section === 'commander')
   const nonTokenCards = cards.filter((card) => card.section !== 'token')
+  const commanderCount = toSectionCount(cards, 'commander')
   const mainboardCount = toSectionCount(cards, 'mainboard')
   const sideboardCount = toSectionCount(cards, 'sideboard')
   const totalNonTokenCards = nonTokenCards.reduce((sum, card) => sum + card.quantity, 0)
 
   if (commanders.length > 0) {
+    // A pair of commanders fronting a 200-card list is a Double Decker, not a
+    // standard 100-card Commander deck. A normal two-commander deck totals 100,
+    // so this only matches the fused format.
+    if (commanderCount === 2 && commanderCount + mainboardCount === DOUBLE_DECKER_TOTAL_CARDS) {
+      return 'double-decker'
+    }
+
     return 'commander'
   }
 
@@ -122,5 +139,10 @@ export function detectDeckFormat(
 }
 
 export function formatSupportsCommanderRules(format: string | null | undefined) {
-  return normalizeDeckFormat(format) === 'commander'
+  const normalized = normalizeDeckFormat(format)
+  return normalized === 'commander' || normalized === 'double-decker'
+}
+
+export function isDoubleDeckerFormat(format: string | null | undefined) {
+  return normalizeDeckFormat(format) === 'double-decker'
 }

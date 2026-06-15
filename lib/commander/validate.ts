@@ -1,4 +1,9 @@
-import { getDeckFormatLabel, normalizeDeckFormat } from '@/lib/decks/formats'
+import {
+  DOUBLE_DECKER_MAX_COPIES,
+  DOUBLE_DECKER_TOTAL_CARDS,
+  getDeckFormatLabel,
+  normalizeDeckFormat,
+} from '@/lib/decks/formats'
 import {
   calculateCanlanderPoints,
   CANLANDER_MAX_POINTS,
@@ -342,6 +347,58 @@ export function validateCommanderDeck(cards: ImportedDeckCard[]) {
   }
 }
 
+export function validateDoubleDeckerDeck(cards: ImportedDeckCard[]) {
+  const { commanders, mainboardCards, commanderCount, mainboardCount, sideboardCount, tokenCount } =
+    toSectionCounts(cards)
+
+  const errors: string[] = []
+
+  // Two commanders front the deck — one drawn from each fused half. They do not
+  // need to be a legal partner pairing; pairing freely is the whole point.
+  if (commanderCount !== 2) {
+    errors.push(`Double Decker decks pair two commanders, found ${commanderCount}.`)
+  }
+
+  const totalCards = commanderCount + mainboardCount
+  if (totalCards !== DOUBLE_DECKER_TOTAL_CARDS) {
+    errors.push(
+      `Double Decker decks must total ${DOUBLE_DECKER_TOTAL_CARDS} cards (commanders plus maindeck), found ${totalCards}.`
+    )
+  }
+
+  // Relaxed singleton: each fused half may bring its own copy of a card, so up
+  // to two copies are allowed between the two decks. Basics are unrestricted.
+  const nameCounts = new Map<string, number>()
+
+  for (const card of [...commanders, ...mainboardCards]) {
+    const key = card.cardName.trim().toLowerCase()
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + card.quantity)
+  }
+
+  for (const [name, qty] of nameCounts.entries()) {
+    if (qty > DOUBLE_DECKER_MAX_COPIES && !isBasicLand(name)) {
+      errors.push(
+        `Too many copies of ${name}: ${qty}. Double Decker allows up to ${DOUBLE_DECKER_MAX_COPIES} between the two decks.`
+      )
+    }
+  }
+
+  errors.push(...validateCommanderColorIdentity(cards))
+
+  // The sideboard is intentionally unlimited and not validated — it rides along
+  // as customizable extra value for the trade.
+
+  return {
+    isValid: errors.length === 0,
+    commanderCount,
+    mainboardCount,
+    sideboardCount,
+    tokenCount,
+    commanderMode: commanderCount === 2 ? ('double_decker' as const) : ('invalid' as const),
+    errors: dedupeErrors(errors),
+  }
+}
+
 export function validateDeckForFormat(
   cards: ImportedDeckCard[],
   format: string | null | undefined
@@ -350,6 +407,10 @@ export function validateDeckForFormat(
 
   if (normalizedFormat === 'commander') {
     return validateCommanderDeck(cards)
+  }
+
+  if (normalizedFormat === 'double-decker') {
+    return validateDoubleDeckerDeck(cards)
   }
 
   if (LEGALITY_CHECKED_FORMATS.has(normalizedFormat)) {

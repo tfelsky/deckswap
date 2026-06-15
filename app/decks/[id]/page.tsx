@@ -2692,6 +2692,7 @@ export default async function DeckDetailPage({
             mainboard={mainboard}
             sideboard={sideboard}
             tokens={tokenCards}
+            format={deckFormat}
           />
         </section>
 
