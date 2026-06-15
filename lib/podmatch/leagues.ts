@@ -223,7 +223,7 @@ export async function getLeagueEntrants(
 
   const { data, error } = await supabase
     .from('podmatch_league_decks')
-    .select('deck_id, player_id, decks(name, commander, proxy_count), deck_scores(*)')
+    .select('deck_id, player_id, decks(name, commander), deck_scores(*)')
     .eq('league_id', leagueId)
     .eq('approved', true)
   if (error) throw new Error(error.message)
@@ -251,7 +251,7 @@ export async function getLeagueEntrants(
       name: row.decks?.name ?? `Deck ${row.deck_id}`,
       commander: row.decks?.commander ?? null,
       owner: playerName.get(row.player_id) ?? null,
-      proxy_count: row.decks?.proxy_count ?? 0,
+      proxy_count: null,
       overall_power: row.deck_scores.overall_power ?? 0,
       speed: row.deck_scores.speed ?? 0,
       salt: row.deck_scores.salt ?? 0,

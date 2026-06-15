@@ -14,7 +14,7 @@ export type PodmatchDeck = {
   commander: string | null
   format: string | null
   image_url: string | null
-  proxy_count: number | null
+  proxy_count?: number | null
 }
 
 export type DeckScoreRow = {
@@ -33,7 +33,7 @@ export type DeckScoreRow = {
   calculated_at: string | null
 }
 
-const DECK_SELECT = 'id, name, commander, format, image_url, proxy_count'
+const DECK_SELECT = 'id, name, commander, format, image_url'
 const CARD_SELECT =
   'card_name, section, quantity, type_line, oracle_text, cmc, mana_cost, color_identity, price_usd, price_usd_foil, price_usd_etched, rarity'
 
@@ -243,7 +243,7 @@ export async function getDecksForPods(
       name: deck.name,
       commander: deck.commander,
       owner: null,
-      proxy_count: deck.proxy_count,
+      proxy_count: null,
       overall_power: score.overall_power ?? 0,
       speed: score.speed ?? 0,
       salt: score.salt ?? 0,
