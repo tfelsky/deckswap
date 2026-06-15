@@ -5,6 +5,7 @@ import Link from 'next/link'
 export type MarketplaceNavSection =
   | 'home'
   | 'optimizer'
+  | 'podmatch'
   | 'decks'
   | 'singles'
   | 'import'
@@ -30,6 +31,7 @@ type MarketplaceNavProps = {
 
 const NAV_ITEMS = {
   optimizer: { href: '/optimizer', label: 'Optimizer' },
+  podmatch: { href: '/podmatch', label: 'PodMatch' },
   decks: { href: '/decks', label: 'Decks' },
   singles: { href: '/singles', label: 'Singles' },
   import: { href: '/import-deck', label: 'Import' },
@@ -48,6 +50,7 @@ const NAV_ITEMS = {
 const PUBLIC_TABS: Array<keyof typeof NAV_ITEMS> = ['decks', 'singles', 'optimizer', 'import']
 const SIGNED_IN_TABS: Array<keyof typeof NAV_ITEMS> = [
   ...PUBLIC_TABS,
+  'podmatch',
   'my-decks',
   'trade-matches',
   'trade-offers',
