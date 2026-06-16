@@ -1,0 +1,90 @@
+<svg viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e1521"/>
+      <stop offset="1" stop-color="#080d15"/>
+    </linearGradient>
+    <radialGradient id="glowEm" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#2fd4a0" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#2fd4a0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#e3b54a" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#e3b54a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2fd4a0"/>
+      <stop offset="1" stop-color="#1fae82"/>
+    </linearGradient>
+    <linearGradient id="manaW" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7f0c7"/><stop offset="1" stop-color="#eadf9d"/></linearGradient>
+    <linearGradient id="manaU" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fc7ff"/><stop offset="1" stop-color="#4b88d9"/></linearGradient>
+    <linearGradient id="manaB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#726f7f"/><stop offset="1" stop-color="#2c2933"/></linearGradient>
+    <linearGradient id="manaR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9b73"/><stop offset="1" stop-color="#d74d37"/></linearGradient>
+    <linearGradient id="manaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9dd98e"/><stop offset="1" stop-color="#3f8b54"/></linearGradient>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <circle cx="250" cy="520" r="520" fill="url(#glowEm)"/>
+  <circle cx="900" cy="1480" r="560" fill="url(#glowGold)"/>
+
+  <!-- brand row -->
+  <g transform="translate(80,150)">
+    <path d="M0 6 L26 0 L52 6 L52 34 Q52 52 26 62 Q0 52 0 34 Z" fill="url(#accent)"/>
+    <text x="40" y="30" fill="#0a0f18" font-size="22" font-weight="800" text-anchor="middle">M</text>
+    <text x="72" y="22" fill="#f6f5ef" font-size="24" font-weight="700" letter-spacing="3">MYTHIVERSE EXCHANGE</text>
+    <text x="72" y="50" fill="#7f8893" font-size="17" font-weight="600" letter-spacing="6">DECKSWAP</text>
+  </g>
+
+  <!-- WUBRG mana signature (from the site color chooser) -->
+  <g transform="translate(80,252)">
+    <circle cx="16" cy="0" r="15" fill="url(#manaW)"/>
+    <circle cx="54" cy="0" r="15" fill="url(#manaU)"/>
+    <circle cx="92" cy="0" r="15" fill="url(#manaB)" stroke="#ffffff" stroke-opacity="0.2"/>
+    <circle cx="130" cy="0" r="15" fill="url(#manaR)"/>
+    <circle cx="168" cy="0" r="15" fill="url(#manaG)"/>
+    <text x="206" y="6" fill="#7f8893" font-size="18" font-weight="700" letter-spacing="3">EVERY COLOR · EVERY DECK</text>
+  </g>
+  <text x="1000" y="178" fill="#7f8893" font-size="22" font-weight="700" text-anchor="end" letter-spacing="2">01 / 05</text>
+
+  <!-- eyebrow -->
+  <g transform="translate(80,470)">
+    <rect x="0" y="0" width="392" height="58" rx="29" fill="#2fd4a0" fill-opacity="0.12" stroke="#2fd4a0" stroke-opacity="0.4"/>
+    <circle cx="34" cy="29" r="6" fill="#2fd4a0"/>
+    <text x="58" y="38" fill="#7ee9c4" font-size="22" font-weight="700" letter-spacing="3">THE WHOLE-DECK MARKET</text>
+  </g>
+
+  <!-- headline -->
+  <text x="80" y="660" fill="#f6f5ef" font-size="98" font-weight="800" letter-spacing="-2">
+    <tspan x="80" dy="0">Sell the whole</tspan>
+    <tspan x="80" dy="112">deck. Keep the</tspan>
+    <tspan x="80" dy="112" fill="#2fd4a0">whole value.</tspan>
+  </text>
+
+  <text x="80" y="1070" fill="#aeb4bd" font-size="34" font-weight="500">
+    <tspan x="80" dy="0">Complete Commander decks trade as one</tspan>
+    <tspan x="80" dy="46">unit — not chopped into a buylist pile</tspan>
+    <tspan x="80" dy="46">of singles at 50 cents on the dollar.</tspan>
+  </text>
+
+  <!-- value comparison motif -->
+  <g transform="translate(80,1240)">
+    <rect x="0" y="0" width="450" height="300" rx="28" fill="#141b27" stroke="#ffffff" stroke-opacity="0.08"/>
+    <text x="32" y="58" fill="#7f8893" font-size="22" font-weight="600" letter-spacing="2">BUYLIST EXIT</text>
+    <text x="32" y="140" fill="#6f7884" font-size="74" font-weight="800">$500</text>
+    <rect x="32" y="186" width="220" height="14" rx="7" fill="#6f7884" fill-opacity="0.5"/>
+    <text x="32" y="252" fill="#8a929c" font-size="24" font-weight="500">~50% of deck value</text>
+
+    <rect x="470" y="0" width="450" height="300" rx="28" fill="#16241f" stroke="#2fd4a0" stroke-opacity="0.4"/>
+    <text x="502" y="58" fill="#7ee9c4" font-size="22" font-weight="700" letter-spacing="2">DECKSWAP TRADE</text>
+    <text x="502" y="140" fill="#2fd4a0" font-size="74" font-weight="800">$878</text>
+    <rect x="502" y="186" width="386" height="14" rx="7" fill="#2fd4a0"/>
+    <text x="502" y="252" fill="#bdeedd" font-size="24" font-weight="500">value preserved per side</text>
+  </g>
+
+  <!-- CTA -->
+  <g transform="translate(80,1660)">
+    <rect x="0" y="0" width="920" height="96" rx="48" fill="url(#accent)"/>
+    <text x="460" y="62" fill="#08110c" font-size="36" font-weight="800" text-anchor="middle" letter-spacing="1">List your deck → mythivex.com</text>
+  </g>
+  <text x="540" y="1820" fill="#7f8893" font-size="26" font-weight="600" text-anchor="middle" letter-spacing="3">SWIPE UP TO IMPORT A DECK</text>
+</svg>

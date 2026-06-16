@@ -62,7 +62,7 @@ export function Categories({ counts }: { counts: CategoryCounts }) {
               Browse by Deck Profile
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Inventory categories that reflect the actual marketplace instead of placeholder archetypes
+              Categories that reflect what&apos;s actually in the marketplace right now.
             </p>
           </div>
         </div>

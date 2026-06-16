@@ -6,7 +6,9 @@ import {
   CalendarClock,
   Gauge,
   Mail,
+  MonitorPlay,
   PackageCheck,
+  RadioTower,
   ShieldCheck,
   Store,
   Users,
@@ -45,9 +47,9 @@ const benefits = [
   },
   {
     icon: Users,
-    title: 'Bring players back in',
+    title: 'PodMatch admin and app interface',
     body:
-      'Offer local pickup and use PodMatch leagues to fill tables. Online listings become a reason for nearby players to walk through your door.',
+      'Give store staff a polished web console for Commander nights: create events, manage pods, and schedule play across cities. It helps drive player interest, event revenue, and repeat weekly attendance.',
   },
   {
     icon: Store,
@@ -202,6 +204,69 @@ export default function ForStoresPage() {
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.body}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* LGS TV */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="grid gap-6 rounded-[2rem] border border-border/80 bg-card/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.2)] backdrop-blur-sm lg:grid-cols-[0.92fr_1.08fr] lg:p-8">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                <MonitorPlay className="h-4 w-4" />
+                LGS TV
+              </div>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                Put your Mythivex inventory, specials, and events on store screens.
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                LGS TV is the store media layer for Mythivex: digital signage that can rotate live
+                inventory, featured decks, store specials, PodMatch league data, and tournament
+                updates on TVs in-store and online.
+              </p>
+              <div className="mt-6">
+                <Button variant="outline" className="h-11" asChild>
+                  <Link href="/lgs-tv">
+                    Explore LGS TV
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  icon: PackageCheck,
+                  title: 'Inventory feed',
+                  body: 'Show store-picked listings and featured decks without making a new graphic every time.',
+                },
+                {
+                  icon: CalendarClock,
+                  title: 'Tournament data',
+                  body: 'Display league timing, standings, pairings, and event reminders where players already look.',
+                },
+                {
+                  icon: BadgeDollarSign,
+                  title: 'Store specials',
+                  body: 'Promote trade-in bonuses, clearance pushes, sealed offers, and local pickup calls.',
+                },
+                {
+                  icon: RadioTower,
+                  title: 'Online channel',
+                  body: 'Reuse the same content stream for web embeds when the store wants signage beyond the wall.',
+                },
+              ].map((item) => {
+                const Icon = item.icon
+
+                return (
+                  <div key={item.title} className="rounded-[1.25rem] border border-border bg-background/35 p-5">
+                    <Icon className="h-5 w-5 text-primary" />
+                    <h3 className="mt-4 font-semibold text-foreground">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </section>
 

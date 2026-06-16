@@ -58,13 +58,13 @@ export async function TradeEconomicsSection() {
         <div className="grid gap-6 lg:grid-cols-[0.94fr_1.06fr]">
           <div className="deckswap-glass rounded-[2rem] p-8">
             <div className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-              Offer Positioning
+              Choosing a lane
             </div>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-              The best DeckSwap outcome depends on the lane, not just the list
+              Your best outcome depends on the lane, not just the list
             </h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              We can now position the service in two premium tiers: escrow as the highest-touch experience, and direct shipping as the more affordable option that still carries meaningful protection through holdback and the self-insurance reserve.
+              Two premium tiers: escrow for the highest-touch experience, and direct shipping for a more affordable path that&apos;s still protected by holdback and the self-insurance reserve.
             </p>
 
             <div className="mt-8 space-y-3">
@@ -96,13 +96,13 @@ export async function TradeEconomicsSection() {
 
           <div className="rounded-[2rem] border border-border bg-card/70 p-8 backdrop-blur-sm">
             <div className="inline-flex rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-              Savings Economics
+              The numbers
             </div>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-              What the three examples actually prove
+              How much value each trade keeps
             </h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              The trade works best when we preserve deck value instead of collapsing everything down to buylist cash. Higher-value deals can support premium escrow, while cleaner domestic lanes can move through direct shipping at a lower cost without dropping the protection story.
+              You keep far more deck value than collapsing everything down to buylist cash. Higher-value deals fit premium escrow; clean domestic trades move through direct shipping at a lower cost — and stay protected either way.
             </p>
 
             <div className="mt-8 grid gap-4">

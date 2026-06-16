@@ -58,25 +58,25 @@ const protectionPillars = [
   {
     icon: Scale,
     eyebrow: "Premium Escrow",
-    title: "The upscale service is built for the highest-trust deals.",
+    title: "Built for the highest-trust deals.",
     description:
-      "Escrow is the white-glove lane between agreement and completion. It is positioned for the deals where platform control, intake, inspection, and release timing should feel meaningfully more hands-on than a standard shipment flow.",
+      "Escrow is the white-glove lane between agreement and completion — for deals where you want hands-on control over intake, inspection, and release timing instead of a standard shipment.",
     bullets: [
       "Best fit for higher-ticket decks and more delicate trust situations",
-      "Higher-touch control over release timing, equalization, and review",
-      "Designed to feel like the flagship service rather than the base package",
+      "Hands-on control over release timing, equalization, and review",
+      "Our highest-touch service for high-value decks",
     ],
   },
   {
     icon: ClipboardCheck,
     eyebrow: "Direct Shipping",
-    title: "The lower-cost lane still keeps a premium protection story.",
+    title: "The lower-cost lane that's still protected.",
     description:
-      "Direct shipping is positioned as the simpler, more affordable option, but not the exposed one. Coverage still comes from structured holdback, clear records, and the self-insurance reserve that backs the lane when something goes sideways.",
+      "Direct shipping is the simpler, more affordable option — not the exposed one. Coverage still comes from structured holdback, clear records, and the self-insurance reserve that backs the lane when something goes wrong.",
     bullets: [
-      "Lower operational cost than full escrow without sounding stripped down",
+      "Lower cost than full escrow, with protection intact",
       "Holdback slows release until the key delivery proof exists",
-      "Self-insurance reserve supports recovery without needing full escrow overhead",
+      "Self-insurance reserve supports recovery without full escrow overhead",
     ],
   },
 ]
@@ -228,22 +228,20 @@ export default function InfoPage() {
                 Protection And Positioning
               </div>
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                DeckSwap can offer both an upscale escrow service and a lower-cost protected shipping lane.
+                Two ways to close a deal: upscale escrow, or a lower-cost protected shipping lane.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
-                This page explains how the protection story can split cleanly in two: premium
-                escrow as the flagship white-glove service, and direct shipping as the more
-                affordable offer that still feels premium because holdback and reserve coverage sit
-                behind it.
+                Premium escrow is the flagship white-glove service. Direct shipping is the more
+                affordable lane that still feels premium, with holdback and reserve coverage behind
+                it.
               </p>
 
               <div className="mt-8 rounded-[1.6rem] border border-amber-300/15 bg-amber-300/8 p-5">
                 <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">Important context</div>
                 <p className="mt-2 text-sm leading-7 text-foreground/85">
-                  The language here describes the intended service architecture and market
-                  positioning for eligible deals. Specific protection mechanics can vary by
-                  transaction while the broader checkout, direct shipping, and escrow systems
-                  continue to mature.
+                  Specific protection details can vary by transaction, and the checkout, direct
+                  shipping, and escrow systems are still maturing. Coverage described here applies to
+                  eligible deals.
                 </p>
               </div>
 
@@ -283,7 +281,7 @@ export default function InfoPage() {
               Protection Design
             </div>
             <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              The strongest positioning separates the flagship service from the scalable one.
+              Two lanes, each protected in the way that fits the deal.
             </h2>
           </div>
 
@@ -390,12 +388,11 @@ export default function InfoPage() {
                 Direct Shipping Standard
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Lower cost should not mean lower-class positioning.
+                Lower cost, not lower protection.
               </h2>
               <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                Direct shipping can still be sold as premium coverage. The difference is that the
-                lane trims operational overhead, while holdback, clear records, and reserve-backed
-                recovery continue to carry the protection story.
+                Direct shipping trims operational overhead, not your coverage. Holdback, clear
+                records, and reserve-backed recovery still stand behind every deal.
               </p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -457,13 +454,12 @@ export default function InfoPage() {
                   The Short Version
                 </div>
                 <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Escrow becomes the flagship. Direct shipping becomes the accessible premium offer.
+                  Escrow for the highest-control deals. Direct shipping for an affordable, still-protected path.
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-foreground/80 sm:text-base">
-                  Premium escrow is the upscale service for deals that need the most control.
-                  Direct shipping gives players a lower-cost path that can still feel protected
-                  because holdback and reserve-backed recovery keep real structure behind the
-                  transaction.
+                  Premium escrow is the upscale service for deals that need the most control. Direct
+                  shipping gives you a lower-cost path that stays protected, with holdback and
+                  reserve-backed recovery behind every transaction.
                 </p>
               </div>
 

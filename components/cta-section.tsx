@@ -25,11 +25,11 @@ export function CTASection() {
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6">
-              <div className="text-sm text-muted-foreground">Why it matters</div>
+              <div className="text-sm text-muted-foreground">What you get</div>
               <div className="mt-4 space-y-3 text-sm text-foreground">
-                <p>Escrow becomes the flagship service instead of the default for every transaction.</p>
-                <p>Direct shipping opens a more accessible price point without sounding stripped down or exposed.</p>
-                <p>Auction still stays available when your priority is simply moving the deck and clearing space fast.</p>
+                <p>Escrow gives high-value deals inspection, controlled release, and hands-on support.</p>
+                <p>Direct shipping is the lower-cost lane, still covered by holdback and the self-insurance reserve.</p>
+                <p>Auctions are there whenever you just want to move a deck and clear space fast.</p>
               </div>
             </div>
           </div>

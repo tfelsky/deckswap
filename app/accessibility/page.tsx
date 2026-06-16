@@ -103,11 +103,9 @@ export default function AccessibilityPage() {
             <section>
               <h2 className="text-2xl font-semibold text-foreground">Current scope and limitations</h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                Some areas of Mythiverse Exchange are still prototype or pre-launch workflows. That
-                means accessibility improvements may still be in progress for advanced marketplace,
-                shipping, or trading experiences. When a barrier is identified, it should be
-                prioritized alongside product and technical fixes rather than deferred as a polish
-                task.
+                Some areas of Mythiverse Exchange are still in active development, so accessibility
+                improvements may be in progress for newer marketplace, shipping, or trading
+                features. When you report a barrier, we prioritize fixing it.
               </p>
             </section>
 

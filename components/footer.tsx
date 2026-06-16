@@ -18,6 +18,7 @@ const footerLinks = {
   resources: [
     { name: "Info & FAQ", href: "/info" },
     { name: "For Game Stores", href: "/for-stores" },
+    { name: "LGS TV", href: "/lgs-tv" },
     { name: "Completed Sales", href: "/completed-sales" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },
     { name: "Paper Power 9", href: "/paper-power-9" },

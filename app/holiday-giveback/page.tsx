@@ -41,7 +41,7 @@ const recipientPrinciples = [
   'Recipient privacy should be protected.',
   'Distribution should happen through trusted families, schools, youth groups, libraries, or nonprofit partners.',
   'Decks should be screened for age-appropriate presentation and reasonable gameplay complexity.',
-  'This page is a concept and pledge surface for now, not a live donation intake system.',
+  'For now this page collects pledges of support rather than processing live donations.',
 ]
 
 export default function HolidayGivebackPage() {

@@ -3,12 +3,18 @@
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 
-export default function InviteCode({ code }: { code: string }) {
+export default function InviteCode({
+  code,
+  joinPath = '/podmatch/leagues/join',
+}: {
+  code: string
+  joinPath?: string
+}) {
   const [copied, setCopied] = useState(false)
 
   function copyLink() {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const link = `${origin}/podmatch/leagues/join?code=${encodeURIComponent(code)}`
+    const link = `${origin}${joinPath}?code=${encodeURIComponent(code)}`
     navigator.clipboard?.writeText(link).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)

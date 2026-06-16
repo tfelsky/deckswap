@@ -36,8 +36,7 @@ export function HowItWorks() {
             How It Works
           </h2>
           <p className="mt-4 text-muted-foreground">
-            The strongest part of the current product is the import-to-marketplace flow,
-            so the landing page now explains that path directly.
+            Go from a Commander list to a polished, market-ready deck page in four steps.
           </p>
         </div>
 
