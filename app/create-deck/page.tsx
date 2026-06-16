@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function CreateDeckPage() {
-  const supabase = createClient()
   const router = useRouter()
 
   const [name, setName] = useState('')
@@ -25,6 +24,7 @@ export default function CreateDeckPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const supabase = createClient()
     setLoading(true)
     setError(null)
 

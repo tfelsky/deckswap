@@ -34,7 +34,7 @@ export async function logDeckImportEvent(
   supabase: {
     from: (table: string) => {
       insert: (
-        value: unknown
+        value: Record<string, unknown>
       ) => PromiseLike<{ error?: { message?: string | null } | null }>
     }
   },
