@@ -28,6 +28,7 @@ const STATIC_ROUTES: Array<{
   { path: '/decks', changeFrequency: 'hourly', priority: 0.9 },
   { path: '/auctions', changeFrequency: 'hourly', priority: 0.8 },
   { path: '/info', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/for-stores', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/completed-sales', changeFrequency: 'daily', priority: 0.7 },
   { path: '/paper-power-9', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/holiday-giveback', changeFrequency: 'weekly', priority: 0.7 },
