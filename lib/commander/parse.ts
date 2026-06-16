@@ -441,6 +441,101 @@ function parseArchidektTable(input: string): ImportedDeckCard[] {
   return cards
 }
 
+function findColumnIndex(headers: string[], aliases: string[]) {
+  return headers.findIndex((header) => aliases.includes(header))
+}
+
+function inferHeaderlessDelimitedSections(cards: ImportedDeckCard[]) {
+  const totalQuantity = cards.reduce((sum, card) => sum + card.quantity, 0)
+
+  if (totalQuantity > 75 && cards[0]?.quantity === 1) {
+    cards[0].section = 'commander'
+  }
+
+  for (const card of cards) {
+    if (card.section === 'mainboard' && isLikelyTokenCard(card.cardName, card.setCode)) {
+      card.section = 'token'
+    }
+  }
+}
+
+function parseDelimitedDeckTable(input: string): ImportedDeckCard[] {
+  const lines = input
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  if (lines.length < 2) return []
+
+  const delimiter = lines[0].includes('\t') ? '\t' : lines[0].includes(',') ? ',' : null
+  if (!delimiter) return []
+
+  const rows = lines.map((line) => splitDelimitedLine(line, delimiter))
+  const firstRow = rows[0] ?? []
+  const headers = firstRow.map(normalizeHeader)
+  const firstCellQuantity = Number(firstRow[0])
+  const hasHeader =
+    !Number.isFinite(firstCellQuantity) ||
+    findColumnIndex(headers, ['quantity', 'qty', 'count', 'amount']) !== -1 ||
+    findColumnIndex(headers, ['card', 'name', 'cardname', 'cardtitle']) !== -1
+
+  const quantityIndex = hasHeader
+    ? findColumnIndex(headers, ['quantity', 'qty', 'count', 'amount'])
+    : 0
+  const nameIndex = hasHeader
+    ? findColumnIndex(headers, ['card', 'name', 'cardname', 'cardtitle'])
+    : 1
+
+  if (quantityIndex === -1 || nameIndex === -1) {
+    return []
+  }
+
+  const setNameIndex = hasHeader
+    ? findColumnIndex(headers, ['setname', 'edition', 'editionname'])
+    : 2
+  const setCodeIndex = hasHeader
+    ? findColumnIndex(headers, ['setcode', 'set', 'editioncode'])
+    : 3
+  const collectorNumberIndex = hasHeader
+    ? findColumnIndex(headers, ['collectornumber', 'number', 'cn'])
+    : 4
+  const foilIndex = hasHeader
+    ? findColumnIndex(headers, ['foil', 'finish', 'printing', 'iscardfoil'])
+    : -1
+
+  const dataRows = hasHeader ? rows.slice(1) : rows
+  const cards: ImportedDeckCard[] = []
+
+  for (const values of dataRows) {
+    const quantity = Number(values[quantityIndex])
+    const cardName = values[nameIndex]?.trim()
+
+    if (!quantity || !cardName) continue
+
+    const row = hasHeader
+      ? Object.fromEntries(
+          headers.map((header, index) => [header, values[index]?.trim() ?? ''])
+        )
+      : {}
+
+    cards.push({
+      section: hasHeader ? inferSectionFromArchidektRow(row) : 'mainboard',
+      quantity,
+      cardName,
+      foil: foilIndex === -1 ? false : parseFoilValue(values[foilIndex] ?? ''),
+      setCode: values[setCodeIndex]?.trim().toLowerCase() || undefined,
+      setName: values[setNameIndex]?.trim() || undefined,
+      collectorNumber: values[collectorNumberIndex]?.trim() || undefined,
+    })
+  }
+
+  if (!hasHeader) {
+    inferHeaderlessDelimitedSections(cards)
+  }
+
+  return cards
+}
+
 function parseCardLine(
   line: string,
   currentSection: 'commander' | 'mainboard' | 'sideboard' | 'token'
@@ -535,6 +630,11 @@ export function parseDeckText(input: string, sourceType = 'text'): ImportedDeckC
     if (archidektCards.length > 0) {
       return archidektCards
     }
+  }
+
+  const delimitedCards = parseDelimitedDeckTable(input)
+  if (delimitedCards.length > 0) {
+    return delimitedCards
   }
 
   const lines = input.split('\n')

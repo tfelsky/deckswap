@@ -11,8 +11,8 @@ type ContextNavProps = {
 }
 
 // The contextual second bar: shows the sub-functions of the current area.
-// Renders nothing when the current area has no sub-functions (e.g. Learn,
-// Support) or the path doesn't map to a known area.
+// Renders nothing when the current area has no sub-functions (e.g. How It Works
+// or Support) or the path doesn't map to a known area.
 export default function ContextNav({
   isAdmin = false,
   unreadTradeOffers = 0,

@@ -11,13 +11,14 @@ const footerLinks = {
   ],
   trading: [
     { name: "Deck Swap", href: "/trade-matches" },
+    { name: "How DeckSwap Works", href: "/info" },
     { name: "Trade Offers", href: "/trade-offers" },
     { name: "Trades Workspace", href: "/trades" },
     { name: "My Decks", href: "/my-decks" },
   ],
   resources: [
-    { name: "Info & FAQ", href: "/info" },
     { name: "For Game Stores", href: "/for-stores" },
+    { name: "Store Pricing", href: "/pricing" },
     { name: "LGS TV", href: "/lgs-tv" },
     { name: "Completed Sales", href: "/completed-sales" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },
@@ -72,7 +73,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-foreground">Trading</h4>
+            <h4 className="mb-4 text-sm font-semibold text-foreground">DeckSwap</h4>
             <ul className="space-y-3">
               {footerLinks.trading.map((link) => (
                 <li key={link.name}>

@@ -53,9 +53,9 @@ const benefits = [
   },
   {
     icon: Store,
-    title: 'No upfront cost',
+    title: 'Store-friendly partner tiers',
     body:
-      'No new POS to install and no monthly software fee to start. Create a store account, list your first decks, and only pay when a deck sells.',
+      'Start with a lightweight store presence, then upgrade when singles, events, LGS TV, and PodMatch are creating measurable demand.',
   },
 ]
 
@@ -123,7 +123,7 @@ export default function ForStoresPage() {
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="h-12 min-w-[200px]" asChild>
-                <Link href="/decks">See the marketplace</Link>
+                <Link href="/pricing">View store pricing</Link>
               </Button>
             </div>
             <div className="mt-8 flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -132,7 +132,7 @@ export default function ForStoresPage() {
                 Escrow &amp; holdback-backed coverage
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-                No upfront cost
+                Store pricing from $99/mo
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
                 Local pickup supported
