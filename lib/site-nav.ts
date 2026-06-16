@@ -85,6 +85,8 @@ export const SITE_AREAS: SiteArea[] = [
     prefixes: ['/podmatch'],
     inMainBar: true,
     sub: [
+      { label: 'For Players', href: '/podmatch/users' },
+      { label: 'For Stores', href: '/podmatch/stores' },
       { label: 'Analyze', href: '/podmatch' },
       { label: 'Pods', href: '/podmatch/pods/generate' },
       { label: 'Leagues', href: '/podmatch/leagues' },
