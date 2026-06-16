@@ -4,8 +4,6 @@ import Link from 'next/link'
 import {
   ArrowRight,
   BadgePercent,
-  BarChart3,
-  CalendarDays,
   CheckCircle2,
   Clock3,
   Mail,
@@ -13,7 +11,6 @@ import {
   PackageSearch,
   QrCode,
   RadioTower,
-  Settings,
   Sparkles,
   Trophy,
 } from 'lucide-react'
@@ -25,53 +22,48 @@ const PARTNER_EMAIL = 'partners@mythivex.com'
 const LGS_TV_MAILTO = `mailto:${PARTNER_EMAIL}?subject=Mythivex%20LGS%20TV`
 
 const heroSignals = [
-  'Live inventory spotlight',
-  'PodMatch event data',
-  'Store promos',
-  'Online channel ready',
+  'Promote live inventory',
+  'Guide event traffic',
+  'Sell from every screen',
+  'Update once',
 ]
 
 const screenFeeds = [
   {
     icon: PackageSearch,
     eyebrow: 'Inventory',
-    title: 'High-value deck arrivals',
-    body: 'Feature complete Commander decks, buylist finds, sealed drops, and local pickup offers.',
+    title: 'Show what is ready to buy',
+    body: 'Feature decks, sealed product, singles, and pickup offers while shoppers are in-store.',
   },
   {
     icon: Trophy,
     eyebrow: 'Events',
-    title: 'League night status',
-    body: 'Show pod pairings, round timing, standings, and upcoming store events on the same loop.',
+    title: 'Keep players oriented',
+    body: 'Put round timing, pairings, standings, and next events where players already look.',
   },
   {
     icon: BadgePercent,
     eyebrow: 'Retail',
-    title: 'Trade-in bonus weekend',
-    body: 'Run time-boxed promos without rebuilding a graphic for every offer or screen.',
+    title: 'Run simple promos',
+    body: 'Push trade-in bonuses, local pickup, and weekend offers without making new posters.',
   },
 ]
 
 const productModes = [
   {
     icon: MonitorPlay,
-    title: 'Counter Screens',
-    body: 'Put high-margin listings and pickup calls where staff and shoppers already meet.',
+    title: 'Better use of wall space',
+    body: 'Turn passive TVs into useful selling surfaces.',
   },
   {
     icon: RadioTower,
-    title: 'Play Space TVs',
-    body: 'Rotate round timing, standings, announcements, and product moments between matches.',
+    title: 'Less staff repetition',
+    body: 'Screens answer common event and promo questions.',
   },
   {
     icon: QrCode,
-    title: 'Web Embeds',
-    body: 'Reuse the same store channel online when a shop wants an always-current public feed.',
-  },
-  {
-    icon: Settings,
-    title: 'Store Controls',
-    body: 'Choose eligible inventory, promo blocks, event modules, and screen priorities.',
+    title: 'More action from shoppers',
+    body: 'QR calls make listings and pickup offers easier to open.',
   },
 ]
 
@@ -79,35 +71,51 @@ const setupSteps = [
   {
     step: '01',
     title: 'Connect the feed',
-    body: 'Start with Mythivex listings, store-picked products, and PodMatch events already tied to the store.',
+    body: 'Choose which Mythivex listings, promos, and events can appear on-screen.',
   },
   {
     step: '02',
     title: 'Build the rotation',
-    body: 'Mix inventory cards, tournament data, specials, QR calls, announcements, and pickup prompts.',
+    body: 'Pick a few blocks: inventory, events, promos, QR calls, or announcements.',
   },
   {
     step: '03',
-    title: 'Run the channel',
-    body: 'Use the same content stream for store TVs, counter displays, event monitors, and web embeds.',
+    title: 'Let it run',
+    body: 'Use the same channel at the counter, in the play space, and online.',
   },
 ]
 
 const trustPoints = [
   {
     icon: Clock3,
-    title: 'Timed rotations',
-    body: 'Lead with event details before round start, then switch to promos and inventory between games.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Useful sales surface',
-    body: 'Screens stop being wallpaper and start pointing customers at real listings and actions.',
+    title: 'Timed to the day',
+    body: 'Events before play, promos between rounds, inventory during retail hours.',
   },
   {
     icon: Sparkles,
-    title: 'No design queue',
-    body: 'Store staff can change what gets screen time without making a new poster for each update.',
+    title: 'No design bottleneck',
+    body: 'Change the offer without remaking the sign.',
+  },
+]
+
+const imageBreaks = [
+  {
+    src: '/lgs-tv-counter-screen.png',
+    alt: 'Store counter with a simple LGS TV screen above it',
+    title: 'Sell what is in the shop',
+    body: 'Feature pickup-ready inventory at the counter.',
+  },
+  {
+    src: '/lgs-tv-event-screen.png',
+    alt: 'Game store play space with a simple event screen',
+    title: 'Help event nights run cleaner',
+    body: 'Make pairings, timing, and promos easier to see.',
+  },
+  {
+    src: '/lgs-tv-pickup-screen.png',
+    alt: 'Game store counter display with a simple pickup callout',
+    title: 'Make the next step obvious',
+    body: 'Point shoppers toward listings, pickups, and offers.',
   },
 ]
 
@@ -138,31 +146,35 @@ function ScreenTicker() {
 
 function LiveChannelGraphic() {
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.08fr_0.92fr]">
-      <div className="overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-[0_22px_70px_rgba(0,0,0,0.24)]">
-        <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-5 py-4">
-          <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-primary/80">LGS TV Live</div>
-            <div className="mt-1 text-lg font-semibold text-foreground">Store Channel</div>
+    <div className="grid gap-4 lg:grid-cols-[1.04fr_0.96fr]">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-4">
+          <div className="min-w-0">
+            <div className="whitespace-nowrap text-sm font-semibold text-foreground">
+              LGS TV Live <span className="text-muted-foreground">/</span> Store Channel
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              A simple loop for inventory, events, and offers
+            </div>
           </div>
-          <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary">
+          <div className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary">
             On air
           </div>
         </div>
 
         <div className="grid gap-4 p-5 sm:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[1.25rem] border border-primary/20 bg-primary/10 p-5">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-5">
             <div className="text-xs uppercase tracking-[0.22em] text-primary/75">
               Featured inventory
             </div>
-            <h3 className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
-              Atraxa Superfriends
+            <h3 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+              Pickup-ready decks
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Complete Commander deck, sleeved and pickup-ready.
+              A clean screen moment for products customers can ask about now.
             </p>
-            <div className="mt-8 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
-              {['Tokens', 'Trade open', 'QR listing'].map((item) => (
+            <div className="mt-6 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
+              {['Featured', 'Pickup', 'Scan'].map((item) => (
                 <div key={item} className="rounded-xl border border-border bg-background/35 px-3 py-3">
                   {item}
                 </div>
@@ -175,7 +187,7 @@ function LiveChannelGraphic() {
               const Icon = item.icon
 
               return (
-                <div key={item.title} className="rounded-[1.25rem] border border-border bg-background/35 p-4">
+                <div key={item.title} className="rounded-lg border border-border bg-background/35 p-4">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" />
@@ -200,7 +212,7 @@ function LiveChannelGraphic() {
           const Icon = mode.icon
 
           return (
-            <div key={mode.title} className="rounded-[1.25rem] border border-border bg-card/75 p-5">
+            <div key={mode.title} className="rounded-lg border border-border bg-card/75 p-5">
               <Icon className="h-5 w-5 text-primary" />
               <h3 className="mt-4 font-semibold text-foreground">{mode.title}</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{mode.body}</p>
@@ -209,6 +221,26 @@ function LiveChannelGraphic() {
         })}
       </div>
     </div>
+  )
+}
+
+function ImageBreaks() {
+  return (
+    <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+      <div className="grid gap-5 md:grid-cols-3">
+        {imageBreaks.map((item) => (
+          <figure key={item.src} className="overflow-hidden rounded-xl border border-border bg-card/70">
+            <div className="relative aspect-[16/10]">
+              <Image src={item.src} alt={item.alt} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+            </div>
+            <figcaption className="p-5">
+              <h3 className="font-semibold text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -238,8 +270,8 @@ export default function LgsTvPage() {
                   Turn every store screen into a live Mythivex channel.
                 </h1>
                 <p className="mt-5 max-w-2xl text-pretty text-lg leading-8 text-zinc-200">
-                  LGS TV brings inventory, specials, tournament timing, standings, QR calls, and
-                  pickup-ready listings onto the screens your players already watch.
+                  Digital signage for local game stores: promote inventory, guide event nights,
+                  and keep customers pointed at the next action.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Button size="lg" className="h-12 min-w-[190px]" asChild>
@@ -270,12 +302,12 @@ export default function LgsTvPage() {
                 Store Media Layer
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Give the wall, counter, and play space the same source of truth.
+                Make screens earn their wall space.
               </h2>
               <p className="mt-4 leading-7 text-muted-foreground">
-                The channel pulls from operational data a store already manages: live Mythivex
-                inventory, store-picked promotions, and PodMatch event activity. Less duplicated
-                marketing work, more useful screen time.
+                Most shops already have TVs. LGS TV turns them into simple, current signage for the
+                things that matter in-store: what is for sale, what is happening tonight, and what
+                players should do next.
               </p>
               <div className="mt-8 grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
                 {trustPoints.map((point) => {
@@ -300,10 +332,12 @@ export default function LgsTvPage() {
           </div>
         </section>
 
+        <ImageBreaks />
+
         <section className="border-y border-border bg-secondary/30 py-14">
           <div className="mx-auto grid max-w-7xl gap-5 px-4 sm:px-6 lg:grid-cols-3 lg:px-8">
             {setupSteps.map((item) => (
-              <div key={item.step} className="rounded-[1.25rem] border border-border bg-card/70 p-6">
+              <div key={item.step} className="rounded-lg border border-border bg-card/70 p-6">
                 <div className="text-sm font-semibold tracking-[0.28em] text-primary/70">
                   {item.step}
                 </div>
@@ -314,48 +348,6 @@ export default function LgsTvPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
-                <CalendarDays className="h-4 w-4" />
-                Built For Store Rhythm
-              </div>
-              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                One loop can sell inventory, guide players, and advertise the next event.
-              </h2>
-              <p className="mt-4 leading-7 text-muted-foreground">
-                LGS TV is not a generic slideshow. It is a channel for the useful moments in a game
-                store: what is for sale, what is happening tonight, what is worth scanning, and
-                what players should do next.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {screenFeeds.map((feed) => {
-                const Icon = feed.icon
-
-                return (
-                  <div key={feed.title} className="rounded-[1.25rem] border border-border bg-card/75 p-5">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.18em] text-primary/75">
-                          {feed.eyebrow}
-                        </div>
-                        <h3 className="mt-1 font-semibold text-foreground">{feed.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{feed.body}</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-
         <section className="relative overflow-hidden bg-secondary/50 py-20">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
@@ -363,11 +355,11 @@ export default function LgsTvPage() {
               Pilot Access
             </div>
             <h2 className="mt-6 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Put Mythivex on the screens that drive store attention.
+              Use your screens to sell more and answer faster.
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Tell us how many screens you run, what inventory feed matters most, and whether you
-              want LGS TV in-store only or online too.
+              Tell us how many screens you run and which store moments matter most: inventory,
+              events, promos, pickup, or all of the above.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button size="lg" className="h-12" asChild>
