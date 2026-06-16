@@ -17,7 +17,7 @@ const faqs = [
   {
     question: "How does direct shipping stay protected at a lower cost?",
     answer:
-      "Direct shipping is meant to be the more affordable premium lane, not the unprotected one. The positioning is simpler logistics with premium coverage still supported by a holdback on release and a self-insurance fund that helps backstop the lane.",
+      "Direct shipping is the more affordable lane, not the unprotected one. You get simpler logistics with coverage still backed by a holdback on release and a self-insurance fund that stands behind the lane.",
   },
   {
     question: "What is the best way to add a deck?",

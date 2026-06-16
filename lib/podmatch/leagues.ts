@@ -645,6 +645,7 @@ export async function finalizeGame(supabase: SupabaseLike, gameId: string): Prom
 
 export type GameSummary = {
   id: string
+  pod_id: string | null
   round_number: number
   status: string
   played_at: string
@@ -664,7 +665,7 @@ export async function getGames(
   const { data, error } = await supabase
     .from('podmatch_games')
     .select(
-      'id, round_number, status, played_at, podmatch_game_players(player_id, placement, points_awarded, podmatch_players(display_name)), podmatch_game_confirmations(player_id)'
+      'id, pod_id, round_number, status, played_at, podmatch_game_players(player_id, placement, points_awarded, podmatch_players(display_name)), podmatch_game_confirmations(player_id)'
     )
     .eq('league_id', leagueId)
     .order('played_at', { ascending: false })
@@ -672,6 +673,7 @@ export async function getGames(
 
   return (data ?? []).map((game: any) => ({
     id: game.id,
+    pod_id: game.pod_id ?? null,
     round_number: game.round_number,
     status: game.status,
     played_at: game.played_at,

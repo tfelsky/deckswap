@@ -22,7 +22,7 @@ const testimonials = [
   },
   {
     quote:
-      "The card modal is the sleeper feature. Once imagery and per-card pricing land, I can actually sanity-check a list before I even message someone.",
+      "The card modal is the sleeper feature. Imagery and per-card pricing let me sanity-check a list before I even message someone.",
     author: "Riley Morgan",
     role: "@stackinteraction",
     avatar: "RM",
@@ -40,7 +40,7 @@ export function Testimonials() {
             Built for Commander players
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Community-style reactions that feel closer to social deck chatter than placeholder marketing copy
+            Reactions that sound like real Commander deck chatter, not stock marketing quotes.
           </p>
         </div>
 

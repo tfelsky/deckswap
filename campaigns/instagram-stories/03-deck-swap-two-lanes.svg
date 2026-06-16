@@ -1,0 +1,95 @@
+<svg viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e1521"/>
+      <stop offset="1" stop-color="#080d15"/>
+    </linearGradient>
+    <radialGradient id="glowEm" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#2fd4a0" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#2fd4a0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#e3b54a" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#e3b54a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2fd4a0"/>
+      <stop offset="1" stop-color="#e3b54a"/>
+    </linearGradient>
+    <linearGradient id="manaW" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7f0c7"/><stop offset="1" stop-color="#eadf9d"/></linearGradient>
+    <linearGradient id="manaU" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fc7ff"/><stop offset="1" stop-color="#4b88d9"/></linearGradient>
+    <linearGradient id="manaB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#726f7f"/><stop offset="1" stop-color="#2c2933"/></linearGradient>
+    <linearGradient id="manaR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9b73"/><stop offset="1" stop-color="#d74d37"/></linearGradient>
+    <linearGradient id="manaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9dd98e"/><stop offset="1" stop-color="#3f8b54"/></linearGradient>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <circle cx="230" cy="560" r="540" fill="url(#glowEm)"/>
+  <circle cx="860" cy="1460" r="560" fill="url(#glowGold)"/>
+
+  <g transform="translate(80,150)">
+    <path d="M0 6 L26 0 L52 6 L52 34 Q52 52 26 62 Q0 52 0 34 Z" fill="url(#accent)"/>
+    <text x="40" y="30" fill="#0a0f18" font-size="22" font-weight="800" text-anchor="middle">M</text>
+    <text x="72" y="22" fill="#f6f5ef" font-size="24" font-weight="700" letter-spacing="3">MYTHIVERSE EXCHANGE</text>
+    <text x="72" y="50" fill="#7f8893" font-size="17" font-weight="600" letter-spacing="6">DECKSWAP</text>
+  </g>
+
+  <!-- WUBRG mana signature (from the site color chooser) -->
+  <g transform="translate(80,252)">
+    <circle cx="16" cy="0" r="15" fill="url(#manaW)"/>
+    <circle cx="54" cy="0" r="15" fill="url(#manaU)"/>
+    <circle cx="92" cy="0" r="15" fill="url(#manaB)" stroke="#ffffff" stroke-opacity="0.2"/>
+    <circle cx="130" cy="0" r="15" fill="url(#manaR)"/>
+    <circle cx="168" cy="0" r="15" fill="url(#manaG)"/>
+    <text x="206" y="6" fill="#7f8893" font-size="18" font-weight="700" letter-spacing="3">EVERY COLOR · EVERY DECK</text>
+  </g>
+  <text x="1000" y="178" fill="#7f8893" font-size="22" font-weight="700" text-anchor="end" letter-spacing="2">03 / 05</text>
+
+  <g transform="translate(80,470)">
+    <rect x="0" y="0" width="430" height="58" rx="29" fill="#2fd4a0" fill-opacity="0.12" stroke="#2fd4a0" stroke-opacity="0.4"/>
+    <circle cx="34" cy="29" r="6" fill="#2fd4a0"/>
+    <text x="58" y="38" fill="#7ee9c4" font-size="22" font-weight="700" letter-spacing="3">DECK-FOR-DECK SWAP</text>
+  </g>
+
+  <text x="80" y="660" fill="#f6f5ef" font-size="98" font-weight="800" letter-spacing="-2">
+    <tspan x="80" dy="0">Trade deck-for-</tspan>
+    <tspan x="80" dy="112">deck. <tspan fill="#2fd4a0">Protected</tspan></tspan>
+    <tspan x="80" dy="112"><tspan fill="#2fd4a0">two ways.</tspan></tspan>
+  </text>
+
+  <text x="80" y="1070" fill="#aeb4bd" font-size="34" font-weight="500">
+    <tspan x="80" dy="0">Pick the lane that fits the deal — every</tspan>
+    <tspan x="80" dy="46">swap holds release until the proof is in.</tspan>
+  </text>
+
+  <!-- two lanes motif -->
+  <g transform="translate(80,1180)">
+    <rect x="0" y="0" width="450" height="360" rx="28" fill="#16241f" stroke="#2fd4a0" stroke-opacity="0.4"/>
+    <circle cx="56" cy="62" r="30" fill="#2fd4a0" fill-opacity="0.18"/>
+    <text x="56" y="74" fill="#2fd4a0" font-size="32" font-weight="800" text-anchor="middle">★</text>
+    <text x="106" y="58" fill="#f6f5ef" font-size="34" font-weight="800">Premium</text>
+    <text x="106" y="98" fill="#f6f5ef" font-size="34" font-weight="800">Escrow</text>
+    <text x="32" y="168" fill="#bdeedd" font-size="25" font-weight="500">White-glove for high-</text>
+    <text x="32" y="204" fill="#bdeedd" font-size="25" font-weight="500">value decks: intake,</text>
+    <text x="32" y="240" fill="#bdeedd" font-size="25" font-weight="500">inspection, controlled</text>
+    <text x="32" y="276" fill="#bdeedd" font-size="25" font-weight="500">release timing.</text>
+    <text x="32" y="332" fill="#7ee9c4" font-size="23" font-weight="700" letter-spacing="2">HIGHEST-TRUST DEALS</text>
+
+    <rect x="470" y="0" width="450" height="360" rx="28" fill="#23200f" stroke="#e3b54a" stroke-opacity="0.4"/>
+    <circle cx="526" cy="62" r="30" fill="#e3b54a" fill-opacity="0.18"/>
+    <text x="526" y="74" fill="#e3b54a" font-size="32" font-weight="800" text-anchor="middle">⇄</text>
+    <text x="576" y="58" fill="#f6f5ef" font-size="34" font-weight="800">Direct</text>
+    <text x="576" y="98" fill="#f6f5ef" font-size="34" font-weight="800">Shipping</text>
+    <text x="502" y="168" fill="#f0d9a3" font-size="25" font-weight="500">Lower-cost lane,</text>
+    <text x="502" y="204" fill="#f0d9a3" font-size="25" font-weight="500">still backed by</text>
+    <text x="502" y="240" fill="#f0d9a3" font-size="25" font-weight="500">holdback + a self-</text>
+    <text x="502" y="276" fill="#f0d9a3" font-size="25" font-weight="500">insurance reserve.</text>
+    <text x="502" y="332" fill="#e3b54a" font-size="23" font-weight="700" letter-spacing="2">CLEAN DOMESTIC DEALS</text>
+  </g>
+
+  <g transform="translate(80,1660)">
+    <rect x="0" y="0" width="920" height="96" rx="48" fill="url(#accent)"/>
+    <text x="460" y="62" fill="#08110c" font-size="34" font-weight="800" text-anchor="middle" letter-spacing="1">Release follows proof, not optimism</text>
+  </g>
+  <text x="540" y="1820" fill="#7f8893" font-size="26" font-weight="600" text-anchor="middle" letter-spacing="3">SWIPE UP TO SEE OPEN SWAPS</text>
+</svg>

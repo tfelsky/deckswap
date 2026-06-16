@@ -8,7 +8,7 @@ import {
   type DeckScoreRow,
 } from '@/lib/podmatch/decks'
 import ScoreDeckForm from '@/components/podmatch/score-deck-form'
-import { Sparkles, ScrollText, Scale, Users, Trophy } from 'lucide-react'
+import { Sparkles, ScrollText, Scale, Users, Trophy, MapPin } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,6 +111,24 @@ export default async function PodMatchPage() {
             {DECK_SCORES_SETUP_MESSAGE}
           </p>
         ) : null}
+
+        <Link
+          href="/podmatch/play"
+          className="mt-6 flex items-center justify-between gap-3 rounded-3xl border border-primary/30 bg-primary/10 p-5 transition hover:bg-primary/15"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/20 text-primary">
+              <MapPin className="h-5 w-5" />
+            </span>
+            <span>
+              <span className="block font-semibold">Play at a shop</span>
+              <span className="block text-sm text-zinc-400">
+                Join an in-store event by code, get your table, report results — no deck setup.
+              </span>
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-primary">Open →</span>
+        </Link>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link

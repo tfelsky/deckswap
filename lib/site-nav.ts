@@ -91,6 +91,17 @@ export const SITE_AREAS: SiteArea[] = [
     ],
   },
   {
+    key: 'stores',
+    label: 'Stores',
+    href: '/for-stores',
+    prefixes: ['/for-stores', '/lgs-tv'],
+    inMainBar: true,
+    sub: [
+      { label: 'Store Program', href: '/for-stores' },
+      { label: 'LGS TV', href: '/lgs-tv' },
+    ],
+  },
+  {
     key: 'account',
     label: 'Profile',
     href: '/settings/profile',
