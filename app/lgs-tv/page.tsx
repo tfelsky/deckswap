@@ -100,20 +100,20 @@ const trustPoints = [
 
 const imageBreaks = [
   {
-    src: '/lgs-tv-counter-screen.png',
-    alt: 'Store counter with a simple LGS TV screen above it',
+    src: '/screenshots/actual-import-deck-clean.png',
+    alt: 'Screenshot of the Mythivex deck import workflow',
     title: 'Sell what is in the shop',
     body: 'Feature pickup-ready inventory at the counter.',
   },
   {
-    src: '/lgs-tv-event-screen.png',
-    alt: 'Game store play space with a simple event screen',
+    src: '/screenshots/actual-podmatch-play-clean.png',
+    alt: 'Screenshot of the PodMatch event join screen',
     title: 'Help event nights run cleaner',
     body: 'Make pairings, timing, and promos easier to see.',
   },
   {
-    src: '/lgs-tv-pickup-screen.png',
-    alt: 'Game store counter display with a simple pickup callout',
+    src: '/screenshots/actual-pricing-clean.png',
+    alt: 'Screenshot of the Mythivex store pricing page',
     title: 'Make the next step obvious',
     body: 'Point shoppers toward listings, pickups, and offers.',
   },
@@ -147,7 +147,7 @@ function ScreenTicker() {
 function LiveChannelGraphic() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1.04fr_0.96fr]">
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-4">
           <div className="min-w-0">
             <div className="whitespace-nowrap text-sm font-semibold text-foreground">
@@ -175,7 +175,7 @@ function LiveChannelGraphic() {
             </p>
             <div className="mt-6 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
               {['Featured', 'Pickup', 'Scan'].map((item) => (
-                <div key={item} className="rounded-xl border border-border bg-background/35 px-3 py-3">
+                <div key={item} className="rounded-lg border border-border bg-background/35 px-3 py-3">
                   {item}
                 </div>
               ))}
@@ -189,7 +189,7 @@ function LiveChannelGraphic() {
               return (
                 <div key={item.title} className="rounded-lg border border-border bg-background/35 p-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
@@ -229,7 +229,7 @@ function ImageBreaks() {
     <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
       <div className="grid gap-5 md:grid-cols-3">
         {imageBreaks.map((item) => (
-          <figure key={item.src} className="overflow-hidden rounded-xl border border-border bg-card/70">
+          <figure key={item.src} className="overflow-hidden rounded-lg border border-border bg-card/70">
             <div className="relative aspect-[16/10]">
               <Image src={item.src} alt={item.alt} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
             </div>
@@ -251,8 +251,8 @@ export default function LgsTvPage() {
       <main className="pt-16">
         <section className="relative min-h-[calc(88svh-4rem)] overflow-hidden border-b border-border bg-black">
           <Image
-            src="/lgs-tv-hero.png"
-            alt="Local game store screens showing Mythivex LGS TV signage"
+            src="/screenshots/actual-lgs-tv-clean.png"
+            alt="Screenshot of the Mythivex LGS TV page"
             fill
             priority
             sizes="100vw"
@@ -315,7 +315,7 @@ export default function LgsTvPage() {
 
                   return (
                     <div key={point.title} className="flex gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div>

@@ -52,93 +52,30 @@ export type PodmatchLandingContent = {
 
 function PlayerVisual() {
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_22px_70px_rgba(0,0,0,0.24)]">
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/mythiverse-shield.png"
-            alt="Mythiverse Exchange shield"
-            width={44}
-            height={44}
-            className="h-11 w-11 rounded-xl object-cover"
-          />
-          <div>
-            <div className="text-xs uppercase text-primary">Friday Commander</div>
-            <div className="font-semibold text-foreground">Balanced pod preview</div>
-          </div>
-        </div>
-        <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary">
-          Ready
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {[
-          ['Mina', 'Power 6.4', 'Token value engine'],
-          ['Arjun', 'Power 6.1', 'Spellslinger draw'],
-          ['Tessa', 'Power 6.7', 'Graveyard value'],
-          ['Noah', 'Power 6.3', 'Combat pressure'],
-        ].map(([name, power, note]) => (
-          <div key={name} className="rounded-[1.25rem] border border-border bg-background/45 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-medium text-foreground">{name}</div>
-              <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs text-primary">
-                {power}
-              </div>
-            </div>
-            <div className="mt-8 text-sm text-muted-foreground">{note}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {[
-          ['Prize track', '3 tickets live'],
-          ['League', 'Week 4 of 8'],
-          ['Table health', 'No spike gap'],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-[1rem] border border-border bg-secondary/40 p-4">
-            <div className="text-xs uppercase text-primary/80">{label}</div>
-            <div className="mt-2 text-sm font-medium text-foreground">{value}</div>
-          </div>
-        ))}
-      </div>
+    <div className="relative aspect-[16/9] overflow-hidden rounded-lg border border-border bg-card shadow-[0_22px_70px_rgba(0,0,0,0.24)]">
+      <Image
+        src="/screenshots/actual-podmatch-play-clean.png"
+        alt="Screenshot of the PodMatch event join screen"
+        fill
+        priority
+        sizes="(min-width: 1024px) 42vw, 100vw"
+        className="object-cover"
+      />
     </div>
   )
 }
 
 function StoreVisual() {
   return (
-    <div className="overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-[0_22px_70px_rgba(0,0,0,0.24)]">
-      <div className="relative h-52">
-        <Image
-          src="/lgs-tv-hero.png"
-          alt="Local game store screens showing Mythivex event content"
-          fill
-          sizes="(min-width: 1024px) 42vw, 100vw"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,16,0.05),rgba(7,10,16,0.84))]" />
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="inline-flex rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-primary backdrop-blur">
-            Store command center
-          </div>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Tonight&apos;s pods, prizes, and league ladder</h2>
-        </div>
-      </div>
-      <div className="grid gap-3 p-5 sm:grid-cols-2">
-        {[
-          ['24 players checked in', 'Six pods balanced by power and league history'],
-          ['$120 prize pool', 'Store credit, raffle tickets, and season points'],
-          ['Round 2 pairing draft', 'Casual tables protected from high-power spillover'],
-          ['Season retention', 'Players can track standings and next week reminders'],
-        ].map(([title, body]) => (
-          <div key={title} className="rounded-[1.25rem] border border-border bg-background/45 p-4">
-            <div className="font-medium text-foreground">{title}</div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
-          </div>
-        ))}
-      </div>
+    <div className="relative aspect-[16/9] overflow-hidden rounded-lg border border-border bg-card shadow-[0_22px_70px_rgba(0,0,0,0.24)]">
+      <Image
+        src="/screenshots/actual-podmatch-stores-clean.png"
+        alt="Screenshot of the PodMatch for stores page"
+        fill
+        priority
+        sizes="(min-width: 1024px) 42vw, 100vw"
+        className="object-cover"
+      />
     </div>
   )
 }
@@ -150,8 +87,8 @@ function FeatureGrid({ items }: { items: LandingItem[] }) {
         const Icon = item.icon
 
         return (
-          <div key={item.title} className="rounded-[1.25rem] border border-border bg-card p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+          <div key={item.title} className="rounded-lg border border-border bg-card p-6">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
               <Icon className="h-5 w-5" />
             </div>
             <h3 className="mt-5 text-lg font-semibold text-foreground">{item.title}</h3>
@@ -194,7 +131,7 @@ export function PodmatchLandingPage({ content }: { content: PodmatchLandingConte
               </div>
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {content.stats.map((stat) => (
-                  <div key={stat.label} className="rounded-[1rem] border border-border bg-card/70 p-4">
+                  <div key={stat.label} className="rounded-lg border border-border bg-card/70 p-4">
                     <div className="text-2xl font-semibold text-foreground">{stat.value}</div>
                     <div className="mt-1 text-xs leading-5 text-muted-foreground">{stat.label}</div>
                   </div>
@@ -265,8 +202,8 @@ export function PodmatchLandingPage({ content }: { content: PodmatchLandingConte
                 const Icon = item.icon
 
                 return (
-                  <div key={item.title} className="flex gap-4 rounded-[1.25rem] border border-border bg-card p-5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                  <div key={item.title} className="flex gap-4 rounded-lg border border-border bg-card p-5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>

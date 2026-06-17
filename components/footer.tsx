@@ -20,6 +20,8 @@ const footerLinks = {
     { name: "For Game Stores", href: "/for-stores" },
     { name: "Store Pricing", href: "/pricing" },
     { name: "LGS TV", href: "/lgs-tv" },
+    { name: "PodMatch for Players", href: "/podmatch/users" },
+    { name: "PodMatch for Stores", href: "/podmatch/stores" },
     { name: "Completed Sales", href: "/completed-sales" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },
     { name: "Paper Power 9", href: "/paper-power-9" },

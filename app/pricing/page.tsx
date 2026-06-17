@@ -139,7 +139,7 @@ export const metadata: Metadata = {
 function PlanCard({ plan }: { plan: (typeof plans)[number] }) {
   return (
     <div
-      className={`relative flex h-full flex-col rounded-xl border p-6 ${
+      className={`relative flex h-full flex-col rounded-lg border p-6 ${
         plan.featured
           ? 'border-primary/45 bg-primary/10 shadow-[0_24px_80px_rgba(0,0,0,0.22)]'
           : 'border-border bg-card/80'
@@ -189,8 +189,8 @@ export default function PricingPage() {
       <main className="pt-16">
         <section className="relative overflow-hidden border-b border-border bg-black">
           <Image
-            src="/lgs-tv-hero.png"
-            alt="Local game store screens showing Mythivex event and inventory content"
+            src="/screenshots/actual-pricing-clean.png"
+            alt="Screenshot of the Mythivex store pricing page"
             fill
             priority
             sizes="100vw"
@@ -258,14 +258,14 @@ export default function PricingPage() {
                 Marketplace Fees
               </div>
               <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
-                Keep fees tied to the value Deckswap creates.
+                Keep fees tied to the value Mythivex creates.
               </h2>
               <p className="mt-4 leading-7 text-muted-foreground">
                 Subscription covers the store operating layer. Marketplace fees stay lower on higher
                 tiers because those stores are already paying for reach, tooling, and screens.
               </p>
             </div>
-            <div className="overflow-hidden rounded-xl border border-border bg-card/80">
+            <div className="overflow-hidden rounded-lg border border-border bg-card/80">
               {marketplaceRows.map(([label, value]) => (
                 <div
                   key={label}
@@ -295,7 +295,7 @@ export default function PricingPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {podmatchLevels.map((item) => (
-                <div key={item.level} className="rounded-xl border border-border bg-card/80 p-5">
+                <div key={item.level} className="rounded-lg border border-border bg-card/80 p-5">
                   <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/75">
                     {item.level}
                   </div>
@@ -313,7 +313,7 @@ export default function PricingPage() {
               const Icon = item.icon
 
               return (
-                <div key={item.title} className="rounded-xl border border-border bg-card/80 p-6">
+                <div key={item.title} className="rounded-lg border border-border bg-card/80 p-6">
                   <Icon className="h-5 w-5 text-primary" />
                   <h3 className="mt-4 font-semibold text-foreground">{item.title}</h3>
                   <p className="mt-2 text-xl font-bold text-foreground">{item.price}</p>
