@@ -10,6 +10,11 @@ const STORE_EMAIL = process.env.SAMPLE_STORE_EMAIL?.trim() || 'heavy-js.sample@m
 const STORE_CONTACT_EMAIL = null
 const STORE_PHONE = null
 const STORE_WEBSITE = 'https://heavyjs.com/'
+const STORE_MAILER_SIGNUP = {
+  label: "Follow Heavy J's event updates",
+  href: 'https://heavyjs.com/',
+  description: "Heavy J's public site points customers to its Events/Upcoming Events surface and Facebook updates.",
+}
 const STORE_PASSWORD = process.env.SAMPLE_STORE_PASSWORD?.trim()
 const STORE_USERNAME = 'heavy-js-card-house-sarnia'
 const STORE_DISPLAY_NAME = "Heavy J's Card House"
@@ -216,6 +221,7 @@ async function getOrCreateLeague(supabase, userId) {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     weeklyCadence: 'Weekly TCG event night based on public Events/Upcoming Events surface',
     prizePolicy: 'Store credit, sealed product, singles credit, and participation promos',
     calendarEvents: STORE_CALENDAR_EVENTS,
@@ -333,6 +339,7 @@ async function main() {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     calendarEvents: STORE_CALENDAR_EVENTS,
   })
   await seedRoster(supabase, user.id, league.id)

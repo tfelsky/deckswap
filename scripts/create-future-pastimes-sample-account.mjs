@@ -10,6 +10,11 @@ const STORE_EMAIL = process.env.SAMPLE_STORE_EMAIL?.trim() || 'future-pastimes.s
 const STORE_CONTACT_EMAIL = 'futurepastimes@hotmail.com'
 const STORE_PHONE = '(519) 383-6967'
 const STORE_WEBSITE = 'https://futurepastimes.ca/'
+const STORE_MAILER_SIGNUP = {
+  label: 'Sign up for Future Pastimes updates',
+  href: 'mailto:futurepastimes@hotmail.com?subject=Join%20Future%20Pastimes%20mailing%20list',
+  description: 'Ask Future Pastimes to add you to store updates, Friday Night Magic notes, and event reminders.',
+}
 const STORE_PASSWORD = process.env.SAMPLE_STORE_PASSWORD?.trim()
 const STORE_USERNAME = 'future-pastimes-sarnia'
 const STORE_DISPLAY_NAME = 'Future Pastimes'
@@ -217,6 +222,7 @@ async function getOrCreateLeague(supabase, userId) {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     weeklyCadence: 'Friday Night Magic latest set draft',
     prizePolicy: 'Draft prize support, promos, store credit, and participation promos',
     calendarEvents: STORE_CALENDAR_EVENTS,
@@ -334,6 +340,7 @@ async function main() {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     calendarEvents: STORE_CALENDAR_EVENTS,
   })
   await seedRoster(supabase, user.id, league.id)

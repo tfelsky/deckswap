@@ -92,6 +92,7 @@ export function buildLeagueSettings(args) {
     website: args.website,
     weeklyCadence: args.weeklyCadence,
     prizePolicy: args.prizePolicy,
+    mailerSignup: args.mailerSignup,
     calendarEvents: args.calendarEvents.map(summarizeCalendarEvent),
   }
 }
@@ -130,6 +131,7 @@ export async function upsertPodmatchCalendarEvents(supabase, args) {
       phone: args.phone,
       contactEmail: args.contactEmail,
       website: args.website,
+      mailerSignup: args.mailerSignup,
       inventory_url: args.website,
       event_start_at: event.event_start_at,
       event_end_at: event.event_end_at,

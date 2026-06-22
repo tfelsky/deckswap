@@ -19,6 +19,7 @@ Heavy J's Card House is configured as a Sarnia store sample account for Mythiver
 - Seeded calendar: four upcoming weekly TCG event-night entries
 - Calendar model: `Weekly TCG Event Night`
 - Event invite-code prefix: `hjevent`
+- Mailer CTA: `https://heavyjs.com/`
 
 ## Research basis
 
@@ -27,6 +28,7 @@ Heavy J's Card House is configured as a Sarnia store sample account for Mythiver
 - The site exposes Home, Contact Us, Buylist, Store Information, and Events navigation.
 - The homepage lists Magic Singles, Pokemon Singles, Lorcana Singles, One Piece Card Game Singles, and sealed product categories.
 - The fetched public page did not expose exact event rows, so the seeded calendar is a sample shell based on the public Events/Upcoming Events surface and TCG categories.
+- The public profile uses the seeded `mailerSignup` block to show a store-updates CTA. Because no public email was exposed, the Heavy J's CTA points back to the store site.
 - The seed keeps the auth login email on `mythivex.test` by default to avoid controlling or sending auth mail to a real store inbox.
 
 ## Seed command

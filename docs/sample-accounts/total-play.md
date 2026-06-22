@@ -19,6 +19,7 @@ Total Play is configured as a Sarnia store sample account for Mythiverse Exchang
 - Seeded calendar: four upcoming Friday Night Magic casual Commander events
 - Calendar model: `Friday Night Magic: Casual Commander`
 - Event invite-code prefix: `tpcomm`
+- Mailer CTA: `mailto:sales@totalplay.ca?subject=Join%20Total%20Play%20mailing%20list`
 
 ## Research basis
 
@@ -27,6 +28,7 @@ Total Play is configured as a Sarnia store sample account for Mythiverse Exchang
 - The homepage and navigation list TCG Singles for Magic the Gathering, Pokemon, Bandai titles, Yu-Gi-Oh!, Disney Lorcana, video game consoles, portable video games, events, and grading.
 - The contact page lists hours as closed Monday and Tuesday, open Wednesday through Saturday 12-6PM, and open Sunday 12-6PM.
 - The seeded Friday Night Magic calendar uses the supplied operating assumption that Total Play FNM is Casual Commander.
+- The public profile uses the seeded `mailerSignup` block to show a store-updates signup CTA.
 - The seed keeps the auth login email on `mythivex.test` by default to avoid controlling or sending auth mail to the store's real public inbox.
 
 ## Seed command

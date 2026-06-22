@@ -10,6 +10,11 @@ const STORE_EMAIL = process.env.SAMPLE_STORE_EMAIL?.trim() || 'total-play.sample
 const STORE_CONTACT_EMAIL = 'sales@totalplay.ca'
 const STORE_PHONE = '5194910919'
 const STORE_WEBSITE = 'https://totalplay.ca/'
+const STORE_MAILER_SIGNUP = {
+  label: 'Sign up for Total Play updates',
+  href: 'mailto:sales@totalplay.ca?subject=Join%20Total%20Play%20mailing%20list',
+  description: 'Ask Total Play to add you to store updates, Casual Commander notes, and event reminders.',
+}
 const STORE_PASSWORD = process.env.SAMPLE_STORE_PASSWORD?.trim()
 const STORE_USERNAME = 'total-play-sarnia'
 const STORE_DISPLAY_NAME = 'Total Play'
@@ -217,6 +222,7 @@ async function getOrCreateLeague(supabase, userId) {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     weeklyCadence: 'Friday Night Magic Casual Commander',
     prizePolicy: 'Store credit, sealed product, and participation promos',
     calendarEvents: STORE_CALENDAR_EVENTS,
@@ -334,6 +340,7 @@ async function main() {
     phone: STORE_PHONE,
     contactEmail: STORE_CONTACT_EMAIL,
     website: STORE_WEBSITE,
+    mailerSignup: STORE_MAILER_SIGNUP,
     calendarEvents: STORE_CALENDAR_EVENTS,
   })
   await seedRoster(supabase, user.id, league.id)

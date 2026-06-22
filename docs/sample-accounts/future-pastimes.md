@@ -19,6 +19,7 @@ Future Pastimes is configured as a Sarnia local-game-store sample account for My
 - Seeded calendar: four upcoming Friday Night Magic draft events
 - Calendar model: `Friday Night Magic: Latest Set Draft`
 - Event invite-code prefix: `fpdraft`
+- Mailer CTA: `mailto:futurepastimes@hotmail.com?subject=Join%20Future%20Pastimes%20mailing%20list`
 
 ## Research basis
 
@@ -26,6 +27,7 @@ Future Pastimes is configured as a Sarnia local-game-store sample account for My
 - `futurepastimes.ca` lists phone `(519) 383-6967`, Facebook Messenger `Future Pastimes`, and email `futurepastimes@hotmail.com`.
 - The site showed hours of `10:00 a.m. - 10:00 p.m.` on the checked day.
 - The seeded Friday Night Magic calendar uses the supplied operating assumption that Future Pastimes FNM is latest set draft.
+- The public profile uses the seeded `mailerSignup` block to show a store-updates signup CTA.
 - The seed keeps the auth login email on `mythivex.test` by default to avoid controlling or sending auth mail to the store's real public inbox.
 
 ## Seed command
