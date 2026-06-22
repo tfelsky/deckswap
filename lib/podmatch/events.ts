@@ -30,19 +30,45 @@ export type EventStanding = {
   games_played: number
 }
 
+export type CreateEventInput = {
+  name: string
+  pod_size?: number
+  event_start_at?: string | null
+  event_end_at?: string | null
+  time_zone?: string | null
+  store_name?: string | null
+  location?: string | null
+  inventory_url?: string | null
+}
+
+function cleanOptional(value?: string | null) {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
 /** Create an in-store event. The caller becomes the host (admin). */
 export async function createEvent(
   supabase: SupabaseLike,
   userId: string,
-  input: { name: string; pod_size?: number }
+  input: CreateEventInput
 ): Promise<League> {
+  const settings = {
+    mode: 'event',
+    event_start_at: cleanOptional(input.event_start_at),
+    event_end_at: cleanOptional(input.event_end_at),
+    time_zone: cleanOptional(input.time_zone),
+    store_name: cleanOptional(input.store_name),
+    location: cleanOptional(input.location),
+    inventory_url: cleanOptional(input.inventory_url),
+  }
+
   const { data, error } = await supabase
     .from('podmatch_leagues')
     .insert({
       admin_user_id: userId,
       name: input.name,
       pod_size: input.pod_size ?? 4,
-      settings: { mode: 'event' },
+      settings,
     })
     .select('*')
     .single()

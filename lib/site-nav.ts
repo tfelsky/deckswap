@@ -96,12 +96,14 @@ export const SITE_AREAS: SiteArea[] = [
     key: 'stores',
     label: 'Stores',
     href: '/for-stores',
-    prefixes: ['/for-stores', '/lgs-tv', '/pricing'],
+    prefixes: ['/for-stores', '/lgs-events', '/lgs-tv', '/comic-subscriptions', '/pricing'],
     inMainBar: true,
     sub: [
       { label: 'Store Program', href: '/for-stores' },
+      { label: 'Event Calendar', href: '/lgs-events' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'LGS TV', href: '/lgs-tv' },
+      { label: 'Prebuy Subs', href: '/comic-subscriptions' },
     ],
   },
   {

@@ -42,6 +42,17 @@ describe('scoreGamePlayer', () => {
     expect(scored.breakdown.map((b) => b.label)).toContain('Sportsmanship vote')
   })
 
+  it('adds completed achievement goals as bonus points', () => {
+    const scored = scoreGamePlayer(
+      result({ player_id: 'a', placement: 2, achievement_count: 3 }),
+      4,
+      CASUAL_BALANCED
+    )
+    // second(3) + final-two(1) + three achievements(3)
+    expect(scored.total).toBe(7)
+    expect(scored.breakdown.map((b) => b.label)).toContain('Achievement goals x3')
+  })
+
   it('applies a no-show penalty and ignores other fields', () => {
     const scored = scoreGamePlayer(
       result({ player_id: 'a', placement: 1, eliminations: 3, no_show: true }),

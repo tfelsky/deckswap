@@ -11,6 +11,7 @@ export type ScoringConfig = {
   survived_final_two: number
   sportsmanship: number
   combo_win: number
+  achievement: number
   no_show: number
 }
 
@@ -21,6 +22,7 @@ export const CASUAL_BALANCED: ScoringConfig = {
   survived_final_two: 1,
   sportsmanship: 1,
   combo_win: 0,
+  achievement: 1,
   no_show: -3,
 }
 
@@ -37,6 +39,7 @@ export function resolveScoringConfig(settings: unknown): ScoringConfig {
     survived_final_two: provided.survived_final_two ?? CASUAL_BALANCED.survived_final_two,
     sportsmanship: provided.sportsmanship ?? CASUAL_BALANCED.sportsmanship,
     combo_win: provided.combo_win ?? CASUAL_BALANCED.combo_win,
+    achievement: provided.achievement ?? CASUAL_BALANCED.achievement,
     no_show: provided.no_show ?? CASUAL_BALANCED.no_show,
   }
 }
@@ -49,6 +52,7 @@ export type GamePlayerResult = {
   no_show: boolean
   sportsmanship: boolean
   first_blood?: boolean
+  achievement_count?: number
 }
 
 export type PointsBreakdown = { label: string; points: number }
@@ -100,6 +104,12 @@ export function scoreGamePlayer(
   }
   if (result.sportsmanship && config.sportsmanship) {
     bonus.push({ label: 'Sportsmanship vote', points: config.sportsmanship })
+  }
+  if (result.achievement_count && result.achievement_count > 0 && config.achievement) {
+    bonus.push({
+      label: `Achievement goals x${result.achievement_count}`,
+      points: result.achievement_count * config.achievement,
+    })
   }
 
   const multiplier = handicap?.bonusMultiplier ?? 1

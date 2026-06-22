@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { randomUUID } from 'crypto'
 import { notFound } from 'next/navigation'
 import AppHeader from '@/components/app-header'
 import { createClient } from '@/lib/supabase/server'
@@ -101,7 +102,13 @@ export default async function ReportGamePage({
           </p>
         ) : (
           <div className="mt-6">
-            <ReportGameForm leagueId={leagueId} podId={podId} roundNumber={roundNumber} seats={seats} />
+            <ReportGameForm
+              leagueId={leagueId}
+              podId={podId}
+              roundNumber={roundNumber}
+              seats={seats}
+              achievementSeed={randomUUID()}
+            />
           </div>
         )}
       </section>

@@ -13,6 +13,7 @@ import {
 import { confirmGameAction, finalizeGameAction } from '../actions'
 import LeagueTabs from '@/components/podmatch/league-tabs'
 import InviteCode from '@/components/podmatch/invite-code'
+import AchievementSelfReport from '@/components/podmatch/achievement-self-report'
 import { CheckCircle2, Clock } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -178,24 +179,33 @@ function GameCard({
           // Admin can confirm any row (on behalf); a member only their own.
           const canConfirm = !isFinal && (isAdmin || p.player_id === myPlayerId)
           return (
-            <li key={p.player_id} className="flex items-center justify-between py-2 text-sm">
-              <span>
-                <span className="text-zinc-500">{p.placement ? `#${p.placement}` : '—'}</span>{' '}
-                <span className="font-medium">{p.display_name}</span>
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-zinc-400">{p.points_awarded} pts</span>
-                {canConfirm ? (
-                  <form action={confirmGameAction}>
-                    <input type="hidden" name="leagueId" value={leagueId} />
-                    <input type="hidden" name="gameId" value={game.id} />
-                    <input type="hidden" name="playerId" value={p.player_id} />
-                    <button className="rounded-lg border border-white/10 px-2 py-1 text-xs hover:bg-white/10">
-                      Confirm
-                    </button>
-                  </form>
-                ) : null}
+            <li key={p.player_id} className="py-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span>
+                  <span className="text-zinc-500">{p.placement ? `#${p.placement}` : '—'}</span>{' '}
+                  <span className="font-medium">{p.display_name}</span>
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-zinc-400">{p.points_awarded} pts</span>
+                  {canConfirm ? (
+                    <form action={confirmGameAction}>
+                      <input type="hidden" name="leagueId" value={leagueId} />
+                      <input type="hidden" name="gameId" value={game.id} />
+                      <input type="hidden" name="playerId" value={p.player_id} />
+                      <button className="rounded-lg border border-white/10 px-2 py-1 text-xs hover:bg-white/10">
+                        Confirm
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               </div>
+              <AchievementSelfReport
+                leagueId={leagueId}
+                gameId={game.id}
+                playerId={p.player_id}
+                goals={p.achievement_goals}
+                canReport={p.player_id === myPlayerId}
+              />
             </li>
           )
         })}

@@ -4,7 +4,9 @@ import Link from 'next/link'
 import {
   ArrowRight,
   BadgeDollarSign,
+  BookOpenCheck,
   CalendarClock,
+  CreditCard,
   Gauge,
   Mail,
   MonitorPlay,
@@ -53,10 +55,16 @@ const benefits = [
       'Give store staff a polished web console for Commander nights: create events, manage pods, and schedule play across cities. It helps drive player interest, event revenue, and repeat weekly attendance.',
   },
   {
-    icon: Store,
-    title: 'Store-friendly partner tiers',
+    icon: CalendarClock,
+    title: 'LGS event calendar and checkout',
     body:
-      'Start with a lightweight store presence, then upgrade when singles, events, LGS TV, and PodMatch are creating measurable demand.',
+      'Publish the weekly Magic schedule with formats, start times, entry fees, prize support, rules, decklist requirements, signup, and checkout before players arrive.',
+  },
+  {
+    icon: BookOpenCheck,
+    title: 'Prebuy subscription manager',
+    body:
+      'Log recurring comic pulls, MTG set prebuys, and Secret Lair commitments, keep a tokenized card-on-file status, hold customer orders for up to three months, and mail batches when the window closes.',
   },
 ]
 
@@ -253,7 +261,7 @@ export default function ForStoresPage() {
                 {
                   icon: CalendarClock,
                   title: 'Tournament data',
-                  body: 'Display league timing, standings, pairings, and event reminders where players already look.',
+                  body: 'Display league timing, standings, pairings, event reminders, and the weekly Magic calendar where players already look.',
                 },
                 {
                   icon: BadgeDollarSign,
@@ -264,6 +272,71 @@ export default function ForStoresPage() {
                   icon: RadioTower,
                   title: 'Online channel',
                   body: 'Reuse the same content stream for web embeds when the store wants signage beyond the wall.',
+                },
+              ].map((item) => {
+                const Icon = item.icon
+
+                return (
+                  <div key={item.title} className="rounded-lg border border-border bg-background/35 p-5">
+                    <Icon className="h-5 w-5 text-primary" />
+                    <h3 className="mt-4 font-semibold text-foreground">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Prebuy subscriptions */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="grid gap-6 rounded-lg border border-border/80 bg-card/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.16)] backdrop-blur-sm lg:grid-cols-[0.92fr_1.08fr] lg:p-8">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary/80">
+                <BookOpenCheck className="h-4 w-4" />
+                Prebuy Subscriptions
+              </div>
+              <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground">
+                Bring pull boxes, set prebuys, Secret Lair commitments, card-on-file orders, and mailed holds into the store stack.
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                The prebuy subscription manager is a proposed LGS workflow for recurring comic
+                pulls, MTG sealed product reservations, and Secret Lair commitments: import release
+                lists from distributor files or POS exports, open prebuys as soon as new sets are
+                released for order, reserve 2027 and 2028 set slots, track customer holds for up to
+                three months, then batch charge and ship when the release or hold window lands.
+              </p>
+              <div className="mt-6">
+                <Button variant="outline" className="h-11" asChild>
+                  <Link href="/comic-subscriptions">
+                    Explore prebuy subscriptions
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  icon: PackageCheck,
+                  title: 'Distributor imports',
+                  body: 'Upload CSV or XLSX lists for upcoming comics, MTG sealed product, Secret Lair drops, allocations, variants, covers, and order windows.',
+                },
+                {
+                  icon: CreditCard,
+                  title: 'Card-on-file status',
+                  body: 'Keep raw card details out of staff tools while still showing billing readiness and failed capture tasks.',
+                },
+                {
+                  icon: CalendarClock,
+                  title: 'Release and hold rules',
+                  body: 'Let customers reserve new sets, subscribe to 2027/2028 release slots, commit to Secret Lair drops, or build a shipment until the hold cap is reached.',
+                },
+                {
+                  icon: Mail,
+                  title: 'Batch mail queue',
+                  body: 'Group customers by ship date, balance, box count, and exception status before labels are printed.',
                 },
               ].map((item) => {
                 const Icon = item.icon
@@ -302,7 +375,7 @@ export default function ForStoresPage() {
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="h-12" asChild>
-                <Link href="/support">Talk to support</Link>
+                <Link href="/lgs-events">View event calendar</Link>
               </Button>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">

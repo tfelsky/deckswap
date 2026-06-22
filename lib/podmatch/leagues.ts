@@ -13,6 +13,10 @@ import {
   type HandicapApplication,
   type StandingsRow,
 } from './league-scoring'
+import {
+  countCompletedAchievementGoals,
+  type PlayerAchievementGoal,
+} from './achievement-goals'
 
 type SupabaseLike = any
 
@@ -555,6 +559,7 @@ export type ReportGameInput = {
     combo_win: boolean
     no_show: boolean
     sportsmanship: boolean
+    achievement_goals?: PlayerAchievementGoal[]
   }>
 }
 
@@ -591,6 +596,7 @@ export async function reportGame(
       combo_win: p.combo_win,
       no_show: p.no_show,
       sportsmanship: p.sportsmanship,
+      achievement_count: countCompletedAchievementGoals(p.achievement_goals),
     }
     const { total } = scoreGamePlayer(result, podSize, config, handicaps?.get(p.player_id))
     return {
@@ -602,6 +608,7 @@ export async function reportGame(
       combo_win: p.combo_win,
       no_show: p.no_show,
       sportsmanship: p.sportsmanship,
+      achievement_goals: p.achievement_goals ?? [],
       points_awarded: total,
     }
   })
@@ -655,6 +662,7 @@ export type GameSummary = {
     display_name: string
     placement: number | null
     points_awarded: number
+    achievement_goals: PlayerAchievementGoal[]
   }>
 }
 
@@ -665,7 +673,7 @@ export async function getGames(
   const { data, error } = await supabase
     .from('podmatch_games')
     .select(
-      'id, pod_id, round_number, status, played_at, podmatch_game_players(player_id, placement, points_awarded, podmatch_players(display_name)), podmatch_game_confirmations(player_id)'
+      'id, pod_id, round_number, status, played_at, podmatch_game_players(player_id, placement, points_awarded, achievement_goals, podmatch_players(display_name)), podmatch_game_confirmations(player_id)'
     )
     .eq('league_id', leagueId)
     .order('played_at', { ascending: false })
@@ -684,6 +692,7 @@ export async function getGames(
         display_name: p.podmatch_players?.display_name ?? 'Player',
         placement: p.placement,
         points_awarded: Number(p.points_awarded) || 0,
+        achievement_goals: Array.isArray(p.achievement_goals) ? p.achievement_goals : [],
       }))
       .sort((a: any, b: any) => (a.placement ?? 99) - (b.placement ?? 99)),
   }))

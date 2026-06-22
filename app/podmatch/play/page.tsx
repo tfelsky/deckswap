@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { getMyLeagues, isLeagueSchemaMissing, LEAGUE_SETUP_MESSAGE } from '@/lib/podmatch/leagues'
 import { isEvent } from '@/lib/podmatch/events'
+import { formatEventDateTime } from '@/lib/podmatch/event-reminders'
 import { CreateEventForm, JoinEventForm } from '@/components/podmatch/event-forms'
 import { MapPin, Users } from 'lucide-react'
 
@@ -81,11 +82,18 @@ export default async function PlayHomePage({
                 <li key={event.id}>
                   <Link
                     href={`/podmatch/play/${event.id}`}
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-900 p-4 transition hover:border-primary/30"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-4 transition hover:border-primary/30"
                   >
-                    <span className="flex items-center gap-2 font-medium">
-                      <Users className="h-4 w-4 text-zinc-500" />
-                      {event.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Users className="h-4 w-4 shrink-0 text-zinc-500" />
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{event.name}</span>
+                        {formatEventDateTime(event) ? (
+                          <span className="block text-xs text-zinc-500">
+                            {formatEventDateTime(event)}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-xs ${

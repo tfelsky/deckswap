@@ -11,16 +11,28 @@ import {
   type PodWithSeats,
 } from '@/lib/podmatch/leagues'
 import { getEventStandings, getGames, isEvent } from '@/lib/podmatch/events'
+import { formatEventDateTime } from '@/lib/podmatch/event-reminders'
 import InviteCode from '@/components/podmatch/invite-code'
 import {
   ReportResultForm,
   SetNameForm,
   StartRoundButton,
 } from '@/components/podmatch/event-forms'
+import AchievementSelfReport from '@/components/podmatch/achievement-self-report'
+import {
+  commanderAchievementSeed,
+  selectCommanderAchievementGoals,
+} from '@/lib/podmatch/achievement-goals'
 import { confirmResultAction, finalizeResultAction } from '../actions'
 import { CheckCircle2, Clock, Trophy } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+type EventPageSettings = {
+  store_name?: string | null
+  location?: string | null
+  inventory_url?: string | null
+}
 
 function winnerName(game: GameSummary): string {
   return game.players.find((p) => p.placement === 1)?.display_name ?? '—'
@@ -43,6 +55,10 @@ export default async function EventPage({
   if (!viewer || !isEvent(viewer.league)) notFound()
   const { league, role } = viewer
   const isHost = role === 'admin'
+  const eventSettings = (league.settings ?? {}) as EventPageSettings
+  const eventDateTime = formatEventDateTime(league)
+  const eventLocation = eventSettings.location?.trim() || eventSettings.store_name?.trim() || ''
+  const inventoryUrl = eventSettings.inventory_url?.trim() || ''
 
   const [standings, pods, games, myPlayer] = await Promise.all([
     getEventStandings(supabase, eventId),
@@ -78,6 +94,22 @@ export default async function EventPage({
             {latestRound > 0 ? `Round ${latestRound}` : 'Not started'}
           </span>
         </div>
+        {eventDateTime || eventLocation || inventoryUrl ? (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-zinc-900 p-4 text-sm text-zinc-400">
+            {eventDateTime ? <p className="text-zinc-200">{eventDateTime}</p> : null}
+            {eventLocation ? <p className="mt-1">{eventLocation}</p> : null}
+            {inventoryUrl ? (
+              <Link
+                href={inventoryUrl}
+                className="mt-2 inline-flex text-primary hover:underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Check store inventory
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Player: confirm name */}
         {myPlayer ? (
@@ -233,6 +265,14 @@ function MyTableCard({
   leagueId: string
   myPlayerId: string | null
 }) {
+  const achievementSeed = commanderAchievementSeed(leagueId, pod.id, pod.round_number)
+  const pendingGoals = myPlayerId
+    ? selectCommanderAchievementGoals(achievementSeed, myPlayerId)
+    : []
+  const myGameRow = myPlayerId
+    ? game?.players.find((player) => player.player_id === myPlayerId) ?? null
+    : null
+
   return (
     <div className="mt-2 rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 to-zinc-900 p-5">
       <div className="flex items-center justify-between">
@@ -257,16 +297,44 @@ function MyTableCard({
 
       <div className="mt-4">
         {!game ? (
-          <ReportResultForm
-            leagueId={leagueId}
-            podId={pod.id}
-            roundNumber={pod.round_number}
-            seats={pod.seats.map((s) => ({ id: s.player_id, name: s.player_name }))}
-          />
+          <div className="space-y-4">
+            {pendingGoals.length > 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3">
+                <p className="text-xs font-medium text-zinc-300">Your goals this game</p>
+                <ul className="mt-2 space-y-1.5 text-xs text-zinc-500">
+                  {pendingGoals.map((goal) => (
+                    <li key={goal.id}>
+                      <span className="font-medium text-zinc-200">{goal.title}:</span>{' '}
+                      {goal.prompt}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <ReportResultForm
+              leagueId={leagueId}
+              podId={pod.id}
+              roundNumber={pod.round_number}
+              seats={pod.seats.map((s) => ({ id: s.player_id, name: s.player_name }))}
+              achievementSeed={achievementSeed}
+            />
+          </div>
         ) : game.status === 'final' ? (
-          <p className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            Winner: <span className="font-semibold">{winnerName(game)}</span>
-          </p>
+          <div className="space-y-3">
+            <p className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              Winner: <span className="font-semibold">{winnerName(game)}</span>
+            </p>
+            {myGameRow ? (
+              <AchievementSelfReport
+                leagueId={leagueId}
+                gameId={game.id}
+                playerId={myGameRow.player_id}
+                goals={myGameRow.achievement_goals}
+                canReport
+                compact
+              />
+            ) : null}
+          </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-zinc-300">
@@ -282,6 +350,16 @@ function MyTableCard({
                   Confirm result
                 </button>
               </form>
+            ) : null}
+            {myGameRow ? (
+              <AchievementSelfReport
+                leagueId={leagueId}
+                gameId={game.id}
+                playerId={myGameRow.player_id}
+                goals={myGameRow.achievement_goals}
+                canReport
+                compact
+              />
             ) : null}
           </div>
         )}
@@ -299,6 +377,8 @@ function HostTableCard({
   game: GameSummary | null
   leagueId: string
 }) {
+  const achievementSeed = commanderAchievementSeed(leagueId, pod.id, pod.round_number)
+
   return (
     <li className="rounded-2xl border border-white/10 bg-zinc-900 p-4">
       <div className="flex items-center justify-between">
@@ -320,6 +400,7 @@ function HostTableCard({
             podId={pod.id}
             roundNumber={pod.round_number}
             seats={pod.seats.map((s) => ({ id: s.player_id, name: s.player_name }))}
+            achievementSeed={achievementSeed}
           />
         </div>
       ) : (
