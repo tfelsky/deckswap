@@ -127,11 +127,7 @@ export async function importDeckAction(
   let parsedCards =
     effectiveSourceType === 'moxfield' ? [] : parseDeckText(resolvedRawList, effectiveSourceType)
 
-  if (
-    deckFile instanceof File &&
-    deckFile.size > 0 &&
-    !resolvedRawList
-  ) {
+  if (deckFile instanceof File && deckFile.size > 0) {
     resolvedRawList = (await deckFile.text()).trim()
 
     if (!resolvedDeckName) {
@@ -238,6 +234,7 @@ export async function importDeckAction(
 
   const params = new URLSearchParams()
   params.set('imported', '1')
+  params.set('tab', 'settings')
   if (guestDraftPresent) {
     params.set(GUEST_IMPORT_SAVED_QUERY_KEY, '1')
   }
@@ -258,5 +255,5 @@ export async function importDeckAction(
     redirect(`${nextUrl.pathname}?${nextParams.toString()}`)
   }
 
-  redirect(`/optimizer/${importResult.deckId}?${params.toString()}`)
+  redirect(`/my-decks/${importResult.deckId}?${params.toString()}`)
 }

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import FormActionButton from '@/components/form-action-button'
 import { reportGameAction, type ActionState } from '@/app/podmatch/leagues/actions'
+import { selectCommanderAchievementGoals } from '@/lib/podmatch/achievement-goals'
 
 export type ReportSeat = {
   player_id: string
@@ -19,11 +20,13 @@ export default function ReportGameForm({
   podId,
   roundNumber,
   seats,
+  achievementSeed,
 }: {
   leagueId: string
   podId: string | null
   roundNumber: number
   seats: ReportSeat[]
+  achievementSeed: string
 }) {
   const [state, action] = useActionState<ActionState, FormData>(reportGameAction, {})
 
@@ -33,6 +36,7 @@ export default function ReportGameForm({
       {podId ? <input type="hidden" name="podId" value={podId} /> : null}
       <input type="hidden" name="roundNumber" value={roundNumber} />
       <input type="hidden" name="playerIds" value={seats.map((s) => s.player_id).join(',')} />
+      <input type="hidden" name="achievementSeed" value={achievementSeed} />
 
       <div className="overflow-x-auto rounded-2xl border border-white/10">
         <table className="w-full text-sm">
@@ -88,6 +92,42 @@ export default function ReportGameForm({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-zinc-900 p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-200">Commander achievement goals</h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            Each player gets five random goals for this game. Completed goals score 1 point each,
+            up to 5 total.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {seats.map((seat) => {
+            const goals = selectCommanderAchievementGoals(achievementSeed, seat.player_id)
+            return (
+              <fieldset key={seat.player_id} className="rounded-xl border border-white/10 bg-zinc-950 p-3">
+                <legend className="px-1 text-sm font-medium text-white">{seat.player_name}</legend>
+                <div className="mt-2 grid gap-2">
+                  {goals.map((goal) => (
+                    <label key={goal.id} className="flex gap-2 text-sm text-zinc-300">
+                      <input
+                        type="checkbox"
+                        name={`achievement_${seat.player_id}`}
+                        value={goal.id}
+                        className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                      />
+                      <span>
+                        <span className="font-medium text-zinc-100">{goal.title}:</span>{' '}
+                        <span className="text-zinc-400">{goal.prompt}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )
+          })}
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

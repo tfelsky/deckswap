@@ -26,6 +26,7 @@ import type { PodOptions } from '@/lib/podmatch/pods'
 import { applyRatingsForGame, getHandicapData } from '@/lib/podmatch/league-ratings'
 import { computeHandicap, resolveHandicapConfig } from '@/lib/podmatch/handicap'
 import type { HandicapApplication } from '@/lib/podmatch/league-scoring'
+import { buildCommanderAchievementResults } from '@/lib/podmatch/achievement-goals'
 
 export type ActionState = { error?: string; ok?: boolean }
 
@@ -183,6 +184,8 @@ export async function reportGameAction(
 
   const podId = (formData.get('podId') as string) || null
   const roundNumber = Number(formData.get('roundNumber')) || 1
+  const achievementSeed =
+    String(formData.get('achievementSeed') ?? '') || `${leagueId}:${podId ?? 'adhoc'}:${roundNumber}`
   const playerIds = String(formData.get('playerIds') ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -200,6 +203,11 @@ export async function reportGameAction(
     combo_win: formData.get(`combo_${pid}`) === 'on',
     no_show: formData.get(`noshow_${pid}`) === 'on',
     sportsmanship: formData.get(`sport_${pid}`) === 'on',
+    achievement_goals: buildCommanderAchievementResults(
+      achievementSeed,
+      pid,
+      formData.getAll(`achievement_${pid}`).map(String)
+    ),
   }))
 
   // Apply soft handicaps to bonus points when the league enables them.
@@ -244,6 +252,33 @@ export async function reportGameAction(
   revalidatePath(`/podmatch/leagues/${leagueId}`)
   revalidatePath(`/podmatch/leagues/${leagueId}/standings`)
   redirect(`/podmatch/leagues/${leagueId}?reported=1`)
+}
+
+export async function reportAchievementGoalAction(formData: FormData): Promise<void> {
+  const { supabase, user } = await requireUser()
+  if (!user) return
+
+  const leagueId = String(formData.get('leagueId') ?? '')
+  const gameId = String(formData.get('gameId') ?? '')
+  const playerId = String(formData.get('playerId') ?? '')
+  const goalId = String(formData.get('goalId') ?? '')
+  const completed = formData.get('completed') !== 'false'
+  if (!leagueId || !gameId || !playerId || !goalId) return
+
+  try {
+    await supabase.rpc('podmatch_report_achievement_goal', {
+      p_game: gameId,
+      p_player: playerId,
+      p_goal: goalId,
+      p_completed: completed,
+    })
+  } catch {
+    // Reflected on next render; invalid member/player/goal combinations are ignored.
+  }
+
+  revalidatePath(`/podmatch/leagues/${leagueId}`)
+  revalidatePath(`/podmatch/leagues/${leagueId}/standings`)
+  revalidatePath(`/podmatch/play/${leagueId}`)
 }
 
 export async function confirmGameAction(formData: FormData): Promise<void> {

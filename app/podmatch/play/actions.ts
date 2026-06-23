@@ -21,6 +21,11 @@ import {
   getEventLatestRound,
   setMyDisplayName,
 } from '@/lib/podmatch/events'
+import { queuePodmatchEventSignupEmails } from '@/lib/podmatch/event-reminders'
+import {
+  buildCommanderAchievementResults,
+  commanderAchievementSeed,
+} from '@/lib/podmatch/achievement-goals'
 
 export type ActionState = { error?: string; ok?: boolean }
 
@@ -37,6 +42,16 @@ function friendly(error: unknown): string {
   return isLeagueSchemaMissing(message) ? LEAGUE_SETUP_MESSAGE : message
 }
 
+function stringValue(formData: FormData, key: string) {
+  return String(formData.get(key) ?? '').trim()
+}
+
+function validIsoDate(value: string) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 export async function createEventAction(
   _prev: ActionState,
   formData: FormData
@@ -44,13 +59,34 @@ export async function createEventAction(
   const { supabase, user } = await requireUser()
   if (!user) return { error: 'Sign in required.' }
 
-  const name = String(formData.get('name') ?? '').trim()
+  const name = stringValue(formData, 'name')
   if (!name) return { error: 'Give your event a name.' }
   const podSize = Number(formData.get('pod_size')) || 4
+  const eventStartAt = validIsoDate(stringValue(formData, 'event_start_at'))
+  const eventEndAt = validIsoDate(stringValue(formData, 'event_end_at'))
+  if (!eventStartAt) return { error: 'Add the event date and start time so reminders can be scheduled.' }
 
   let eventId: string
   try {
-    const event = await createEvent(supabase, user.id, { name, pod_size: podSize })
+    const event = await createEvent(supabase, user.id, {
+      name,
+      pod_size: podSize,
+      event_start_at: eventStartAt,
+      event_end_at: eventEndAt,
+      time_zone: stringValue(formData, 'time_zone') || undefined,
+      store_name: stringValue(formData, 'store_name') || undefined,
+      location: stringValue(formData, 'location') || undefined,
+      inventory_url: stringValue(formData, 'inventory_url') || undefined,
+    })
+    try {
+      await queuePodmatchEventSignupEmails({
+        league: event,
+        userId: user.id,
+        email: user.email,
+      })
+    } catch (emailError) {
+      console.error('Failed to queue PodMatch host event emails:', emailError)
+    }
     eventId = event.id
   } catch (error) {
     return { error: friendly(error) }
@@ -75,6 +111,18 @@ export async function joinEventAction(
   let eventId: string
   try {
     eventId = await joinLeague(supabase, code)
+    const viewer = await getLeagueForViewer(supabase, eventId, user.id)
+    if (viewer) {
+      try {
+        await queuePodmatchEventSignupEmails({
+          league: viewer.league,
+          userId: user.id,
+          email: user.email,
+        })
+      } catch (emailError) {
+        console.error('Failed to queue PodMatch event emails:', emailError)
+      }
+    }
   } catch (error) {
     return { error: friendly(error) }
   }
@@ -137,6 +185,8 @@ export async function reportResultAction(
   const leagueId = String(formData.get('leagueId') ?? '')
   const podId = (formData.get('podId') as string) || null
   const roundNumber = Number(formData.get('roundNumber')) || 1
+  const achievementSeed =
+    String(formData.get('achievementSeed') ?? '') || commanderAchievementSeed(leagueId, podId, roundNumber)
   const winnerId = String(formData.get('winnerId') ?? '')
   const seatIds = String(formData.get('seatIds') ?? '')
     .split(',')
@@ -157,6 +207,7 @@ export async function reportResultAction(
     combo_win: false,
     no_show: false,
     sportsmanship: false,
+    achievement_goals: buildCommanderAchievementResults(achievementSeed, pid, []),
   }))
 
   try {

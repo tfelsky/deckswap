@@ -114,11 +114,11 @@ function ImportDeckPageContent() {
             </div>
 
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-              Optimize a deck
+              Import a deck
             </h1>
 
             <p className="mt-3 max-w-2xl text-zinc-400">
-              Start with an import and DeckSwap will build a buying tree with optimized printings, style branches, and marketplace handoffs.
+              Upload or paste a decklist and DeckSwap will save it for review before you send it to marketplace, trade, or optimizer workflows.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -143,6 +143,7 @@ function ImportDeckPageContent() {
       <section className="mx-auto max-w-4xl px-6 py-10">
         <form
           action={formAction}
+          encType="multipart/form-data"
           className="rounded-3xl border border-white/10 bg-zinc-900 p-6 sm:p-8"
         >
           <div className="grid gap-5">
@@ -409,7 +410,7 @@ Tokens
                 disabled={pending}
                 className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {pending ? 'Importing...' : 'Optimize Deck'}
+                {pending ? 'Importing...' : 'Import Deck'}
               </button>
             </div>
           </div>
