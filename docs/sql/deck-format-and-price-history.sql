@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622150900_deck_format_and_price_history.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.decks
   add column if not exists imported_at timestamptz default now(),
   add column if not exists format text default 'unknown';

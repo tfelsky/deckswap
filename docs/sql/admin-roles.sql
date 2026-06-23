@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622150000_admin_roles.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 create table if not exists public.admin_roles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   role text not null check (role in ('admin', 'superadmin')),

@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622153000_escrow_payment_intents.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 -- Payment-intent placeholder fields on escrow participants. These capture the
 -- chosen payment method and a placeholder intent id/status/amount so the
 -- escrow flow is shaped for a real payment provider later.

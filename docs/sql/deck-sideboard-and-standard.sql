@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622151400_deck_sideboard_and_standard.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.decks
   add column if not exists sideboard_count integer not null default 0;
 

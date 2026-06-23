@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622150200_commander_directory.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 create table if not exists public.commander_directory (
   normalized_name text primary key,
   name text not null,

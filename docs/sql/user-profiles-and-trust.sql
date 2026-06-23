@@ -1,9 +1,13 @@
+-- NOTE: This schema is now applied via supabase/migrations/20260622130000_profile_trust_schema.sql
+-- (run by `supabase db push`). Do not hand-apply this file — it is kept for reference only.
+
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   username text unique,
   bio text,
   avatar_url text,
+  banner_url text,
   location_country text,
   location_region text,
   preferred_currency text default 'USD',
@@ -75,6 +79,9 @@ create table if not exists public.profile_reputation_summary (
   internal_validation_last_calculated_at timestamptz,
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists banner_url text;
 
 alter table public.profile_reputation_summary
   add column if not exists last_seen_at timestamptz,
