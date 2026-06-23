@@ -15,6 +15,7 @@ const footerLinks = {
     { name: "Trade Offers", href: "/trade-offers" },
     { name: "Trades Workspace", href: "/trades" },
     { name: "My Decks", href: "/my-decks" },
+    { name: "PodMatch for Players", href: "/podmatch/users" },
   ],
   resources: [
     { name: "For Game Stores", href: "/for-stores" },
@@ -22,7 +23,6 @@ const footerLinks = {
     { name: "Store Pricing", href: "/pricing" },
     { name: "LGS TV", href: "/lgs-tv" },
     { name: "Prebuy Subscriptions", href: "/comic-subscriptions" },
-    { name: "PodMatch for Players", href: "/podmatch/users" },
     { name: "PodMatch for Stores", href: "/podmatch/stores" },
     { name: "Completed Sales", href: "/completed-sales" },
     { name: "Holiday Giveback", href: "/holiday-giveback" },

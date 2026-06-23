@@ -34,44 +34,11 @@ export const SITE_AREAS: SiteArea[] = [
     key: 'decks',
     label: 'Decks',
     href: '/decks',
-    prefixes: ['/decks'],
+    // Marketplace browse + your own collection and deck tools, all in one area.
+    prefixes: ['/decks', '/my-decks', '/optimizer', '/import-deck', '/create-deck'],
     inMainBar: true,
     sub: [
       { label: 'Browse', href: '/decks' },
-      { label: 'Import', href: '/import-deck' },
-    ],
-  },
-  {
-    key: 'singles',
-    label: 'Singles',
-    href: '/singles',
-    prefixes: ['/singles', '/my-singles', '/singles-orders'],
-    inMainBar: true,
-    sub: [
-      { label: 'Browse', href: '/singles' },
-      { label: 'My Singles', href: '/my-singles' },
-      { label: 'Single Orders', href: '/singles-orders' },
-    ],
-  },
-  {
-    key: 'swap',
-    label: 'Deck Swap',
-    href: '/trade-matches',
-    prefixes: ['/trade-matches', '/trade-offers', '/trade-deals', '/trade-drafts', '/trades'],
-    inMainBar: true,
-    sub: [
-      { label: 'Matches', href: '/trade-matches' },
-      { label: 'Offers', href: '/trade-offers', badge: 'offers' },
-      { label: 'Trades', href: '/trades' },
-    ],
-  },
-  {
-    key: 'mydecks',
-    label: 'My Decks',
-    href: '/my-decks',
-    prefixes: ['/my-decks', '/optimizer', '/import-deck', '/create-deck'],
-    inMainBar: true,
-    sub: [
       { label: 'My Decks', href: '/my-decks' },
       { label: 'Optimizer', href: '/optimizer' },
       { label: 'Import', href: '/import-deck' },
@@ -79,27 +46,62 @@ export const SITE_AREAS: SiteArea[] = [
     ],
   },
   {
+    key: 'trade',
+    label: 'Trade',
+    href: '/singles',
+    // Single-card marketplace + deck-swap matching, offers, and trades.
+    prefixes: [
+      '/singles',
+      '/my-singles',
+      '/singles-orders',
+      '/trade-matches',
+      '/trade-offers',
+      '/trade-deals',
+      '/trade-drafts',
+      '/trades',
+    ],
+    inMainBar: true,
+    sub: [
+      { label: 'Singles', href: '/singles' },
+      { label: 'My Singles', href: '/my-singles' },
+      { label: 'Single Orders', href: '/singles-orders' },
+      { label: 'Matches', href: '/trade-matches' },
+      { label: 'Offers', href: '/trade-offers', badge: 'offers' },
+      { label: 'Trades', href: '/trades' },
+    ],
+  },
+  {
     key: 'podmatch',
     label: 'PodMatch',
     href: '/podmatch',
+    // Player-facing tooling. The store-facing pitch lives under Stores.
     prefixes: ['/podmatch'],
     inMainBar: true,
     sub: [
-      { label: 'For Players', href: '/podmatch/users' },
-      { label: 'For Stores', href: '/podmatch/stores' },
       { label: 'Analyze', href: '/podmatch' },
       { label: 'Pods', href: '/podmatch/pods/generate' },
       { label: 'Leagues', href: '/podmatch/leagues' },
+      { label: 'Play', href: '/podmatch/play' },
     ],
   },
   {
     key: 'stores',
     label: 'Stores',
     href: '/for-stores',
-    prefixes: ['/for-stores', '/lgs-events', '/lgs-tv', '/comic-subscriptions', '/pricing'],
+    // The single home for everything store-facing, including PodMatch for stores.
+    // `/podmatch/stores` resolves here because its prefix is longer than PodMatch's.
+    prefixes: [
+      '/for-stores',
+      '/podmatch/stores',
+      '/lgs-events',
+      '/lgs-tv',
+      '/comic-subscriptions',
+      '/pricing',
+    ],
     inMainBar: true,
     sub: [
       { label: 'Store Program', href: '/for-stores' },
+      { label: 'Events & Pods', href: '/podmatch/stores' },
       { label: 'Event Calendar', href: '/lgs-events' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'LGS TV', href: '/lgs-tv' },
