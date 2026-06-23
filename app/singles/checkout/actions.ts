@@ -18,6 +18,7 @@ function normalizeCartPayload(raw: string): SinglesCartItem[] {
 
 export async function createSinglesOrderAction(formData: FormData) {
   const cartItems = normalizeCartPayload(String(formData.get('cart_payload') ?? ''))
+  const redeemPoints = Math.max(0, Math.floor(Number(formData.get('redeem_points') ?? 0)) || 0)
   const supabase = await createClient()
   const adminSupabase = createAdminClientOrNull() ?? supabase
   const {
@@ -31,6 +32,7 @@ export async function createSinglesOrderAction(formData: FormData) {
   const checkoutResult = await supabase.rpc('create_singles_checkout', {
     p_buyer_user_id: user.id,
     p_cart_items: cartItems,
+    p_redeem_points: redeemPoints,
   })
 
   if (checkoutResult.error) {

@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622151300_deck_scryfall_enrichment_columns.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.deck_cards
   add column if not exists scryfall_id text,
   add column if not exists oracle_id text,

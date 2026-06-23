@@ -1,3 +1,29 @@
+import { readFileSync } from 'node:fs'
+
+// Seed scripts read connection details from the shell environment. The Next app
+// (and the checker) also fall back to .env.local, so load it here too — only for
+// keys not already set — to keep all three pointed at the same project.
+export function loadEnvLocal() {
+  for (const name of ['.env.local', '.env']) {
+    try {
+      const contents = readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+      for (const line of contents.split('\n')) {
+        const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
+        if (!match || process.env[match[1]]) continue
+        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '')
+      }
+    } catch {
+      // File absent — rely on the shell environment.
+    }
+  }
+}
+
+// Prints the project the seed is about to write to, so a wrong env is obvious.
+export function logSeedTarget(label) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  console.log(`[${label}] target project: ${url ? new URL(url).host : '(NEXT_PUBLIC_SUPABASE_URL not set)'}`)
+}
+
 const DEFAULT_TIME_ZONE = 'America/Toronto'
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   timeZone: DEFAULT_TIME_ZONE,
@@ -5,6 +31,9 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 })
+
+export const DEFAULT_NO_SHOW_POLICY =
+  "Can't make it? We'll miss you — but your packs won't go anywhere. Prepaid product is held safely behind the counter for you to grab on your next visit. Prepaid entries are non-refundable, but the cards are always yours."
 
 const WEEKDAYS = {
   Sunday: 0,
@@ -79,6 +108,7 @@ function summarizeCalendarEvent(event) {
     source: event.source,
     publicEventBasis: event.publicEventBasis,
     inviteCode: event.invite_code,
+    noShowPolicy: event.noShowPolicy ?? DEFAULT_NO_SHOW_POLICY,
   }
 }
 
@@ -146,6 +176,7 @@ export async function upsertPodmatchCalendarEvents(supabase, args) {
       rounds: event.rounds,
       prize: event.prize,
       rules: event.rules,
+      noShowPolicy: event.noShowPolicy ?? DEFAULT_NO_SHOW_POLICY,
       recurring: {
         cadence: 'weekly',
         day: event.day,

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "seed:future-pastimes": "node scripts/create-future-pastimes-sample-account.mjs",
     "seed:total-play": "node scripts/create-total-play-sample-account.mjs",
-    "seed:heavy-js": "node scripts/create-heavy-js-sample-account.mjs"
+    "seed:heavy-js": "node scripts/create-heavy-js-sample-account.mjs",
+    "check:sample-store": "node scripts/check-sample-store.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

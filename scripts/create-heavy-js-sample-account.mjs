@@ -2,9 +2,13 @@ import { createClient } from '@supabase/supabase-js'
 import {
   buildLeagueSettings,
   buildWeeklyEventSeries,
+  loadEnvLocal,
+  logSeedTarget,
   upsertMainLeagueSettings,
   upsertPodmatchCalendarEvents,
 } from './sample-store-calendar.mjs'
+
+loadEnvLocal()
 
 const STORE_EMAIL = process.env.SAMPLE_STORE_EMAIL?.trim() || 'heavy-js.sample@mythivex.test'
 const STORE_CONTACT_EMAIL = null
@@ -49,6 +53,15 @@ const STORE_CALENDAR_EVENTS = buildWeeklyEventSeries({
   source: 'heavyjs.com exposes Events/Upcoming Events and asks customers to follow Facebook for updates; exact event rows were not available in the static fetch.',
   publicEventBasis: 'Heavy J\'s public site advertises store events and TCG categories; this is a sample calendar shell until exact public event rows are available.',
 })
+
+// Public profile imagery + store ratings. Override per run via env if you have
+// real assets; otherwise the public page falls back to an initials avatar and a
+// gradient banner, and these rating values seed a believable store score.
+const STORE_AVATAR_URL = process.env.SAMPLE_STORE_AVATAR_URL?.trim() || null
+const STORE_BANNER_URL = process.env.SAMPLE_STORE_BANNER_URL?.trim() || null
+const STORE_RATING_AVERAGE = Number(process.env.SAMPLE_STORE_RATING_AVERAGE ?? 4.9)
+const STORE_RATING_COUNT = Number(process.env.SAMPLE_STORE_RATING_COUNT ?? 64)
+const STORE_POSITIVE_FEEDBACK = Number(process.env.SAMPLE_STORE_POSITIVE_FEEDBACK ?? 61)
 
 function requireEnv(name) {
   const value = process.env[name]?.trim()
@@ -135,6 +148,8 @@ async function upsertProfileRows(supabase, userId) {
       user_id: userId,
       display_name: STORE_DISPLAY_NAME,
       username: STORE_USERNAME,
+      avatar_url: STORE_AVATAR_URL,
+      banner_url: STORE_BANNER_URL,
       bio:
         "Sarnia card house with Magic, Pokemon, Lorcana, One Piece, sealed products, singles, buylist, and event surfaces.",
       location_country: 'Canada',
@@ -183,9 +198,10 @@ async function upsertProfileRows(supabase, userId) {
       user_id: userId,
       completed_trades_count: 0,
       successful_shipments_count: 0,
-      positive_feedback_count: 0,
+      positive_feedback_count: STORE_POSITIVE_FEEDBACK,
       negative_feedback_count: 0,
-      external_rating_count: 0,
+      external_rating_average: STORE_RATING_AVERAGE,
+      external_rating_count: STORE_RATING_COUNT,
       verification_badges: ['sample_store', 'sarnia_demo', 'tcg_singles'],
       is_manually_verified: true,
       is_known_user: true,
@@ -322,6 +338,7 @@ async function seedRoster(supabase, userId, leagueId) {
 }
 
 async function main() {
+  logSeedTarget('heavy-js')
   const supabase = createClient(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: {
       autoRefreshToken: false,
