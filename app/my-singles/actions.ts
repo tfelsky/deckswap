@@ -1,6 +1,8 @@
 'use server'
 
 import { fetchScryfallCollection, scryfallToDeckCardUpdate } from '@/lib/scryfall/enrich'
+import { awardEngagementPoints } from '@/lib/rewards/award'
+import { engagementPointsFor } from '@/lib/rewards/engagement'
 import { isSingleImportSchemaMissing } from '@/lib/singles/import-events'
 import { createClient } from '@/lib/supabase/server'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
@@ -414,6 +416,24 @@ export async function publishAllStagedSinglesAction(formData: FormData) {
       if (result.error) {
         throw new Error(result.error.message)
       }
+    }
+
+    // Award Spark (engagement points) for each newly-listed item. Idempotent per
+    // listing id, so re-publishing the same item never re-awards. Best-effort: a
+    // points failure must not fail the publish, so swallow per-award errors.
+    const listItemPoints = engagementPointsFor('list_item')
+    for (const awardBatch of chunkArray(publishRows, 25)) {
+      await Promise.allSettled(
+        awardBatch.map((row) =>
+          awardEngagementPoints(supabase, {
+            userId: user.id,
+            amount: listItemPoints,
+            reason: 'list_item',
+            sourceType: 'single_listing',
+            sourceId: String(row.id),
+          })
+        )
+      )
     }
 
     redirect(

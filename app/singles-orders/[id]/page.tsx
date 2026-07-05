@@ -6,6 +6,12 @@ import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { formatCurrencyAmount } from '@/lib/currency'
 import { createNotification } from '@/lib/notifications'
+import { awardRewardPoints } from '@/lib/rewards/award'
+import {
+  REWARD_POINTS,
+  calculateBuyerPurchasePoints,
+  calculateSellerSalePointsFromSale,
+} from '@/lib/rewards/points'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatSinglesOrderStatus,
@@ -173,15 +179,59 @@ export default async function SinglesOrderDetailPage({
       })
       .eq('id', orderId)
 
+    // Mint reward points now that the order has settled. Awards are idempotent at the
+    // database level, so a re-run of this completion path can never double-pay.
+    const saleValueUsd = Number(currentOrder.discounted_subtotal_usd ?? 0)
+    const buyerPoints = calculateBuyerPurchasePoints(saleValueUsd)
+    const sellerPoints = calculateSellerSalePointsFromSale(saleValueUsd)
+    const orderSource = { sourceType: 'singles_order', sourceId: String(orderId) }
+
+    await awardRewardPoints(adminSupabase, {
+      userId: currentOrder.buyer_user_id,
+      amount: buyerPoints,
+      reason: 'singles_purchase',
+      usdBasis: saleValueUsd,
+      ...orderSource,
+    })
+    const bonusMinted = await awardRewardPoints(adminSupabase, {
+      userId: currentOrder.buyer_user_id,
+      amount: REWARD_POINTS.firstOrderBonus,
+      reason: 'first_order_bonus',
+      sourceType: 'lifetime',
+      sourceId: 'first_completed_order',
+    })
+    await awardRewardPoints(adminSupabase, {
+      userId: currentOrder.seller_user_id,
+      amount: sellerPoints,
+      reason: 'singles_sale',
+      usdBasis: saleValueUsd,
+      ...orderSource,
+    })
+
     await createNotification(supabase, {
       userId: currentOrder.seller_user_id,
       actorUserId: user.id,
       type: 'singles_order_completed',
       title: 'A singles order was marked delivered',
-      body: `Order #${orderId} is now complete.`,
+      body:
+        sellerPoints > 0
+          ? `Order #${orderId} is now complete. You earned ${sellerPoints} Mythivex Points.`
+          : `Order #${orderId} is now complete.`,
       href: `/singles-orders/${orderId}`,
-      metadata: { orderId },
+      metadata: { orderId, rewardPoints: sellerPoints },
     })
+
+    if (buyerPoints + bonusMinted > 0) {
+      await createNotification(supabase, {
+        userId: currentOrder.buyer_user_id,
+        actorUserId: user.id,
+        type: 'reward_points_earned',
+        title: 'You earned Mythivex Points',
+        body: `Order #${orderId} earned you ${buyerPoints + bonusMinted} Mythivex Points.`,
+        href: `/singles-orders/${orderId}`,
+        metadata: { orderId, rewardPoints: buyerPoints, bonusPoints: bonusMinted },
+      })
+    }
 
     redirect(`/singles-orders/${orderId}`)
   }

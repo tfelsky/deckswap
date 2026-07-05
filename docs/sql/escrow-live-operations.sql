@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622153100_escrow_live_operations.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.trade_transactions
   add column if not exists payment_requested_at timestamptz,
   add column if not exists release_ready_at timestamptz,

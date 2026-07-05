@@ -4,6 +4,7 @@ export type PublicProfile = {
   username?: string | null
   bio?: string | null
   avatar_url?: string | null
+  banner_url?: string | null
   location_country?: string | null
   location_region?: string | null
   preferred_currency?: string | null
@@ -405,6 +406,28 @@ export function getTrustBadges(
 export function formatShipFrom(profile?: Partial<PublicProfile> | null) {
   const parts = [profile?.location_region, profile?.location_country].filter(Boolean)
   return parts.length > 0 ? parts.join(', ') : 'Location not set'
+}
+
+export type SellerRating = {
+  average: number
+  count: number
+}
+
+export function getSellerRating(summary?: Partial<ReputationSummary> | null): SellerRating | null {
+  const average =
+    summary?.external_rating_average != null ? Number(summary.external_rating_average) : null
+  const count = Math.max(0, Number(summary?.external_rating_count ?? 0))
+
+  if (average == null || !Number.isFinite(average) || count <= 0) return null
+  return { average: clamp(average, 0, 5), count }
+}
+
+export function getProfileInitials(profile?: Partial<PublicProfile> | null) {
+  const source = profile?.display_name?.trim() || profile?.username?.trim() || ''
+  const parts = source.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 export function marketplaceLinks(profile?: Partial<PublicProfile> | null) {

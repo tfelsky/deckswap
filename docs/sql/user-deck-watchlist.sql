@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622152600_user_deck_watchlist.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 create table if not exists public.user_deck_watchlist (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,

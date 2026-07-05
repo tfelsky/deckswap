@@ -13,6 +13,12 @@ import {
   type DirectSaleOrderRow,
 } from '@/lib/direct-sales'
 import { createNotification } from '@/lib/notifications'
+import { awardRewardPoints } from '@/lib/rewards/award'
+import {
+  REWARD_POINTS,
+  calculateBuyerPurchasePoints,
+  calculateSellerSalePointsFromSale,
+} from '@/lib/rewards/points'
 
 export const dynamic = 'force-dynamic'
 
@@ -266,6 +272,49 @@ export default async function OrderDetailPage({
         updated_at: now,
       })
       .eq('id', orderId)
+
+    // Mint reward points on the settled deck sale. Idempotent per order id.
+    const saleValueUsd = Number(currentOrder.price_usd ?? 0)
+    const orderSource = { sourceType: 'direct_sale_order', sourceId: String(orderId) }
+    const sellerPoints = calculateSellerSalePointsFromSale(saleValueUsd)
+
+    await awardRewardPoints(adminSupabase, {
+      userId: currentOrder.seller_user_id,
+      amount: sellerPoints,
+      reason: 'deck_sale',
+      usdBasis: saleValueUsd,
+      ...orderSource,
+    })
+
+    if (currentOrder.buyer_user_id) {
+      const buyerPoints = calculateBuyerPurchasePoints(saleValueUsd)
+      await awardRewardPoints(adminSupabase, {
+        userId: currentOrder.buyer_user_id,
+        amount: buyerPoints,
+        reason: 'deck_purchase',
+        usdBasis: saleValueUsd,
+        ...orderSource,
+      })
+      const bonusMinted = await awardRewardPoints(adminSupabase, {
+        userId: currentOrder.buyer_user_id,
+        amount: REWARD_POINTS.firstOrderBonus,
+        reason: 'first_order_bonus',
+        sourceType: 'lifetime',
+        sourceId: 'first_completed_order',
+      })
+
+      if (buyerPoints + bonusMinted > 0) {
+        await createNotification(supabase, {
+          userId: currentOrder.buyer_user_id,
+          actorUserId: user.id,
+          type: 'reward_points_earned',
+          title: 'You earned Mythivex Points',
+          body: `Order #${orderId} earned you ${buyerPoints + bonusMinted} Mythivex Points.`,
+          href: `/orders/${orderId}`,
+          metadata: { orderId, rewardPoints: buyerPoints, bonusPoints: bonusMinted },
+        })
+      }
+    }
 
     redirect(`/orders/${orderId}`)
   }

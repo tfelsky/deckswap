@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622152300_trust_telemetry.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 -- Trust telemetry: populate the reputation-summary fields used by the
 -- internal validation score (last_seen_at, avg_trade_reply_hours,
 -- last_login_ip_country). Called fire-and-forget from authenticated pages

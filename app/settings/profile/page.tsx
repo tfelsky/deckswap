@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { AdminOnlyCallout } from '@/components/admin-only-callout'
 import FormActionButton from '@/components/form-action-button'
 import GovernmentIdUploader from '@/components/government-id-uploader'
+import ProfileImageUploader from '@/components/profile-image-uploader'
 import { isGovernmentIdStoragePath } from '@/lib/profiles/government-id'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -624,7 +625,7 @@ export default async function ProfileSettingsPage({
 
           {profileSchemaMissing && (
             <div className="mt-6 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-sm text-yellow-100">
-              Profile tables are not in Supabase yet. Run the SQL in `docs/sql/user-profiles-and-trust.sql` before expecting this page to persist data.
+              Profile tables are not in Supabase yet. Run `supabase db push` (migration `20260622130000_profile_trust_schema.sql`) before expecting this page to persist data.
             </div>
           )}
         </div>
@@ -633,6 +634,27 @@ export default async function ProfileSettingsPage({
       <section className="mx-auto max-w-6xl px-5 py-10 sm:px-6">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
+            <div className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Profile Imagery</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Upload an avatar and banner. These save immediately and show on your public profile.
+              </p>
+              <div className="mt-5 space-y-4">
+                <ProfileImageUploader
+                  kind="avatar"
+                  label="Profile image"
+                  hint="Square logo or headshot, shown as your avatar."
+                  currentUrl={profile.avatar_url}
+                />
+                <ProfileImageUploader
+                  kind="banner"
+                  label="Banner image"
+                  hint="Wide image (about 1500×500) shown across the top of your profile."
+                  currentUrl={profile.banner_url}
+                />
+              </div>
+            </div>
+
             <form id="public-profile" action={savePublicProfile} className="rounded-3xl border border-white/10 bg-zinc-900 p-6">
               <h2 className="text-2xl font-semibold">Public Profile</h2>
               <p className="mt-2 text-sm text-zinc-400">

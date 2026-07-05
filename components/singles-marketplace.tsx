@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
@@ -103,6 +103,9 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
   const [cardsPerRow, setCardsPerRow] = useState<CardsPerRowOption>(5)
   const [cartPanelCollapsed, setCartPanelCollapsed] = useState(false)
   const [page, setPage] = useState(1)
+  // Listings we've already pinged the cart-signal endpoint for this session, so
+  // toggling an item in and out of the cart fires the Spark award at most once.
+  const signaledListings = useRef<Set<number>>(new Set())
   const deferredSearch = useDeferredValue(search)
 
   useEffect(() => {
@@ -207,11 +210,28 @@ export function SinglesMarketplace({ listings, isSignedIn }: SinglesMarketplaceP
       : 'lg:pr-[26rem]'
     : ''
 
+  function signalCartAdd(listingId: number) {
+    if (!isSignedIn || signaledListings.current.has(listingId)) return
+    signaledListings.current.add(listingId)
+
+    // Fire-and-forget: the award is best-effort and must never block the cart UI.
+    void fetch('/api/singles/cart-signal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId }),
+    }).catch(() => {})
+  }
+
   function setListingQuantity(listing: PublicSingleListing, nextQuantity: number) {
     const quantity = Math.max(
       0,
       Math.min(Math.floor(nextQuantity), Number(listing.marketplace_quantity_available ?? 0))
     )
+
+    // First time this listing enters the cart this session → reward the signal.
+    if (quantity > 0 && getListingQuantity(listing.id) === 0) {
+      signalCartAdd(listing.id)
+    }
 
     setCartItems((current) => {
       const withoutListing = current.filter((item) => item.singleInventoryItemId !== listing.id)

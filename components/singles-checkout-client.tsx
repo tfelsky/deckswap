@@ -6,6 +6,7 @@ import FormActionButton from '@/components/form-action-button'
 import { formatCurrencyAmount } from '@/lib/currency'
 import { buildSinglesQuote, type PublicSingleListing } from '@/lib/singles/marketplace'
 import { type SinglesCartItem } from '@/lib/singles/pricing'
+import { REWARD_POINTS, resolveRedemption } from '@/lib/rewards/points'
 
 const SINGLES_CART_STORAGE_KEY = 'deckswap_singles_cart_v1'
 
@@ -22,18 +23,32 @@ export function SinglesCheckoutClient({
   listings,
   schemaMissing,
   errorMessage,
+  pointsBalance = 0,
 }: {
   listings: PublicSingleListing[]
   schemaMissing: boolean
   errorMessage?: string | null
+  pointsBalance?: number
 }) {
   const [cartItems, setCartItems] = useState<SinglesCartItem[]>([])
+  const [applyPoints, setApplyPoints] = useState(false)
 
   useEffect(() => {
     setCartItems(readStoredCart())
   }, [])
 
   const quote = buildSinglesQuote({ cartItems, listings })
+
+  // Resolve the best redemption against the live total. The server re-validates this
+  // on submit, so the worst case from a stale balance is the points control no-opping.
+  const redemption = applyPoints
+    ? resolveRedemption({
+        pointsRequested: pointsBalance,
+        balance: pointsBalance,
+        orderTotalUsd: quote.pricing.grandTotal,
+      })
+    : { pointsApplied: 0, creditUsd: 0, reason: 'none_requested' as const }
+  const adjustedTotal = Math.max(0, Number((quote.pricing.grandTotal - redemption.creditUsd).toFixed(2)))
 
   if (schemaMissing) {
     return (
@@ -132,15 +147,51 @@ export function SinglesCheckoutClient({
             <span>Tax</span>
             <span>{formatCurrencyAmount(quote.pricing.taxAmount, 'USD')}</span>
           </div>
+
+          {pointsBalance > 0 ? (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={applyPoints}
+                  onChange={(event) => setApplyPoints(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-amber-400"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-amber-100">Redeem Mythivex Points</span>
+                  <span className="mt-0.5 block text-xs text-amber-200/70">
+                    Balance: {pointsBalance.toLocaleString()} MP · {REWARD_POINTS.redemptionPointsPerUsd} MP = $1 ·
+                    up to {Math.round(REWARD_POINTS.maxRedemptionFraction * 100)}% of an order
+                  </span>
+                </span>
+              </label>
+              {applyPoints && redemption.reason !== 'applied' ? (
+                <p className="mt-2 text-xs text-amber-200/70">
+                  {redemption.reason === 'below_minimum' || redemption.reason === 'insufficient_balance'
+                    ? `You need at least ${REWARD_POINTS.minRedemptionPoints.toLocaleString()} MP to redeem.`
+                    : 'This order is too small to apply points yet.'}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {redemption.pointsApplied > 0 ? (
+            <div className="flex items-center justify-between text-amber-200">
+              <span>Points redeemed ({redemption.pointsApplied.toLocaleString()} MP)</span>
+              <span>-{formatCurrencyAmount(redemption.creditUsd, 'USD')}</span>
+            </div>
+          ) : null}
+
           <div className="border-t border-white/10 pt-3">
             <div className="flex items-center justify-between text-lg font-semibold text-white">
               <span>Grand total</span>
-              <span>{formatCurrencyAmount(quote.pricing.grandTotal, 'USD')}</span>
+              <span>{formatCurrencyAmount(adjustedTotal, 'USD')}</span>
             </div>
           </div>
         </div>
 
         <input type="hidden" name="cart_payload" value={JSON.stringify(cartItems)} />
+        <input type="hidden" name="redeem_points" value={redemption.pointsApplied} />
         <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
           Checkout revalidates every listing live on submit, recalculates discounts and Canada
           shipping, and creates an order snapshot so later price edits do not change this order.

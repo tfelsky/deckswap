@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622151900_guest_import_drafts.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 create extension if not exists pgcrypto;
 
 create table if not exists public.guest_import_drafts (

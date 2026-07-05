@@ -65,6 +65,12 @@ export default async function SinglesCheckoutPage({
   }
 
   const unreadNotifications = await getUnreadNotificationsCount(supabase, user.id)
+  const { data: rewardBalance } = await supabase
+    .from('reward_point_balances')
+    .select('balance')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const pointsBalance = Math.max(0, Math.floor(Number(rewardBalance?.balance ?? 0)))
   const { data, error } = await supabase
     .from('single_inventory_items')
     .select(
@@ -104,6 +110,7 @@ export default async function SinglesCheckoutPage({
             listings={(data ?? []) as PublicSingleListing[]}
             schemaMissing={schemaMissing}
             errorMessage={errorMessage || null}
+            pointsBalance={pointsBalance}
           />
         </form>
       </section>

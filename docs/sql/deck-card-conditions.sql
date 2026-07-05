@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622150400_deck_card_conditions.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.deck_cards
   add column if not exists condition text not null default 'near_mint';
 

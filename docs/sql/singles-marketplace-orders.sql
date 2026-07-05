@@ -1,3 +1,6 @@
+-- NOTE: Folded into supabase/migrations/20260622152800_singles_marketplace_orders.sql (run by `supabase db push`).
+-- Kept for reference only — do not hand-apply.
+
 alter table public.single_inventory_items
   add column if not exists marketplace_visible boolean not null default false,
   add column if not exists marketplace_status text not null default 'draft',
