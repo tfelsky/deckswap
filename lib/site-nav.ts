@@ -102,7 +102,9 @@ export const SITE_AREAS: SiteArea[] = [
     sub: [
       { label: 'Store Program', href: '/for-stores' },
       { label: 'Events & Pods', href: '/podmatch/stores' },
-      { label: 'Event Calendar', href: '/lgs-events' },
+      // Event Calendar (/lgs-events) is hidden: it renders a hardcoded demo
+      // schedule with a simulated checkout. The prefix stays above so direct
+      // visits still highlight the Stores area.
       { label: 'Pricing', href: '/pricing' },
       { label: 'LGS TV', href: '/lgs-tv' },
       { label: 'Prebuy Subs', href: '/comic-subscriptions' },
@@ -113,7 +115,9 @@ export const SITE_AREAS: SiteArea[] = [
     label: "Arb'r",
     href: '/arber',
     prefixes: ['/arber'],
-    inMainBar: true,
+    // Hidden until real eBay credentials are configured; currently runs on
+    // sample listings only. Still reachable directly at /arber.
+    inMainBar: false,
     sub: [{ label: 'Finder', href: '/arber' }],
   },
   {
