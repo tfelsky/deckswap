@@ -109,6 +109,14 @@ export const SITE_AREAS: SiteArea[] = [
     ],
   },
   {
+    key: 'arber',
+    label: "Arb'r",
+    href: '/arber',
+    prefixes: ['/arber'],
+    inMainBar: true,
+    sub: [{ label: 'Finder', href: '/arber' }],
+  },
+  {
     key: 'account',
     label: 'Profile',
     href: '/settings/profile',
