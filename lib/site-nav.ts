@@ -55,6 +55,7 @@ export const SITE_AREAS: SiteArea[] = [
       '/my-singles',
       '/singles-orders',
       '/trade-matches',
+      '/trade-network',
       '/trade-offers',
       '/trade-deals',
       '/trade-drafts',
@@ -66,6 +67,7 @@ export const SITE_AREAS: SiteArea[] = [
       { label: 'My Singles', href: '/my-singles' },
       { label: 'Single Orders', href: '/singles-orders' },
       { label: 'Matches', href: '/trade-matches' },
+      { label: 'Link-Up', href: '/trade-network' },
       { label: 'Offers', href: '/trade-offers', badge: 'offers' },
       { label: 'Trades', href: '/trades' },
     ],
@@ -119,6 +121,16 @@ export const SITE_AREAS: SiteArea[] = [
     // sample listings only. Still reachable directly at /arber.
     inMainBar: false,
     sub: [{ label: 'Finder', href: '/arber' }],
+  },
+  {
+    key: 'live',
+    label: 'Mythivex Live',
+    href: '/live-auctions',
+    prefixes: ['/live-auctions'],
+    // Hidden while the 24/7 channel runs as a simulated demo broadcast (fake
+    // lots, bids, and bidders). Still reachable directly at /live-auctions.
+    inMainBar: false,
+    sub: [{ label: 'Live Floor', href: '/live-auctions' }],
   },
   {
     key: 'account',

@@ -8,6 +8,8 @@ import {
   getSingleInventoryStatusDescription,
   getSingleInventoryStatusLabel,
 } from '@/lib/singles/inventory-status'
+import { computeCardValueSignals, getValueSignalBadgeClass } from '@/lib/singles/value-signals'
+import { getCommanderStapleDataByOracleId } from '@/lib/singles/value-signals-data'
 import Link from 'next/link'
 import { backfillSinglesEnrichmentAction, publishAllStagedSinglesAction } from './actions'
 
@@ -26,6 +28,14 @@ type SingleRow = {
   set_code?: string | null
   set_name?: string | null
   collector_number?: string | null
+  oracle_id?: string | null
+  released_at?: string | null
+  rarity?: string | null
+  oracle_text?: string | null
+  type_line?: string | null
+  keywords?: string[] | null
+  cmc?: number | null
+  finishes?: string[] | null
   inventory_status?: string | null
   image_url?: string | null
   price_usd?: number | null
@@ -323,7 +333,7 @@ export default async function MySinglesPage({
     supabase
       .from('single_inventory_items')
       .select(
-        'id, card_name, quantity, foil, condition, language, set_code, set_name, collector_number, inventory_status, image_url, price_usd, price_usd_foil, buy_now_price_usd, buy_now_currency, source_collection_name, source_collection_url, import_warning'
+        'id, card_name, quantity, foil, condition, language, set_code, set_name, collector_number, oracle_id, released_at, rarity, oracle_text, type_line, keywords, cmc, finishes, inventory_status, image_url, price_usd, price_usd_foil, buy_now_price_usd, buy_now_currency, source_collection_name, source_collection_url, import_warning'
       ),
     user.id,
     filters
@@ -336,6 +346,9 @@ export default async function MySinglesPage({
   }
 
   const rows = schemaMissing ? [] : ((data ?? []) as SingleRow[])
+  const commanderStaples = await getCommanderStapleDataByOracleId(
+    rows.map((row) => row.oracle_id ?? '').filter(Boolean)
+  )
   const totalCopies = summaryRows.reduce((sum, row) => sum + Number(row.quantity ?? 0), 0)
   const totalValue = summaryRows.reduce((sum, row) => {
     const unitValue = row.foil
@@ -678,6 +691,24 @@ export default async function MySinglesPage({
                 ? Number(row.price_usd_foil ?? row.price_usd ?? 0)
                 : Number(row.price_usd ?? row.price_usd_foil ?? 0)
               const totalRowValue = unitValue * Number(row.quantity ?? 0)
+              const valueSignals = computeCardValueSignals({
+                cardName: row.card_name,
+                setCode: row.set_code,
+                setName: row.set_name,
+                releasedAt: row.released_at,
+                rarity: row.rarity,
+                foil: row.foil,
+                finishes: row.finishes,
+                oracleText: row.oracle_text,
+                typeLine: row.type_line,
+                keywords: row.keywords,
+                cmc: row.cmc == null ? null : Number(row.cmc),
+                condition: row.condition,
+                language: row.language,
+                priceUsd: row.price_usd == null ? null : Number(row.price_usd),
+                priceUsdFoil: row.price_usd_foil == null ? null : Number(row.price_usd_foil),
+                commanderData: row.oracle_id ? commanderStaples.get(row.oracle_id) ?? null : null,
+              })
 
               return (
                 <article
@@ -747,6 +778,40 @@ export default async function MySinglesPage({
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-zinc-400">
                       {getSingleInventoryStatusDescription(row.inventory_status)}
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                        AI value signals
+                      </div>
+                      {valueSignals.signals.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {valueSignals.signals.map((signal) => (
+                            <span
+                              key={signal.kind}
+                              title={signal.detail}
+                              className={`cursor-help rounded-full border px-3 py-1 text-xs ${getValueSignalBadgeClass(signal.strength)}`}
+                            >
+                              {signal.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {valueSignals.cons.length > 0 ? (
+                        <ul className="mt-3 space-y-1.5">
+                          {valueSignals.cons.map((con) => (
+                            <li key={con.label} title={con.detail} className="flex cursor-help items-start gap-2 text-xs text-zinc-400">
+                              <span className="mt-0.5 shrink-0 text-amber-400/80" aria-hidden>
+                                &minus;
+                              </span>
+                              <span>
+                                <span className="font-medium text-amber-200/90">{con.label}.</span>{' '}
+                                {con.detail}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
 
                     {row.import_warning ? (

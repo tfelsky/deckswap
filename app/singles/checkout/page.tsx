@@ -4,6 +4,7 @@ import { SinglesCheckoutClient } from '@/components/singles-checkout-client'
 import AppHeader from '@/components/app-header'
 import { getUnreadNotificationsCount } from '@/lib/notifications'
 import { createClient } from '@/lib/supabase/server'
+import { type CheckoutMailSlot, type MailSlotOrderLike } from '@/lib/singles/mail-slots'
 import { type PublicSingleListing } from '@/lib/singles/marketplace'
 
 export const dynamic = 'force-dynamic'
@@ -71,6 +72,30 @@ export default async function SinglesCheckoutPage({
     .eq('user_id', user.id)
     .maybeSingle()
   const pointsBalance = Math.max(0, Math.floor(Number(rewardBalance?.balance ?? 0)))
+
+  // Open mail slots let a queued order join what's already on hold with that
+  // seller. If the table isn't there yet, Queue My Order is simply not offered.
+  const mailSlotsResult = await supabase
+    .from('singles_mail_slots')
+    .select('id, seller_user_id, held_until, max_hold_until')
+    .eq('buyer_user_id', user.id)
+    .eq('status', 'open')
+  const openMailSlots = (mailSlotsResult.data ?? []) as Omit<CheckoutMailSlot, 'orders'>[]
+  const slotOrdersResult =
+    openMailSlots.length > 0
+      ? await supabase
+          .from('singles_orders')
+          .select('mail_slot_id, item_subtotal_usd, item_count')
+          .in(
+            'mail_slot_id',
+            openMailSlots.map((slot) => slot.id)
+          )
+      : { data: [] }
+  const slotOrders = (slotOrdersResult.data ?? []) as (MailSlotOrderLike & { mail_slot_id: number })[]
+  const mailSlots: CheckoutMailSlot[] = openMailSlots.map((slot) => ({
+    ...slot,
+    orders: slotOrders.filter((order) => order.mail_slot_id === slot.id),
+  }))
   const { data, error } = await supabase
     .from('single_inventory_items')
     .select(
@@ -111,6 +136,8 @@ export default async function SinglesCheckoutPage({
             schemaMissing={schemaMissing}
             errorMessage={errorMessage || null}
             pointsBalance={pointsBalance}
+            mailSlots={mailSlots}
+            mailSlotsEnabled={!mailSlotsResult.error}
           />
         </form>
       </section>

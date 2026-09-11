@@ -1,4 +1,5 @@
 export type SinglesOrderStatus =
+  | 'queued'
   | 'awaiting_shipment'
   | 'shipped'
   | 'delivered'
@@ -28,6 +29,9 @@ export type SinglesOrderRow = {
   shipped_at?: string | null
   delivered_at?: string | null
   completed_at?: string | null
+  /** Set when the order was queued: it ships with its mail slot, not on its own. */
+  mail_slot_id?: number | null
+  slot_rent_usd?: number | null
   created_at?: string | null
   updated_at?: string | null
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import { getCommanderBracketSummary } from '@/lib/commander/brackets'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import {
@@ -8,7 +9,6 @@ import {
 } from '@/lib/decks/color-identity'
 import { formatCurrencyAmount, normalizeSupportedCurrency } from '@/lib/currency'
 import {
-  isInventoryStatusCompleted,
   getInventoryStatusBadgeClass,
   getInventoryStatusLabel,
   isInventoryStatusLocked,
@@ -266,6 +266,102 @@ function sortDeckViews(deckViews: DeckView[], sort: DeckSortOption) {
   })
 }
 
+const SAVED_DECK_TONES = {
+  watched: {
+    label: 'Watchlist',
+    border: 'border-amber-400/20',
+    labelText: 'text-amber-200/80',
+    imageOpacity: 'opacity-90',
+  },
+  rejected: {
+    label: 'Rejected',
+    border: 'border-rose-400/20',
+    labelText: 'text-rose-200/80',
+    imageOpacity: 'opacity-80',
+  },
+} as const
+
+function SavedDeckCard({
+  deck,
+  tone,
+  footer,
+}: {
+  deck: DeckView
+  tone: keyof typeof SAVED_DECK_TONES
+  footer: ReactNode
+}) {
+  const styles = SAVED_DECK_TONES[tone]
+
+  return (
+    <article className={`overflow-hidden rounded-3xl border ${styles.border} bg-zinc-900/80`}>
+      <Link href={`/decks/${deck.id}`} className="block">
+        <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
+          {deck.image_url ? (
+            <img
+              src={deck.image_url}
+              alt={deck.name}
+              className={`h-full w-full object-cover object-top ${styles.imageOpacity}`}
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-5">
+            <div className={`text-xs uppercase tracking-[0.2em] ${styles.labelText}`}>
+              {styles.label}
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-white">
+              {deck.commander || deck.name}
+            </div>
+          </div>
+        </div>
+        <div className="p-5">
+          <h3 className="text-xl font-semibold tracking-tight text-white">{deck.name}</h3>
+          <p className="mt-1 text-sm text-zinc-400">
+            {formatSupportsCommanderRules(deck.format)
+              ? `Commander: ${deck.commander || 'Not set'}`
+              : `Format: ${getDeckFormatLabel(deck.format)}`}
+          </p>
+        </div>
+      </Link>
+
+      {footer}
+    </article>
+  )
+}
+
+type DeckListTable = 'user_deck_passes' | 'user_deck_watchlist'
+
+async function applyDeckListChange(
+  formData: FormData,
+  change: { remove: DeckListTable[]; addTo?: DeckListTable }
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) redirect('/sign-in')
+
+  const deckId = Number(formData.get('deck_id'))
+
+  if (Number.isFinite(deckId)) {
+    for (const table of change.remove) {
+      await supabase.from(table).delete().eq('user_id', user.id).eq('deck_id', deckId)
+    }
+
+    if (change.addTo) {
+      await supabase.from(change.addTo).upsert(
+        {
+          user_id: user.id,
+          deck_id: deckId,
+        },
+        { onConflict: 'user_id,deck_id' }
+      )
+    }
+  }
+
+  redirect('/decks')
+}
+
 export default async function DecksPage({
   searchParams,
 }: {
@@ -290,6 +386,7 @@ export default async function DecksPage({
   const requireCompletePrecon = readBooleanSearchParam(resolvedSearchParams.completePrecon)
   const sortOption = readDeckSortOption(resolvedSearchParams.sort)
   const advancedFiltersOpen =
+    searchScope !== 'any' ||
     selectedFormat !== 'unknown' ||
     selectedListingType !== 'any' ||
     selectedInventoryStatus !== 'any' ||
@@ -304,7 +401,7 @@ export default async function DecksPage({
     requireSealed ||
     requireCompletePrecon ||
     sortOption !== 'newest'
-  const hasActiveSearch = !!query || searchScope !== 'any' || advancedFiltersOpen
+  const hasActiveSearch = !!query || advancedFiltersOpen
 
   const {
     data: { user },
@@ -326,106 +423,28 @@ export default async function DecksPage({
 
   async function passDeckAction(formData: FormData) {
     'use server'
-
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) redirect('/sign-in')
-
-    const deckId = Number(formData.get('deck_id'))
-    if (!Number.isFinite(deckId)) redirect('/decks')
-
-    await supabase
-      .from('user_deck_watchlist')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('deck_id', deckId)
-
-    await supabase.from('user_deck_passes').upsert(
-      {
-        user_id: user.id,
-        deck_id: deckId,
-      },
-      { onConflict: 'user_id,deck_id' }
-    )
-
-    redirect('/decks')
+    await applyDeckListChange(formData, {
+      remove: ['user_deck_watchlist'],
+      addTo: 'user_deck_passes',
+    })
   }
 
   async function watchDeckAction(formData: FormData) {
     'use server'
-
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) redirect('/sign-in')
-
-    const deckId = Number(formData.get('deck_id'))
-    if (!Number.isFinite(deckId)) redirect('/decks')
-
-    await supabase
-      .from('user_deck_passes')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('deck_id', deckId)
-
-    await supabase.from('user_deck_watchlist').upsert(
-      {
-        user_id: user.id,
-        deck_id: deckId,
-      },
-      { onConflict: 'user_id,deck_id' }
-    )
-
-    redirect('/decks')
+    await applyDeckListChange(formData, {
+      remove: ['user_deck_passes'],
+      addTo: 'user_deck_watchlist',
+    })
   }
 
   async function restorePassedDeckAction(formData: FormData) {
     'use server'
-
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) redirect('/sign-in')
-
-    const deckId = Number(formData.get('deck_id'))
-    if (!Number.isFinite(deckId)) redirect('/decks')
-
-    await supabase
-      .from('user_deck_passes')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('deck_id', deckId)
-
-    redirect('/decks')
+    await applyDeckListChange(formData, { remove: ['user_deck_passes'] })
   }
 
   async function restoreWatchedDeckAction(formData: FormData) {
     'use server'
-
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) redirect('/sign-in')
-
-    const deckId = Number(formData.get('deck_id'))
-    if (!Number.isFinite(deckId)) redirect('/decks')
-
-    await supabase
-      .from('user_deck_watchlist')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('deck_id', deckId)
-
-    redirect('/decks')
+    await applyDeckListChange(formData, { remove: ['user_deck_watchlist'] })
   }
 
   const { data, error } = await supabase
@@ -465,7 +484,6 @@ export default async function DecksPage({
     : ((watchedDecksResult.data ?? []) as UserDeckWatchlistRow[])
   const passedDeckIds = new Set(passedDeckRows.map((row) => row.deck_id))
   const watchedDeckIds = new Set(watchedDeckRows.map((row) => row.deck_id))
-  const completedDeckCount = allDecks.filter((deck) => isInventoryStatusCompleted(deck.inventory_status)).length
   const deckIds = decks.map((deck) => deck.id)
 
   const { data: deckCards } = deckIds.length
@@ -584,22 +602,6 @@ export default async function DecksPage({
     sortOption
   )
 
-  const ratedDecks = availableDeckViews.filter(
-    (deck) => formatSupportsCommanderRules(deck.format) && deck.bracket.bracket != null
-  )
-  const topValueDeck = [...availableDeckViews].sort(
-    (a, b) => Number(b.price_total_usd_foil ?? 0) - Number(a.price_total_usd_foil ?? 0)
-  )[0]
-  const bracketCounts = new Map<number, number>()
-
-  for (const deck of ratedDecks) {
-    const bracket = deck.bracket.bracket as number
-    bracketCounts.set(bracket, (bracketCounts.get(bracket) ?? 0) + 1)
-  }
-
-  const dominantBracketEntry =
-    [...bracketCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
-
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
       <AppHeader
@@ -618,11 +620,11 @@ export default async function DecksPage({
               </div>
 
               <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Browse live decks
+                Find your next deck
               </h1>
 
               <p className="mt-3 text-sm text-zinc-400 sm:text-base">
-                Search by deck or card, narrow the list with lightweight filters, and jump straight into live listings.
+                Complete, ready-to-play decks you can swap, buy, or bid on. Search by deck name, commander, or the cards inside.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -630,6 +632,12 @@ export default async function DecksPage({
                 <span className="text-zinc-500">Live</span>{' '}
                 <span className="font-semibold text-white">{availableDeckViews.length}</span>
               </div>
+              <Link
+                href="/decks/review"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+              >
+                Review One by One
+              </Link>
               <Link
                 href="/completed-sales"
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
@@ -656,21 +664,6 @@ export default async function DecksPage({
 
               <div className="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
                 <label className="block">
-                  <span className="sr-only">Search scope</span>
-                  <select
-                    name="scope"
-                    defaultValue={searchScope}
-                    className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white xl:w-44"
-                  >
-                    {SEARCH_SCOPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
                   <span className="sr-only">Sort</span>
                   <select
                     name="sort"
@@ -689,12 +682,14 @@ export default async function DecksPage({
                   Search
                 </button>
 
-                <Link
-                  href="/decks"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-center text-sm text-white hover:bg-white/10"
-                >
-                  Reset
-                </Link>
+                {hasActiveSearch ? (
+                  <Link
+                    href="/decks"
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-center text-sm text-white hover:bg-white/10"
+                  >
+                    Reset
+                  </Link>
+                ) : null}
               </div>
             </div>
 
@@ -708,6 +703,21 @@ export default async function DecksPage({
                 </summary>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Search in</span>
+                    <select
+                      name="scope"
+                      defaultValue={searchScope}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2.5 text-sm text-white"
+                    >
+                      {SEARCH_SCOPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
                   <label className="block">
                     <span className="mb-1.5 block text-xs uppercase tracking-wide text-zinc-500">Format</span>
                     <select
@@ -877,71 +887,6 @@ export default async function DecksPage({
             </div>
           </form>
 
-          {hasActiveSearch ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {query ? (
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
-                  {query}
-                </span>
-              ) : null}
-              {searchScope !== 'any' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {SEARCH_SCOPE_OPTIONS.find((option) => option.value === searchScope)?.label}
-                </span>
-              ) : null}
-              {selectedFormat !== 'unknown' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {getDeckFormatLabel(selectedFormat)}
-                </span>
-              ) : null}
-              {selectedListingType !== 'any' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {LISTING_TYPE_OPTIONS.find((option) => option.value === selectedListingType)?.label}
-                </span>
-              ) : null}
-              {selectedInventoryStatus !== 'any' ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {getInventoryStatusLabel(selectedInventoryStatus)}
-                </span>
-              ) : null}
-              {selectedColorIdentity ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  {getColorIdentityLabel(selectedColorIdentity === 'C' ? [] : selectedColorIdentity.split(''))}
-                </span>
-              ) : null}
-              {selectedBracket != null ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Bracket {selectedBracket}
-                </span>
-              ) : null}
-              {minPrice != null ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Min ${minPrice}
-                </span>
-              ) : null}
-              {maxPrice != null ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                  Max ${maxPrice}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {topValueDeck ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-                Top value: <span className="font-medium text-white">{topValueDeck.name}</span>
-              </div>
-            ) : null}
-            {dominantBracketEntry ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-                Common bracket: <span className="font-medium text-white">Bracket {dominantBracketEntry[0]}</span>
-              </div>
-            ) : null}
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              Rated decks: <span className="font-medium text-white">{ratedDecks.length}/{availableDeckViews.length}</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -956,7 +901,7 @@ export default async function DecksPage({
                 ? 'Try a broader search term, switch from card search to deck search, or clear a few advanced filters.'
                 : user && passedDeckViews.length > 0
                 ? 'Everything currently visible has been moved into your watchlist or rejected list. You can restore any of them below.'
-                : 'Your connection works. Now seed the table with more decks and metadata.'}
+                : 'New listings land here as soon as they go live. Import a deck to get yours in front of traders first.'}
             </p>
             {hasActiveSearch ? (
               <div className="mt-5">
@@ -1056,42 +1001,32 @@ export default async function DecksPage({
                             normalizeSupportedCurrency(deck.buy_now_currency)
                           )}
                         </div>
-                        <div className="mt-1 text-xs text-amber-50/70">
-                          Direct-sale fallback after Deck Swap
-                        </div>
                       </div>
                     )}
 
                     {isInventoryStatusLocked(deck.inventory_status) && (
                       <div className="mt-4 rounded-2xl border border-zinc-600/40 bg-zinc-800/70 px-4 py-3 text-xs text-zinc-300">
-                        This deck is currently committed to another flow and is not positioned like an active live listing.
+                        Committed to another transaction — not available right now.
                       </div>
                     )}
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                        {formatSupportsCommanderRules(deck.format)
-                          ? deck.bracket.label
-                          : getDeckFormatLabel(deck.format)}
-                      </span>
-                      {formatSupportsCommanderRules(deck.format) && (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                          {deck.bracket.gameChangerCount} Game Changer
-                          {deck.bracket.gameChangerCount === 1 ? '' : 's'}
-                        </span>
-                      )}
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
                         {(deck.commander_count ?? 0) + (deck.mainboard_count ?? 0)} cards
                       </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                        {Number(deck.token_count ?? 0)} token
-                        {Number(deck.token_count ?? 0) === 1 ? '' : 's'}
-                      </span>
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs ${getInventoryStatusBadgeClass(deck.inventory_status)}`}
-                      >
-                        {getInventoryStatusLabel(deck.inventory_status)}
-                      </span>
+                      {Number(deck.token_count ?? 0) > 0 && (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                          {Number(deck.token_count)} token
+                          {Number(deck.token_count) === 1 ? '' : 's'}
+                        </span>
+                      )}
+                      {formatSupportsCommanderRules(deck.format) &&
+                        deck.bracket.gameChangerCount > 0 && (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                            {deck.bracket.gameChangerCount} Game Changer
+                            {deck.bracket.gameChangerCount === 1 ? '' : 's'}
+                          </span>
+                        )}
                       {getDeckMarketingChips(deck).map((chip) => (
                         <span
                           key={`${deck.id}-${chip}`}
@@ -1161,51 +1096,27 @@ export default async function DecksPage({
 
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {watchedDeckViews.map((deck) => (
-                <article key={deck.id} className="overflow-hidden rounded-3xl border border-amber-400/20 bg-zinc-900/80">
-                  <Link href={`/decks/${deck.id}`} className="block">
-                    <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
-                      {deck.image_url ? (
-                        <img
-                          src={deck.image_url}
-                          alt={deck.name}
-                          className="h-full w-full object-cover object-top opacity-90"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                      <div className="absolute inset-x-0 bottom-0 p-5">
-                        <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
-                          Watchlist
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-white">
-                          {deck.commander || deck.name}
-                        </div>
-                      </div>
+                <SavedDeckCard
+                  key={deck.id}
+                  deck={deck}
+                  tone="watched"
+                  footer={
+                    <div className="grid gap-3 border-t border-white/10 px-5 py-4 sm:grid-cols-2">
+                      <form action={restoreWatchedDeckAction}>
+                        <input type="hidden" name="deck_id" value={deck.id} />
+                        <button className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
+                          Restore to browsing
+                        </button>
+                      </form>
+                      <form action={passDeckAction}>
+                        <input type="hidden" name="deck_id" value={deck.id} />
+                        <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
+                          Reject
+                        </button>
+                      </form>
                     </div>
-                    <div className="p-5">
-                      <h3 className="text-xl font-semibold tracking-tight text-white">{deck.name}</h3>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        {formatSupportsCommanderRules(deck.format)
-                          ? `Commander: ${deck.commander || 'Not set'}`
-                          : `Format: ${getDeckFormatLabel(deck.format)}`}
-                      </p>
-                    </div>
-                  </Link>
-
-                  <div className="grid gap-3 border-t border-white/10 px-5 py-4 sm:grid-cols-2">
-                    <form action={restoreWatchedDeckAction}>
-                      <input type="hidden" name="deck_id" value={deck.id} />
-                      <button className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10">
-                        Restore to browsing
-                      </button>
-                    </form>
-                    <form action={passDeckAction}>
-                      <input type="hidden" name="deck_id" value={deck.id} />
-                      <button className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:bg-rose-400/15">
-                        Reject
-                      </button>
-                    </form>
-                  </div>
-                </article>
+                  }
+                />
               ))}
             </div>
           </div>
@@ -1229,45 +1140,21 @@ export default async function DecksPage({
 
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {passedDeckViews.map((deck) => (
-                <article key={deck.id} className="overflow-hidden rounded-3xl border border-rose-400/20 bg-zinc-900/80">
-                  <Link href={`/decks/${deck.id}`} className="block">
-                    <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
-                      {deck.image_url ? (
-                        <img
-                          src={deck.image_url}
-                          alt={deck.name}
-                          className="h-full w-full object-cover object-top opacity-80"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                      <div className="absolute inset-x-0 bottom-0 p-5">
-                        <div className="text-xs uppercase tracking-[0.2em] text-rose-200/80">
-                          Rejected
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-white">
-                          {deck.commander || deck.name}
-                        </div>
-                      </div>
+                <SavedDeckCard
+                  key={deck.id}
+                  deck={deck}
+                  tone="rejected"
+                  footer={
+                    <div className="border-t border-white/10 px-5 py-4">
+                      <form action={restorePassedDeckAction}>
+                        <input type="hidden" name="deck_id" value={deck.id} />
+                        <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15">
+                          Restore to browsing
+                        </button>
+                      </form>
                     </div>
-                    <div className="p-5">
-                      <h3 className="text-xl font-semibold tracking-tight text-white">{deck.name}</h3>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        {formatSupportsCommanderRules(deck.format)
-                          ? `Commander: ${deck.commander || 'Not set'}`
-                          : `Format: ${getDeckFormatLabel(deck.format)}`}
-                      </p>
-                    </div>
-                  </Link>
-
-                  <div className="border-t border-white/10 px-5 py-4">
-                    <form action={restorePassedDeckAction}>
-                      <input type="hidden" name="deck_id" value={deck.id} />
-                      <button className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15">
-                        Restore to browsing
-                      </button>
-                    </form>
-                  </div>
-                </article>
+                  }
+                />
               ))}
             </div>
           </div>

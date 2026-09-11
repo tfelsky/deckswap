@@ -6,12 +6,8 @@ import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { getAdminAccessForUser } from '@/lib/admin/access'
 import { formatCurrencyAmount } from '@/lib/currency'
 import { createNotification } from '@/lib/notifications'
-import { awardRewardPoints } from '@/lib/rewards/award'
-import {
-  REWARD_POINTS,
-  calculateBuyerPurchasePoints,
-  calculateSellerSalePointsFromSale,
-} from '@/lib/rewards/points'
+import { formatMailSlotDate, type SinglesMailSlotRow } from '@/lib/singles/mail-slots'
+import { awardSinglesOrderCompletionPoints } from '@/lib/singles/order-completion'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatSinglesOrderStatus,
@@ -87,6 +83,18 @@ export default async function SinglesOrderDetailPage({
     .eq('order_id', orderId)
     .order('created_at', { ascending: true })
   const items = (itemsResult.data ?? []) as SinglesOrderItemRow[]
+  const mailSlotId = order.mail_slot_id ?? null
+  const mailSlotResult = mailSlotId
+    ? await adminSupabase
+        .from('singles_mail_slots')
+        .select('id, status, held_until')
+        .eq('id', mailSlotId)
+        .maybeSingle()
+    : null
+  const mailSlot = (mailSlotResult?.data ?? null) as Pick<
+    SinglesMailSlotRow,
+    'id' | 'status' | 'held_until'
+  > | null
 
   const isBuyer = order.buyer_user_id === user.id
   const isSeller = order.seller_user_id === user.id || items.some((item) => item.seller_user_id === user.id)
@@ -116,7 +124,13 @@ export default async function SinglesOrderDetailPage({
       .maybeSingle()
     const currentOrder = currentOrderResult.data as SinglesOrderRow | null
 
-    if (!currentOrder || currentOrder.seller_user_id !== user.id || currentOrder.status !== 'awaiting_shipment') {
+    // Orders held in a mail slot ship with the slot, never one by one.
+    if (
+      !currentOrder ||
+      currentOrder.seller_user_id !== user.id ||
+      currentOrder.status !== 'awaiting_shipment' ||
+      currentOrder.mail_slot_id
+    ) {
       redirect(`/singles-orders/${orderId}`)
     }
 
@@ -164,7 +178,12 @@ export default async function SinglesOrderDetailPage({
       .maybeSingle()
     const currentOrder = currentOrderResult.data as SinglesOrderRow | null
 
-    if (!currentOrder || currentOrder.buyer_user_id !== user.id || currentOrder.status !== 'shipped') {
+    if (
+      !currentOrder ||
+      currentOrder.buyer_user_id !== user.id ||
+      currentOrder.status !== 'shipped' ||
+      currentOrder.mail_slot_id
+    ) {
       redirect(`/singles-orders/${orderId}`)
     }
 
@@ -181,32 +200,10 @@ export default async function SinglesOrderDetailPage({
 
     // Mint reward points now that the order has settled. Awards are idempotent at the
     // database level, so a re-run of this completion path can never double-pay.
-    const saleValueUsd = Number(currentOrder.discounted_subtotal_usd ?? 0)
-    const buyerPoints = calculateBuyerPurchasePoints(saleValueUsd)
-    const sellerPoints = calculateSellerSalePointsFromSale(saleValueUsd)
-    const orderSource = { sourceType: 'singles_order', sourceId: String(orderId) }
-
-    await awardRewardPoints(adminSupabase, {
-      userId: currentOrder.buyer_user_id,
-      amount: buyerPoints,
-      reason: 'singles_purchase',
-      usdBasis: saleValueUsd,
-      ...orderSource,
-    })
-    const bonusMinted = await awardRewardPoints(adminSupabase, {
-      userId: currentOrder.buyer_user_id,
-      amount: REWARD_POINTS.firstOrderBonus,
-      reason: 'first_order_bonus',
-      sourceType: 'lifetime',
-      sourceId: 'first_completed_order',
-    })
-    await awardRewardPoints(adminSupabase, {
-      userId: currentOrder.seller_user_id,
-      amount: sellerPoints,
-      reason: 'singles_sale',
-      usdBasis: saleValueUsd,
-      ...orderSource,
-    })
+    const { buyerPoints, bonusMinted, sellerPoints } = await awardSinglesOrderCompletionPoints(
+      adminSupabase,
+      currentOrder
+    )
 
     await createNotification(supabase, {
       userId: currentOrder.seller_user_id,
@@ -236,8 +233,9 @@ export default async function SinglesOrderDetailPage({
     redirect(`/singles-orders/${orderId}`)
   }
 
-  const canMarkShipped = order.status === 'awaiting_shipment' && isSeller
-  const canMarkDelivered = order.status === 'shipped' && isBuyer
+  // Orders held in a mail slot ship and settle with the slot, not one by one.
+  const canMarkShipped = order.status === 'awaiting_shipment' && isSeller && !mailSlotId
+  const canMarkDelivered = order.status === 'shipped' && isBuyer && !mailSlotId
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
@@ -273,6 +271,17 @@ export default async function SinglesOrderDetailPage({
                   ? 'You placed this singles order. Inventory and discount totals are locked to the checkout snapshot.'
                   : 'This order includes singles from your marketplace inventory.'}
               </div>
+              {mailSlotId ? (
+                <Link
+                  href={`/singles-orders/slots/${mailSlotId}`}
+                  className="mt-3 block rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100 transition hover:bg-amber-400/15"
+                >
+                  Held in mail slot #{mailSlotId}
+                  {mailSlot?.status === 'open' ? ` until ${formatMailSlotDate(mailSlot.held_until)}` : ''}.
+                  It ships with the rest of the slot.{' '}
+                  {isSeller ? 'Open the slot to see when to ship.' : 'Open the slot to extend it or ship it now.'}
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>
@@ -322,6 +331,11 @@ export default async function SinglesOrderDetailPage({
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   Checkout confirmed: {formatSinglesTimelineTimestamp(order.checkout_confirmed_at)}
                 </div>
+                {mailSlotId ? (
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-amber-100">
+                    Queued in mail slot #{mailSlotId} at checkout
+                  </div>
+                ) : null}
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   Payment confirmed: {formatSinglesTimelineTimestamp(order.payment_confirmed_at)}
                 </div>
@@ -352,9 +366,15 @@ export default async function SinglesOrderDetailPage({
                   <span>-{formatCurrencyAmount(Number(order.discount_amount_usd ?? 0), 'USD')}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Shipping</span>
+                  <span>{mailSlotId ? 'Shipping (combined, billed on the slot)' : 'Shipping'}</span>
                   <span>{formatCurrencyAmount(Number(order.shipping_amount_usd ?? 0), 'USD')}</span>
                 </div>
+                {Number(order.slot_rent_usd ?? 0) > 0 ? (
+                  <div className="flex items-center justify-between text-amber-200">
+                    <span>Mail slot rent</span>
+                    <span>{formatCurrencyAmount(Number(order.slot_rent_usd ?? 0), 'USD')}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between">
                   <span>Tax</span>
                   <span>{formatCurrencyAmount(Number(order.tax_amount_usd ?? 0), 'USD')}</span>

@@ -4,6 +4,13 @@ import { redirect } from 'next/navigation'
 import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrencyAmount } from '@/lib/currency'
+import {
+  daysUntil,
+  formatMailSlotDate,
+  formatMailSlotPhase,
+  resolveMailSlotPhase,
+  type SinglesMailSlotRow,
+} from '@/lib/singles/mail-slots'
 import { formatSinglesOrderStatus, isSinglesOrdersSchemaMissing, type SinglesOrderItemRow, type SinglesOrderRow } from '@/lib/singles/orders'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +66,24 @@ export default async function SinglesOrdersPage() {
       new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime()
   )
 
+  // Mail slots still in play, as buyer or seller. Delivered slots drop off (their
+  // orders stay listed below); an error, e.g. the migration not run yet, just
+  // hides the section.
+  const mailSlotsResult = await adminSupabase
+    .from('singles_mail_slots')
+    .select('*')
+    .or(`buyer_user_id.eq.${user.id},seller_user_id.eq.${user.id}`)
+    .neq('status', 'delivered')
+    .order('created_at', { ascending: false })
+  const mailSlots = (mailSlotsResult.data ?? []) as SinglesMailSlotRow[]
+  const slotOrderCounts = new Map<number, number>()
+  for (const order of orders) {
+    if (order.mail_slot_id) {
+      slotOrderCounts.set(order.mail_slot_id, (slotOrderCounts.get(order.mail_slot_id) ?? 0) + 1)
+    }
+  }
+  const now = new Date()
+
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
       <AppHeader current="singles-orders" isSignedIn />
@@ -72,6 +97,55 @@ export default async function SinglesOrdersPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10">
+        {mailSlots.length > 0 ? (
+          <div className="mb-10">
+            <h2 className="text-2xl font-semibold">Mail slots</h2>
+            <p className="mt-1 text-sm text-zinc-400">Paid orders on hold, waiting to ship together.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {mailSlots.map((slot) => {
+                const phase = resolveMailSlotPhase(slot, now)
+                const orderCount = slotOrderCounts.get(slot.id) ?? 0
+
+                return (
+                  <Link
+                    key={slot.id}
+                    href={`/singles-orders/slots/${slot.id}`}
+                    className="rounded-3xl border border-amber-400/20 bg-amber-400/5 p-5 transition hover:bg-amber-400/10"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-amber-200">
+                          {slot.buyer_user_id === user.id ? 'Your mail slot' : 'Holding for a buyer'}
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold text-white">Mail slot #{slot.id}</div>
+                        <div className="mt-2 text-sm text-zinc-400">
+                          {orderCount} order{orderCount === 1 ? '' : 's'} · {formatMailSlotPhase(phase)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {phase === 'holding' ? (
+                          <>
+                            <div className="text-lg font-semibold text-amber-200">
+                              {daysUntil(slot.held_until, now)}d left
+                            </div>
+                            <div className="text-xs text-zinc-500">
+                              until {formatMailSlotDate(slot.held_until)}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm font-medium text-amber-200">
+                            {phase === 'shipped' ? 'On the way' : 'Due to ship'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {orders.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center">
             <h2 className="text-2xl font-semibold">No singles orders yet</h2>
@@ -94,7 +168,10 @@ export default async function SinglesOrdersPage() {
                   <div>
                     <div className="text-xs uppercase tracking-wide text-emerald-200">Singles order</div>
                     <div className="mt-2 text-2xl font-semibold text-white">Order #{order.id}</div>
-                    <div className="mt-2 text-sm text-zinc-400">{formatSinglesOrderStatus(order.status)}</div>
+                    <div className="mt-2 text-sm text-zinc-400">
+                      {formatSinglesOrderStatus(order.status)}
+                      {order.mail_slot_id ? ` · Mail slot #${order.mail_slot_id}` : ''}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold text-emerald-300">
