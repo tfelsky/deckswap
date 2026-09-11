@@ -20,8 +20,8 @@ export type SinglesPricingBreakdown = {
   grandTotal: number
 }
 
-const PWE_SHIPPING_RATE_USD = 5
-const TRACKED_MAILER_RATE_USD = 15
+export const PWE_SHIPPING_RATE_USD = 5
+export const TRACKED_MAILER_RATE_USD = 15
 const PWE_MAX_CARD_COUNT = 10
 const TRACKED_MAILER_SUBTOTAL_THRESHOLD_USD = 30
 const TAX_RATE = 0

@@ -115,6 +115,12 @@ export default async function AdminLayout({
               >
                 Power 9 Studio
               </Link>
+              <Link
+                href="/admin/qship"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                QShip Dry Run
+              </Link>
             </div>
           </div>
         </div>
