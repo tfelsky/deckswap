@@ -4,7 +4,9 @@ import { createAdminClientOrNull } from '@/lib/supabase/admin'
 import { collectTrackedScryfallIds } from '@/lib/qship/data'
 import { snapshotPrices } from '@/lib/qship/providers/scryfall'
 
-export const maxDuration = 300
+// 60s is the highest duration every Vercel plan accepts; a larger value fails
+// the deployment on Hobby projects without Fluid Compute.
+export const maxDuration = 60
 
 function isAuthorized(request: Request) {
   const authHeader = request.headers.get('authorization')?.trim()

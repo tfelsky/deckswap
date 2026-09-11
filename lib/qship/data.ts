@@ -585,8 +585,11 @@ export async function runQshipDryRun(input: QshipDryRunInput): Promise<QshipDryR
 
 // ---------- price tracking ----------
 
-/** Printings whose prices QShip snapshots daily: hub stock, Supply, members' decks. */
-export async function collectTrackedScryfallIds(admin: SupabaseAdmin, limit = 7500) {
+/**
+ * Printings whose prices QShip snapshots daily: hub stock, Supply, members' decks.
+ * 5,000 ids is ~67 Scryfall requests, which keeps the cron inside 60 seconds.
+ */
+export async function collectTrackedScryfallIds(admin: SupabaseAdmin, limit = 5000) {
   const ids = new Set<string>()
   const add = (rows: Array<{ scryfall_id: string | null }>) => {
     for (const row of rows) if (row.scryfall_id && ids.size < limit) ids.add(row.scryfall_id)
