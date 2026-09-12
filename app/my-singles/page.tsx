@@ -375,22 +375,24 @@ export default async function MySinglesPage({
     <main className="min-h-screen bg-zinc-950 pt-32 text-white">
       <AppHeader current="my-singles" isSignedIn unreadNotifications={unreadNotifications} />
 
-      <section className="border-b border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-950">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium tracking-wide text-emerald-300">
-                Private Inventory
-              </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                My Singles
-              </h1>
-              <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-                Search your inventory, retry Scryfall enrichment, and push staged singles into the public marketplace when they are ready.
-              </p>
+      <section className="border-b border-white/10 bg-zinc-900/50">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">My Singles</h1>
+              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-300">Private</span>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Link href="/import-library?scope=singles" className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90">Import singles</Link>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-zinc-400" aria-label="Filtered inventory summary">
+            <span><strong className="font-medium text-white">{safeTotalRows}</strong> rows</span>
+            <span><strong className="font-medium text-white">{totalCopies}</strong> copies</span>
+            <span title="Estimated snapshot value from imported pricing"><strong className="font-medium text-emerald-300">{formatCurrencyAmount(totalValue, 'USD')}</strong> est. value</span>
+            <span><strong className="font-medium text-amber-200">{stagedCount}</strong> staged / <strong className="font-medium text-white">{liveCount}</strong> live</span>
+          </div>
+          <details className="mt-3">
+            <summary className="w-fit cursor-pointer rounded text-sm text-zinc-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400">Inventory actions</summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <form action={backfillSinglesEnrichmentAction} className="rounded-3xl border border-white/10 bg-white/5 p-4">
                 <input type="hidden" name="return_to" value={currentUrl} />
                 <div className="text-sm font-medium text-white">Retry Scryfall backfill</div>
@@ -419,63 +421,16 @@ export default async function MySinglesPage({
                 </FormActionButton>
               </form>
             </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Singles Rows</div>
-              <div className="mt-2 text-3xl font-semibold">{safeTotalRows}</div>
-              <div className="mt-2 text-xs text-zinc-500">
-                Showing {showingStart}-{showingEnd} on this page.
-              </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <Link href="/singles" className="text-emerald-300 hover:underline">Singles marketplace</Link>
+              <Link href="/my-decks" className="text-zinc-300 hover:underline">Back to decks</Link>
+              <span className="text-zinc-400">{warningCount} warning{warningCount === 1 ? '' : 's'} across {uniqueSources} source{uniqueSources === 1 ? '' : 's'} in this view.</span>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Total Copies</div>
-              <div className="mt-2 text-3xl font-semibold">{totalCopies}</div>
-              <div className="mt-2 text-xs text-zinc-500">Aggregated quantity across the filtered singles set.</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Estimated Value</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                {formatCurrencyAmount(totalValue, 'USD')}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">Snapshot value from imported pricing fields.</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-zinc-400">Staged / Published</div>
-              <div className="mt-2 text-3xl font-semibold text-amber-200">
-                {stagedCount} / {liveCount}
-              </div>
-              <div className="mt-2 text-xs text-zinc-500">
-                {warningCount} warning{warningCount === 1 ? '' : 's'} across {uniqueSources} source{uniqueSources === 1 ? '' : 's'} in the current filter.
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/import-library?scope=singles"
-              className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
-            >
-              Import more singles
-            </Link>
-            <Link
-              href="/singles"
-              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
-            >
-              Open singles marketplace
-            </Link>
-            <Link
-              href="/my-decks"
-              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
-            >
-              Back to decks
-            </Link>
-          </div>
+          </details>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         {schemaMissing ? (
           <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-sm text-yellow-100">
             Run <code>docs/sql/single-inventory.sql</code> to enable private singles inventory before using this surface.
@@ -501,19 +456,26 @@ export default async function MySinglesPage({
         ) : null}
 
         {!schemaMissing ? (
-          <form method="get" className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-4">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_12rem_12rem_12rem_10rem_auto]">
-              <input
-                type="search"
-                name="q"
-                defaultValue={filters.queryText}
-                placeholder="Search cards, sets, collector number, source..."
-                className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
-              />
+          <form method="get" className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2">
+              <input type="search" name="q" defaultValue={filters.queryText} aria-label="Search inventory" placeholder="Search cards, sets, or sources…" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400/40" />
+              <button type="submit" className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90">Apply</button>
+              {filters.queryText || filters.status !== 'all' || filters.finish !== 'all' || filters.warnings !== 'all' || pageSize !== 50 || cardsPerRow !== 5 ? (
+                <Link href="/my-singles" className="rounded-xl px-2 py-2 text-sm text-zinc-300 hover:text-white">Reset</Link>
+              ) : null}
+            </div>
+            <details className="mt-2">
+              <summary className="w-fit cursor-pointer rounded py-1 text-sm text-zinc-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400">
+                Filters & display
+                {filters.status !== 'all' || filters.finish !== 'all' || filters.warnings !== 'all' ? (
+                  <span className="ml-2 text-emerald-300">{[filters.status !== 'all' ? getSingleInventoryStatusLabel(filters.status) : '', filters.finish === 'foil' ? 'Foil' : filters.finish === 'nonfoil' ? 'Non-foil' : '', filters.warnings === 'only' ? 'Warnings only' : filters.warnings === 'clean' ? 'Clean rows' : ''].filter(Boolean).join(' · ')}</span>
+                ) : null}
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-5">
               <select
-                name="status"
+                aria-label="Status" name="status"
                 defaultValue={filters.status}
-                className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400/40"
               >
                 <option value="all">All statuses</option>
                 <option value="staged">Staged</option>
@@ -522,27 +484,27 @@ export default async function MySinglesPage({
                 <option value="completed">Completed</option>
               </select>
               <select
-                name="finish"
+                aria-label="Finish" name="finish"
                 defaultValue={filters.finish}
-                className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400/40"
               >
                 <option value="all">All finishes</option>
                 <option value="foil">Foil</option>
                 <option value="nonfoil">Non-foil</option>
               </select>
               <select
-                name="warnings"
+                aria-label="Import warnings" name="warnings"
                 defaultValue={filters.warnings}
-                className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400/40"
               >
                 <option value="all">All warnings</option>
                 <option value="only">Warnings only</option>
                 <option value="clean">Clean rows only</option>
               </select>
               <select
-                name="pageSize"
+                aria-label="Cards per page" name="pageSize"
                 defaultValue={String(pageSize)}
-                className="rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400/40"
               >
                 {PAGE_SIZE_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -550,63 +512,11 @@ export default async function MySinglesPage({
                   </option>
                 ))}
               </select>
-              <input type="hidden" name="cardsPerRow" value={String(cardsPerRow)} />
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-medium text-zinc-950 hover:opacity-90"
-                >
-                  Apply
-                </button>
-                <Link
-                  href="/my-singles"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
-                >
-                  Reset
-                </Link>
+                <select name="cardsPerRow" defaultValue={String(cardsPerRow)} aria-label="Cards per row" className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400/40">
+                  {CARDS_PER_ROW_OPTIONS.map((option) => <option key={option} value={option}>{option} cards / row</option>)}
+                </select>
               </div>
-            </div>
-          </form>
-        ) : null}
-
-        {!schemaMissing && rows.length > 0 ? (
-          <form method="get" className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-4">
-            <input type="hidden" name="q" value={filters.queryText} />
-            <input type="hidden" name="status" value={filters.status} />
-            <input type="hidden" name="finish" value={filters.finish} />
-            <input type="hidden" name="warnings" value={filters.warnings} />
-            <input type="hidden" name="pageSize" value={String(pageSize)} />
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="text-sm font-medium text-white">Cards per row</div>
-                <div className="mt-1 text-sm text-zinc-400">
-                  Match the marketplace card view while keeping your current filters.
-                </div>
-              </div>
-              <div className="flex min-w-[16rem] items-center gap-3">
-                <span className="text-xs text-zinc-500">2</span>
-                <input
-                  type="range"
-                  name="cardsPerRow"
-                  min={2}
-                  max={5}
-                  step={1}
-                  defaultValue={cardsPerRow}
-                  className="h-2 w-full cursor-pointer accent-emerald-400"
-                  aria-label="Cards per row"
-                />
-                <span className="text-xs text-zinc-500">5</span>
-                <div className="min-w-14 rounded-2xl border border-white/10 bg-zinc-950 px-3 py-2 text-center text-sm font-medium text-white">
-                  {cardsPerRow}
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-2xl bg-emerald-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:opacity-90"
-                >
-                  Update
-                </button>
-              </div>
-            </div>
+            </details>
           </form>
         ) : null}
 
@@ -625,13 +535,10 @@ export default async function MySinglesPage({
           </div>
         ) : (
           <div className="grid gap-4">
-            <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-sm font-medium text-white">
                   Showing {showingStart}-{showingEnd} of {safeTotalRows} singles rows
-                </div>
-                <div className="mt-1 text-sm text-zinc-400">
-                  Large imports are split across pages so the inventory view stays responsive.
                 </div>
               </div>
               <div className="flex items-center gap-2">
