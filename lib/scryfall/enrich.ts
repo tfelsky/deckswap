@@ -48,6 +48,12 @@ type Identifier = {
   collector_number?: string
 }
 
+const SCRYFALL_REQUEST_HEADERS = {
+  Accept: 'application/json;q=0.9,*/*;q=0.8',
+  'Content-Type': 'application/json',
+  'User-Agent': 'Mythivex/1.0 (+https://mythivex.com)',
+} as const
+
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
@@ -100,7 +106,7 @@ export async function fetchScryfallCollection(
   for (const ids of chunks) {
     const res = await fetch('https://api.scryfall.com/cards/collection', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: SCRYFALL_REQUEST_HEADERS,
       body: JSON.stringify({ identifiers: ids }),
       cache: 'no-store',
     })
